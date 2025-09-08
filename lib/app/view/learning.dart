@@ -513,31 +513,30 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               ),
             )),
             const SizedBox(height: 32),
-            if (controller.lessonCompletionStatus[lesson.id] != true)
-              Center(
-                child: ElevatedButton(
-                  onPressed: controller.isCompletingLesson.value 
+            Center(
+              child: Obx(() {
+                final isCompleted = controller.lessonCompletionStatus[lesson.id] ?? false;
+                
+                return ElevatedButton.icon(
+                  onPressed: isCompleted || controller.isCompletingLesson.value
                       ? null 
                       : () => controller.completeLesson(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  icon: Icon(
+                    isCompleted ? Icons.check_circle : Icons.check,
+                    color: Colors.white,
                   ),
-                  child: controller.isCompletingLesson.value
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          'Mark as Complete',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                ),
-              ),
+                  label: Text(
+                    isCompleted ? 'Completed' : 'Mark as Complete',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isCompleted ? Colors.grey : Colors.green,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    disabledBackgroundColor: isCompleted ? Colors.grey : Colors.green.shade300,
+                  ),
+                );
+              }),
+            ),
           ],
         ),
       ),
