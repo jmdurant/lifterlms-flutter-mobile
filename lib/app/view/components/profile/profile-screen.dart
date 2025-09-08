@@ -272,6 +272,32 @@ class _Profile extends State<Profile> {
                                               decoration: BoxDecoration(
                                                 borderRadius:
                                                     BorderRadius.circular(12),
+                                                color: Colors.amber,
+                                              ),
+                                              child: Icon(Icons.card_membership,
+                                                  size: 20,
+                                                  color: Colors.white),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Text(
+                                              'My Certificates',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w500),
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(height: 15),
+                                      GestureDetector(
+                                        onTap: () => {widget.goToPage(3)},
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 50,
+                                              height: 50,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                                 color: Color(0xFFF8C719),
                                               ),
                                               child: Icon(Feather.shopping_bag,

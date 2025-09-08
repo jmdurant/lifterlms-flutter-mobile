@@ -15,6 +15,7 @@ import 'package:flutter_app/app/util/theme.dart';
 import 'package:watch_it/watch_it.dart';
 
 import 'components/profile/settings-screen.dart';
+import 'my_certificates.dart';
 
 class MyProfileScreen extends WatchingStatefulWidget {
   MyProfileScreen({Key? key}) : super(key: key);
@@ -106,6 +107,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             ),
             SettingsScreen(
                 pageController: _pageController, goBack: (page) => _goBack()),
+            MyCertificatesScreen(),
             MyOrderScreen(
                 pageController: _pageController, goBack: (page) => _goBack()),
           ],
@@ -113,7 +115,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
               GestureDetector(
                 onTap: () => _goToPage(i),
                 child: Container(),

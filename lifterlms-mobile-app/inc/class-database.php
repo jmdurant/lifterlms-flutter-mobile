@@ -53,6 +53,9 @@ class LLMS_Mobile_Database {
         // Stripe payment tables
         $this->create_stripe_tables( $charset_collate );
         
+        // Favorites table
+        $this->create_favorites_table( $charset_collate );
+        
         // Update database version
         update_option( 'llms_mobile_db_version', '1.0.0' );
     }
@@ -484,6 +487,32 @@ class LLMS_Mobile_Database {
             KEY user_id (user_id),
             KEY payment_method_id (payment_method_id),
             UNIQUE KEY user_payment_method (user_id, payment_method_id)
+        ) $charset_collate;";
+        
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
+    }
+    
+    /**
+     * Create favorites table
+     */
+    private function create_favorites_table( $charset_collate ) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'llms_mobile_favorites';
+        
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            object_id bigint(20) NOT NULL,
+            object_type varchar(20) NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY object_id (object_id),
+            KEY object_type (object_type),
+            KEY user_object (user_id, object_id, object_type),
+            UNIQUE KEY unique_favorite (user_id, object_id, object_type)
         ) $charset_collate;";
         
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );

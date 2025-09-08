@@ -16,26 +16,26 @@ class AppConstants {
 
   // API Routes
   static const String getAppSettings = 'api/v1/settings/getDefault';
-  static const String onlogin = 'wp-json/learnpress/v1/token';
-  static const String register = 'wp-json/learnpress/v1/token/register';
-  static const String getUser = 'wp-json/learnpress/v1/users';
-  static const String forgotPassword = 'wp-json/learnpress/v1/users/reset-password';
+  static const String onlogin = 'wp-json/llms/v1/token';
+  static const String register = 'wp-json/llms/v1/token/register';
+  static const String getUser = 'wp-json/llms/v1/users';
+  static const String forgotPassword = 'wp-json/llms/v1/users/reset-password';
 
   static const String loginWithPhonePassword = 'api/v1/auth/loginWithPhonePassword';
   static const String verifyPhoneFirebase = 'api/v1/auth/verifyPhoneForFirebase';
   static const String verifyPhone = 'api/v1/otp/verifyPhone';
   static const String loginWithMobileToken = 'api/v1/auth/loginWithMobileOtp';
   static const String updateFCM = 'api/v1/profile/update';
-  static const String getTopCourses = 'wp-json/learnpress/v1/courses?popular=true&optimize=true';
-  static const String getNewCourses = '/wp-json/learnpress/v1/courses?order=desc&optimize=true';
-  static const String getIntructor = '/wp-json/learnpress/v1/users';
-  static const String getCateHome = 'wp-json/learnpress/v1/course_category';
+  static const String getTopCourses = 'wp-json/llms/v1/courses?popular=true&optimize=true';
+  static const String getNewCourses = '/wp-json/llms/v1/courses?order=desc&optimize=true';
+  static const String getIntructor = '/wp-json/llms/v1/users';
+  static const String getCateHome = 'wp-json/llms/v1/course_category';
   static const String getCategory = 'wp-json/wp/v2/course_category';
-  static const String getOverview = 'wp-json/learnpress/v1/courses';
+  static const String getOverview = 'wp-json/llms/v1/courses';
 
-  static const String getCourses = 'wp-json/learnpress/v1/courses';
-  static const String getWishList = 'wp-json/learnpress/v1/wishlist';
-  static const String toggleWishlist = 'wp-json/learnpress/v1/wishlist/toggle';
+  static const String getCourses = 'wp-json/llms/v1/courses';
+  static const String getWishList = 'wp-json/llms/v1/wishlist';
+  static const String toggleWishlist = 'wp-json/llms/v1/wishlist/toggle';
 
   // LifterLMS Mobile App Plugin Endpoints
   static const String getProductIAP = 'wp-json/llms/v1/mobile-app/product-iap';
@@ -55,26 +55,26 @@ class AppConstants {
   static const String stripeDeletePaymentMethod = 'wp-json/llms/v1/mobile-app/stripe/payment-methods';
   
   // LifterLMS REST API Endpoints (keeping for compatibility)
-  static const String getCourseDetail = 'wp-json/learnpress/v1/courses/';
-  static const String getWishlistWithId = 'wp-json/learnpress/v1/wishlist/course/';
-  static const String enroll = 'wp-json/learnpress/v1/courses/enroll';
-  static const String getLessonWithId = 'wp-json/learnpress/v1/lessons/';
-  static const String completeLesson = 'wp-json/learnpress/v1/lessons/finish';
-  static const String finishCourse = 'wp-json/learnpress/v1/courses/finish';
-  static const String getQuizWithId = 'wp-json/learnpress/v1/quiz/';
-  static const String getAssignmentWithId = 'wp-json/learnpress/v1/assignments/';
-  static const String quizStart = 'wp-json/learnpress/v1/quiz/start';
-  static const String quizFinish = 'wp-json/learnpress/v1/quiz/finish';
-  static const String checkQuestion = 'wp-json/learnpress/v1/quiz/check_answer';
-  static const String retakeAssignment = 'wp-json/learnpress/v1/assignments/retake';
-  static const String startAssignment = 'wp-json/learnpress/v1/assignments/start';
-  static const String saveOrSendAssignment = 'wp-json/learnpress/v1/assignments/submit';
-  static const String deleteFileAssignment = 'wp-json/learnpress/v1/assignments/delete-submit-file';
-  static const String checkAnswer = 'wp-json/learnpress/v1/quiz/check_answer';
-  static const String getNotification = '/wp-json/learnpress/notifications/v1/notifications';
-  static const String getRating = 'wp-json/learnpress/v1/review/course/';
-  static const String createRating = 'wp-json/learnpress/v1/review/submit';
-  static const String changePassword = 'wp-json/learnpress/v1/users/change-password';
-  static const String deletePassword = 'wp-json/learnpress/v1/users/delete';
-  static const String updateUser = 'wp-json/learnpress/v1/users/';
+  static const String getCourseDetail = 'wp-json/llms/v1/courses/';
+  static const String getWishlistWithId = 'wp-json/llms/v1/wishlist/course/';
+  static const String enroll = 'wp-json/llms/v1/courses/enroll';
+  static const String getLessonWithId = 'wp-json/llms/v1/lessons/';
+  static const String completeLesson = 'wp-json/llms/v1/lessons/finish';
+  static const String finishCourse = 'wp-json/llms/v1/courses/finish';
+  static const String getQuizWithId = 'wp-json/llms/v1/quiz/';
+  static const String getAssignmentWithId = 'wp-json/llms/v1/assignments/';
+  static const String quizStart = 'wp-json/llms/v1/quiz/start';
+  static const String quizFinish = 'wp-json/llms/v1/quiz/finish';
+  static const String checkQuestion = 'wp-json/llms/v1/quiz/check_answer';
+  static const String retakeAssignment = 'wp-json/llms/v1/assignments/retake';
+  static const String startAssignment = 'wp-json/llms/v1/assignments/start';
+  static const String saveOrSendAssignment = 'wp-json/llms/v1/assignments/submit';
+  static const String deleteFileAssignment = 'wp-json/llms/v1/assignments/delete-submit-file';
+  static const String checkAnswer = 'wp-json/llms/v1/quiz/check_answer';
+  static const String getNotification = '/wp-json/llms/notifications/v1/notifications';
+  static const String getRating = 'wp-json/llms/v1/review/course/';
+  static const String createRating = 'wp-json/llms/v1/review/submit';
+  static const String changePassword = 'wp-json/llms/v1/users/change-password';
+  static const String deletePassword = 'wp-json/llms/v1/users/delete';
+  static const String updateUser = 'wp-json/llms/v1/users/';
 }

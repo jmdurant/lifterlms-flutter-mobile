@@ -6,7 +6,7 @@ class LMSConfig {
   
   /// LearnPress Configuration
   static const String learnPressUrl = 'https://your-learnpress-site.com';
-  static const String learnPressApiPath = '/wp-json/learnpress/v1';
+  static const String learnPressApiPath = '/wp-json/llms/v1';
   
   /// LifterLMS Configuration  
   static const String lifterLMSUrl = 'https://your-lifterlms-site.com';

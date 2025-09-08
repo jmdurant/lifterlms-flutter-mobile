@@ -915,4 +915,102 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
+  
+  // Favorites/Wishlist Methods (use our WordPress plugin)
+  @override
+  Future<Response> getWishlist({required int userId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/favorites/courses');
+    
+    try {
+      final response = await http.get(
+        url,
+        headers: _getAuthenticatedHeaders(),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      if (response.statusCode == 200) {
+        // Parse the response and extract courses
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['courses'] != null) {
+          return Response(
+            statusCode: 200,
+            body: data['courses'],
+          );
+        }
+      }
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error getting wishlist: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  @override
+  Future<Response> addToWishlist({required int userId, required int courseId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/favorites/add');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: _getAuthenticatedHeaders(),
+        body: jsonEncode({
+          'object_id': courseId,
+          'object_type': 'course',
+        }),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error adding to wishlist: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  @override
+  Future<Response> removeFromWishlist({required int userId, required int courseId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/favorites/remove');
+    
+    try {
+      final response = await http.delete(
+        url,
+        headers: _getAuthenticatedHeaders(),
+        body: jsonEncode({
+          'object_id': courseId,
+          'object_type': 'course',
+        }),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error removing from wishlist: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  @override
+  Future<Response> isInWishlist({required int userId, required int courseId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/favorites/check/course/$courseId');
+    
+    try {
+      final response = await http.get(
+        url,
+        headers: _getAuthenticatedHeaders(),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Response(
+          statusCode: 200,
+          body: {
+            'is_favorite': data['is_favorite'] ?? false,
+          },
+        );
+      }
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error checking wishlist status: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
 }

@@ -82,6 +82,8 @@ class AppRouter {
   static const String writeReview = '/writeReview';
   static const String terms = '/terms';
   static const String privacy = '/privacy';
+  static const String myCertificates = '/myCertificates';
+  static const String certificateDetail = '/certificateDetail';
 
   static String getInitialRoute() => initial;
   static String getSplashRoute() => splash;
@@ -115,6 +117,8 @@ class AppRouter {
   static String getCourseDetail() => courseDetail;
   static String getLearning() => learning;
   static String getInstructorDetail() => intructorDetail;
+  static String getMyCertificates() => myCertificates;
+  static String getCertificateDetail() => certificateDetail;
 
   static List<GetPage> routes = [
     // GetPage(

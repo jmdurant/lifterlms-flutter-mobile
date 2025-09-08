@@ -115,7 +115,7 @@ class UnifiedAuthService extends GetxService {
   /// LearnPress login
   Future<Response> _loginLearnPress(String username, String password) async {
     final response = await apiService.postPublic(
-      'wp-json/learnpress/v1/token',
+      'wp-json/llms/v1/token',
       {
         'username': username,
         'password': password,
@@ -204,7 +204,7 @@ class UnifiedAuthService extends GetxService {
       if (LMSConfig.isLearnPress) {
         // LearnPress registration
         response = await apiService.postPublic(
-          'wp-json/learnpress/v1/token/register',
+          'wp-json/llms/v1/token/register',
           {
             'username': username,
             'email': email,

@@ -98,6 +98,9 @@ class LifterLMS_Mobile_App {
         require_once LLMS_MOBILE_APP_PATH . 'inc/class-social-login.php';
         require_once LLMS_MOBILE_APP_PATH . 'inc/class-stripe-handler.php';
         require_once LLMS_MOBILE_APP_PATH . 'inc/class-instructor-social.php';
+        require_once LLMS_MOBILE_APP_PATH . 'inc/class-favorites.php';
+        require_once LLMS_MOBILE_APP_PATH . 'inc/class-quiz-handler.php';
+        require_once LLMS_MOBILE_APP_PATH . 'inc/class-certificate-handler.php';
         
         // Helper functions
         require_once LLMS_MOBILE_APP_PATH . 'inc/functions.php';
