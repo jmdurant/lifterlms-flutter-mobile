@@ -385,10 +385,8 @@ class CourseDetailController extends GetxController implements GetxService {
       enrolledStudents.value = course.value?.enrollmentCount ?? 0;
       totalDuration.value = course.value?.length ?? 0;
       
-      // Parse HTML content to immediately show course structure
-      _parseCourseSyllabusFromHTML(course.value?.content);
-      
-      // Set cleaned content (without syllabus) for display
+      // Set cleaned content (without syllabus) for display only.
+      // Do NOT parse HTML to build curriculum; sections/lessons are loaded via REST on demand.
       cleanedContent.value = _removeSyllabusFromHTML(course.value?.content);
       
       update(); // Notify UI to rebuild
