@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "596368690318",
+    "project_id": "edumaflutternotification",
+    "storage_bucket": "edumaflutternotification.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:596368690318:android:bee63b393dc86383254ddf",
+        "android_client_info": {
+          "package_name": "com.edumaflutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-IqivVLFSYJr4FDGHYIre7r0hrrGk9yE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
