@@ -101,10 +101,10 @@ class _TabScreenState extends State<TabScreen>
                             selectedFontSize: 12,
                             unselectedFontSize: 12,
                             selectedLabelStyle: TextStyle(
-                              color: ThemeProvider.blackColor,
+                              color: Colors.black,
                             ),
                             unselectedLabelStyle: TextStyle(color: Colors.grey.shade400),
-                            selectedItemColor: ThemeProvider.blackColor,
+                            selectedItemColor: Colors.black,
                             unselectedItemColor: Colors.grey.shade400,
                             showUnselectedLabels: true,
                             elevation: 4,
@@ -117,7 +117,7 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 0
-                                        ? ThemeProvider.blackColor
+                                        ? Colors.black
                                         : Colors.grey.shade400,
                                   ),
                                 ),
@@ -134,7 +134,7 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 1
-                                        ? ThemeProvider.blackColor
+                                        ? Colors.black
                                         : Colors.grey.shade400,
                                   ),
                                 ),
@@ -151,7 +151,7 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 2
-                                        ? ThemeProvider.blackColor
+                                        ? Colors.black
                                         : Colors.grey.shade400,
                                   ),
                                 ),
@@ -168,7 +168,7 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 3
-                                        ? ThemeProvider.blackColor
+                                        ? Colors.black
                                         : Colors.grey.shade400,
                                   ),
                                 ),
@@ -185,7 +185,7 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 4
-                                        ? ThemeProvider.blackColor
+                                        ? Colors.black
                                         : Colors.grey.shade400,
                                   ),
                                 ),
@@ -214,7 +214,7 @@ class _TabScreenState extends State<TabScreen>
 
   Widget bottomHeightLight(){
       return Divider(
-        color: ThemeProvider.appColor,
+        color: Colors.blue,
         height: 3,
         thickness: 3,
         indent: 20+(controller.tabId)*(screenWidth/5),

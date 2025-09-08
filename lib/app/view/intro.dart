@@ -24,7 +24,7 @@ class _IntroScreenState extends State<IntroScreen> {
     return GetBuilder<IntroController>(builder: (value) {
       return Container(
         decoration: const BoxDecoration(
-          color: ThemeProvider.whiteColor,
+          color: Colors.white,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -37,7 +37,7 @@ class _IntroScreenState extends State<IntroScreen> {
                   child: Text(
                     'Previous'.tr,
                     style: const TextStyle(
-                        fontFamily: 'bold', color: ThemeProvider.blackColor),
+                        fontFamily: 'bold', color: Colors.black),
                   ),
                 ),
               ),

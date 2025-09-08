@@ -129,7 +129,7 @@ class _MultiLanguageState extends State<MultiLanguage> {
                                           true)
                                         Icon(
                                           Ionicons.checkmark_circle,
-                                          color: ThemeProvider.appColor,
+                                          color: Colors.blue,
                                         )
                                     ],
                                   ),

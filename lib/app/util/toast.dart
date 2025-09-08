@@ -48,7 +48,7 @@ Future<bool> clearCartAlert() async {
                 child: const Text(
                   'Cancel',
                   style: TextStyle(
-                      color: ThemeProvider.blackColor, fontFamily: 'medium'),
+                      color: Colors.black, fontFamily: 'medium'),
                 ),
               ),
               TextButton(
@@ -59,7 +59,7 @@ Future<bool> clearCartAlert() async {
                 child: const Text(
                   'Clear Cart',
                   style: TextStyle(
-                      color: ThemeProvider.appColor, fontFamily: 'bold'),
+                      color: Colors.blue, fontFamily: 'bold'),
                 ),
               )
             ],

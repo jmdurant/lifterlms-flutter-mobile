@@ -135,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Text(
                 Environments.appName,
                 style: TextStyle(
-                    color: ThemeProvider.whiteColor, fontFamily: 'bold'),
+                    color: Colors.white, fontFamily: 'bold'),
               ),
             ), //CircularAvatar
           ),
@@ -143,7 +143,7 @@ class _SplashScreenState extends State<SplashScreen> {
             bottom: 50,
             child: Center(
               child: CircularProgressIndicator(
-                color: ThemeProvider.whiteColor,
+                color: Colors.white,
               ),
             ), //CircularAvatar
           ),
@@ -153,7 +153,7 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Text(
                 'Developed By '.tr + Environments.companyName,
                 style: const TextStyle(
-                    color: ThemeProvider.whiteColor, fontFamily: 'bold'),
+                    color: Colors.white, fontFamily: 'bold'),
               ),
             ),
           ),

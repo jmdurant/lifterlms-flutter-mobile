@@ -247,7 +247,7 @@ class Page3 extends StatelessWidget {
     return Container(
       child: const Text(
         "page 3",
-        style: TextStyle(fontFamily: 'bold', color: ThemeProvider.blackColor),
+        style: TextStyle(fontFamily: 'bold', color: Colors.black),
       ),
     );
   }
