@@ -102,87 +102,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
                   child: Column(
                     children: [
-                      GestureDetector(
-                        child: Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Feather.settings,size: 18,),
-                                SizedBox(width: 5,),
-                                Text(
-                                    tr(LocaleKeys.settings_general),
-                                    style: TextStyle(
-                                      fontFamily: 'medium',
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 16,
-                                    ))
-                              ],
-                            ),
-                            Icon(
-                              Ionicons.chevron_forward_outline,
-                              size: 18,
-                            )
-                          ],
-                        ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
                         onTap: () => Get.toNamed(AppRouter.general),
-                      ),
-                      SizedBox(height: 24,),
-                      GestureDetector(
-                        child: Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Feather.lock,size: 18,),
-                                SizedBox(width: 5,),
-                                Text(
-                                    tr(LocaleKeys.settings_password),
-                                    style: TextStyle(
-                                      fontFamily: 'medium',
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 16,
-                                    ))
-                              ],
-                            ),
-                            Icon(
-                              Ionicons.chevron_forward_outline,
-                              size: 18,
-                            )
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Feather.settings,size: 18,),
+                                  SizedBox(width: 5,),
+                                  Text(
+                                      tr(LocaleKeys.settings_general),
+                                      style: TextStyle(
+                                        fontFamily: 'medium',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 16,
+                                      ))
+                                ],
+                              ),
+                              Icon(
+                                Ionicons.chevron_forward_outline,
+                                size: 18,
+                              )
+                            ],
+                          ),
                         ),
+                      ),
+                      SizedBox(height: 8,),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
                         onTap: () => Get.toNamed(AppRouter.password),
-                      ),
-                      SizedBox(height: 24,),
-                      GestureDetector(
-                        child: Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Ionicons.language,size: 18,),
-                                SizedBox(width: 5,),
-                                Text(
-                                    tr(LocaleKeys.language),
-                                    style: TextStyle(
-                                      fontFamily: 'medium',
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 16,
-                                    ))
-                              ],
-                            ),
-                            Icon(
-                              Ionicons.chevron_forward_outline,
-                              size: 18,
-                            )
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Feather.lock,size: 18,),
+                                  SizedBox(width: 5,),
+                                  Text(
+                                      tr(LocaleKeys.settings_password),
+                                      style: TextStyle(
+                                        fontFamily: 'medium',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 16,
+                                      ))
+                                ],
+                              ),
+                              Icon(
+                                Ionicons.chevron_forward_outline,
+                                size: 18,
+                              )
+                            ],
+                          ),
                         ),
-                        onTap: () => Get.toNamed(AppRouter.language),
                       ),
-                      SizedBox(height: 24,),
+                      SizedBox(height: 8,),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => Get.toNamed(AppRouter.language),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Ionicons.language,size: 18,),
+                                  SizedBox(width: 5,),
+                                  Text(
+                                      tr(LocaleKeys.language),
+                                      style: TextStyle(
+                                        fontFamily: 'medium',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 16,
+                                      ))
+                                ],
+                              ),
+                              Icon(
+                                Ionicons.chevron_forward_outline,
+                                size: 18,
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 8,),
                       Obx(() => Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
