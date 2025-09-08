@@ -7,7 +7,7 @@ class AppTheme {
     primarySwatch: Colors.blue,
     primaryColor: Colors.blue,
     scaffoldBackgroundColor: Colors.white,
-    backgroundColor: Colors.white,
+    // backgroundColor: Colors.white, // deprecated
     cardColor: Colors.white,
     dividerColor: Colors.grey[300],
     
@@ -47,7 +47,7 @@ class AppTheme {
     ),
     
     // Card Theme
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -98,7 +98,7 @@ class AppTheme {
     primarySwatch: Colors.blue,
     primaryColor: Colors.blue,
     scaffoldBackgroundColor: const Color(0xFF121212),
-    backgroundColor: const Color(0xFF121212),
+    // backgroundColor: const Color(0xFF121212), // deprecated
     cardColor: const Color(0xFF1E1E1E),
     dividerColor: Colors.grey[800],
     
@@ -138,7 +138,7 @@ class AppTheme {
     ),
     
     // Card Theme
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: const Color(0xFF1E1E1E),
       elevation: 4,
       shape: RoundedRectangleBorder(

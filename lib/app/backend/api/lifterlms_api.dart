@@ -58,6 +58,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
   
   // GET Course Categories (WordPress taxonomy)
+  @override
   Future<Response> getCategories({Map<String, dynamic>? params}) async {
     final queryParams = params ?? {};
     final queryString = Uri(queryParameters: queryParams.map((key, value) => MapEntry(key, value.toString()))).query;
@@ -75,6 +76,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
 
   // GET WordPress Media
+  @override
   Future<Response> getMedia({required int mediaId}) async {
     final url = Uri.parse('$appBaseUrl/wp-json/wp/v2/media/$mediaId');
     
@@ -105,6 +107,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
 
   // GET Courses
+  @override
   Future<Response> getCourses({Map<String, dynamic>? params}) async {
     final queryString = params != null ? "?${Uri(queryParameters: params).query}" : "";
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/courses$queryString');
@@ -210,6 +213,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
 
   // GET Student by ID
+  @override
   Future<Response> getStudent({int? studentId}) async {
     if (studentId == null) {
       // Get current user
@@ -230,6 +234,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
 
   // GET Student Enrollments
+  @override
   Future<Response> getStudentEnrollments({required int studentId}) async {
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/students/$studentId/enrollments');
     
@@ -325,6 +330,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
 
   // GET Instructors
+  @override
   Future<Response> getInstructors({Map<String, dynamic>? params}) async {
     final queryString = params != null ? "?${Uri(queryParameters: params).query}" : "";
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/instructors$queryString');
@@ -342,6 +348,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
   
   // GET WordPress Users  
+  @override
   Future<Response> getUsers({Map<String, dynamic>? params}) async {
     final queryString = params != null ? "?${Uri(queryParameters: params).query}" : "";
     final url = Uri.parse('$appBaseUrl/wp-json/wp/v2/users$queryString');
@@ -359,6 +366,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   }
 
   // GET Memberships
+  @override
   Future<Response> getMemberships({Map<String, dynamic>? params}) async {
     final queryString = params != null ? "?${Uri(queryParameters: params).query}" : "";
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/memberships$queryString');
