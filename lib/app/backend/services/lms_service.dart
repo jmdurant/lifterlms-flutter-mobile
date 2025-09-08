@@ -13,6 +13,8 @@ class LMSService extends GetxService {
   
   late LMSApiInterface _api;
   late SharedPreferences _prefs;
+  // Repositories
+  CourseRepository? _courses;
   
   // Configuration
   String _baseUrl = '';
@@ -276,7 +278,6 @@ class CourseRepository {
 
 extension LMSServiceRepositories on LMSService {
   CourseRepository get courses => _courses ??= CourseRepository(this);
-  CourseRepository? _courses;
 
   // Plugin endpoint wrappers (certificates, devices)
   ApiService get _apiService => Get.find<ApiService>();
