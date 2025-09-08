@@ -405,6 +405,25 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 );
               }),
             ),
+            // Auto-advance toggle
+            Obx(() => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Auto-advance lessons',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  Switch(
+                    value: controller.autoAdvanceEnabled.value,
+                    onChanged: (_) => controller.toggleAutoAdvance(),
+                    activeColor: Colors.green,
+                  ),
+                ],
+              ),
+            )),
+            const Divider(thickness: 1),
             // Progress indicator
             Obx(() => Container(
               padding: const EdgeInsets.all(16),
