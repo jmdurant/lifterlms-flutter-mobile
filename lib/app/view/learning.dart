@@ -19,10 +19,11 @@ class LearningScreen extends StatefulWidget {
   State<LearningScreen> createState() => _LearningScreenState();
 }
 
-class _LearningScreenState extends State<LearningScreen> {
+class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   YoutubePlayerController? _youtubeController;
   String? _vimeoVideoId;
+  int? _currentLessonId;
   
   var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
   var screenHeight = (window.physicalSize.longestSide / window.devicePixelRatio);
@@ -30,12 +31,33 @@ class _LearningScreenState extends State<LearningScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Ensure controller picks up current route args when screen is created
+    try {
+      final controller = Get.find<LearningController>();
+      controller.initializeFromArguments();
+    } catch (_) {}
   }
   
   @override
   void dispose() {
+    try { _youtubeController?.pause(); } catch (_) {}
+    WidgetsBinding.instance.removeObserver(this);
     _youtubeController?.dispose();
     super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    try { _youtubeController?.pause(); } catch (_) {}
+    super.deactivate();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      try { _youtubeController?.pause(); } catch (_) {}
+    }
   }
   
   String? _extractYoutubeId(String content) {
@@ -90,42 +112,61 @@ class _LearningScreenState extends State<LearningScreen> {
   
   void _initializeVideoPlayer(String? videoEmbed) {
     if (videoEmbed == null || videoEmbed.isEmpty) {
-      _youtubeController?.dispose();
-      _youtubeController = null;
-      _vimeoVideoId = null;
+      if (mounted) {
+        setState(() {
+          _youtubeController?.dispose();
+          _youtubeController = null;
+          _vimeoVideoId = null;
+        });
+      }
       return;
     }
     
     // Try YouTube first
     final youtubeId = _extractYoutubeId(videoEmbed);
     if (youtubeId != null) {
-      _vimeoVideoId = null; // Clear Vimeo
-      _youtubeController?.dispose();
-      _youtubeController = YoutubePlayerController(
-        initialVideoId: youtubeId,
-        flags: const YoutubePlayerFlags(
-          autoPlay: false,
-          mute: false,
-          disableDragSeek: false,
-          enableCaption: true,
-        ),
-      );
+      print('Learning - Initializing YouTube player with ID: $youtubeId');
+      if (mounted) {
+        setState(() {
+          _vimeoVideoId = null; // Clear Vimeo
+          _youtubeController?.dispose();
+          _youtubeController = YoutubePlayerController(
+            initialVideoId: youtubeId,
+            flags: const YoutubePlayerFlags(
+              autoPlay: false,
+              mute: false,
+              disableDragSeek: false,
+              enableCaption: true,
+            ),
+          );
+        });
+      }
       return;
     }
     
     // Try Vimeo
     final vimeoId = _extractVimeoId(videoEmbed);
     if (vimeoId != null) {
-      _youtubeController?.dispose();
-      _youtubeController = null; // Clear YouTube
-      _vimeoVideoId = vimeoId;
+      print('Learning - Initializing Vimeo player with ID: $vimeoId');
+      if (mounted) {
+        setState(() {
+          _youtubeController?.dispose();
+          _youtubeController = null; // Clear YouTube
+          _vimeoVideoId = vimeoId;
+        });
+      }
       return;
     }
     
     // No supported video found
-    _youtubeController?.dispose();
-    _youtubeController = null;
-    _vimeoVideoId = null;
+    print('Learning - No supported video found in embed');
+    if (mounted) {
+      setState(() {
+        _youtubeController?.dispose();
+        _youtubeController = null;
+        _vimeoVideoId = null;
+      });
+    }
   }
 
   @override
@@ -392,12 +433,20 @@ class _LearningScreenState extends State<LearningScreen> {
     final lesson = controller.currentLesson.value!;
     
     // Initialize video player when lesson changes
-    if (lesson.videoEmbed != null && lesson.videoEmbed!.isNotEmpty) {
-      _initializeVideoPlayer(lesson.videoEmbed);
-    } else {
-      _youtubeController?.dispose();
-      _youtubeController = null;
-      _vimeoVideoId = null;
+    if (_currentLessonId != lesson.id) {
+      _currentLessonId = lesson.id;
+      if (lesson.videoEmbed != null && lesson.videoEmbed!.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _initializeVideoPlayer(lesson.videoEmbed);
+            setState(() {});
+          }
+        });
+      } else {
+        _youtubeController?.dispose();
+        _youtubeController = null;
+        _vimeoVideoId = null;
+      }
     }
     
     return RefreshIndicator(
@@ -575,48 +624,22 @@ class _LearningScreenState extends State<LearningScreen> {
           }),
           const SizedBox(height: 32),
           Center(
-            child: ElevatedButton(
-              onPressed: () async {
-                print('Start Learning button pressed');
-                print('Sections count: ${controller.sections.length}');
-                
-                // If sections are not loaded, load them first
-                if (controller.sections.isEmpty) {
-                  print('Sections not loaded, loading now...');
-                  await controller.loadCourseSectionsOnly();
-                  print('After loading - Sections count: ${controller.sections.length}');
-                }
-                
-                // Load first section's lessons if available
-                if (controller.sections.isNotEmpty && controller.sections[0].id != null) {
-                  await controller.loadSectionOnDemand(controller.sections[0].id!);
-                }
-                
-                // Start with first lesson
-                if (controller.sections.isNotEmpty && 
-                    controller.sections.first.lessons.isNotEmpty) {
-                  print('First section: ${controller.sections.first.title}');
-                  print('First section has ${controller.sections.first.lessons.length} lessons');
-                  print('Loading lesson ID: ${controller.sections.first.lessons.first.id}');
-                  controller.loadLesson(controller.sections.first.lessons.first.id);
-                } else {
-                  print('No sections or lessons available');
-                  if (controller.sections.isEmpty) {
-                    print('Sections list is still empty after loading');
-                  } else if (controller.sections.first.lessons.isEmpty) {
-                    print('First section "${controller.sections.first.title}" has no lessons');
-                  }
-                }
-              },
+            child: Obx(() => ElevatedButton.icon(
+              onPressed: () => controller.startOrResumeLearning(),
+              icon: Icon(controller.completedLessons.value > 0 
+                  ? Icons.play_arrow 
+                  : Icons.play_circle_outline),
+              label: Text(
+                controller.completedLessons.value > 0 
+                    ? 'Resume Learning' 
+                    : 'Start Course',
+                style: const TextStyle(fontSize: 16),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
-              child: const Text(
-                'Start Learning',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
+            )),
           ),
         ],
       ),
@@ -624,61 +647,135 @@ class _LearningScreenState extends State<LearningScreen> {
   }
   
   Widget _buildNavigationBar(LearningController controller) {
-    return Obx(() => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, -2),
+    return Obx(() {
+      // Special case: if on overview, show different navigation
+      if (controller.currentLesson.value == null) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ElevatedButton.icon(
-            onPressed: controller.canNavigatePrevious.value 
-                ? () => controller.navigateToPreviousLesson()
-                : null,
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Previous'),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: controller.canNavigatePrevious.value 
-                  ? Colors.white 
-                  : Colors.grey,
-              backgroundColor: controller.canNavigatePrevious.value 
-                  ? Theme.of(context).primaryColor 
-                  : Colors.grey[300],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Empty space or back button
+              const SizedBox(width: 100),
+              Text(
+                '${controller.courseProgress.value.toStringAsFixed(0)}% Complete',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              // Start/Resume button
+              ElevatedButton.icon(
+                onPressed: () => controller.startOrResumeLearning(),
+                label: Text(
+                  controller.completedLessons.value > 0 
+                      ? 'Resume' 
+                      : 'Start',
+                ),
+                icon: Icon(
+                  controller.completedLessons.value > 0 
+                      ? Icons.play_arrow 
+                      : Icons.play_circle_outline,
+                ),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).primaryColor,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      
+      // Normal navigation for lessons
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, -2),
             ),
-          ),
-          Text(
-            '${controller.courseProgress.value.toStringAsFixed(0)}% Complete',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Show "Back to Overview" for first lesson, otherwise "Previous"
+            controller.isFirstLesson.value
+                ? ElevatedButton.icon(
+                    onPressed: () => controller.backToOverview(),
+                    icon: const Icon(Icons.home),
+                    label: const Text('Overview'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).primaryColor,
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: controller.canNavigatePrevious.value 
+                        ? () => controller.navigateToPreviousLesson()
+                        : null,
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Previous'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: controller.canNavigatePrevious.value 
+                          ? Colors.white 
+                          : Colors.grey,
+                      backgroundColor: controller.canNavigatePrevious.value 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey[300],
+                    ),
+                  ),
+            Text(
+              '${controller.courseProgress.value.toStringAsFixed(0)}% Complete',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          ElevatedButton.icon(
-            onPressed: controller.canNavigateNext.value 
-                ? () => controller.navigateToNextLesson()
-                : null,
-            label: const Text('Next'),
-            icon: const Icon(Icons.arrow_forward),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: controller.canNavigateNext.value 
-                  ? Colors.white 
-                  : Colors.grey,
-              backgroundColor: controller.canNavigateNext.value 
-                  ? Theme.of(context).primaryColor 
-                  : Colors.grey[300],
-            ),
-          ),
-        ],
-      ),
-    ));
+            // Show "Back to Overview" for last lesson, otherwise "Next"
+            controller.isLastLesson.value
+                ? ElevatedButton.icon(
+                    onPressed: () => controller.backToOverview(),
+                    label: const Text('Overview'),
+                    icon: const Icon(Icons.home),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).primaryColor,
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: controller.canNavigateNext.value 
+                        ? () => controller.navigateToNextLesson()
+                        : null,
+                    label: const Text('Next'),
+                    icon: const Icon(Icons.arrow_forward),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: controller.canNavigateNext.value 
+                          ? Colors.white 
+                          : Colors.grey,
+                      backgroundColor: controller.canNavigateNext.value 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey[300],
+                    ),
+                  ),
+          ],
+        ),
+      );
+    });
   }
 }
 
