@@ -38,7 +38,7 @@ class _AccordionState extends State<AccordionLesson> {
                   (index) => AccordionItemLesson(
                     item: widget.data[index],
                       onNavigate: (item) => {
-                        value.onNavigateLearning(item,index),
+                        value.onNavigateLearning(item),
                         _scaffoldKey.currentState?.closeDrawer()
                       },
                     showContent: widget.indexLesson==index,

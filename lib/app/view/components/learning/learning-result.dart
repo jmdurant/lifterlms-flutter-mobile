@@ -206,7 +206,7 @@ class LearningResult extends WatchingWidget {
                                     data.results!.retaken! >
                                 0))))
                       ElevatedButton(
-                          onPressed: () => {value.onStartQuiz()},
+                          onPressed: () => {value.onStartQuiz(data.id ?? 0)},
                           style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFF46647),
                               padding:

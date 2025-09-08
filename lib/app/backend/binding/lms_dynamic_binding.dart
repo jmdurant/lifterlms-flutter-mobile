@@ -48,4 +48,26 @@ class LMSDynamicBinding extends Bindings {
     // Payment
     Get.lazyPut(() => PaymentController());
   }
+  
+  /// Static method to reload controllers when switching platforms
+  static void reloadControllers() {
+    // Delete existing controller instances
+    Get.delete<HomeController>(force: true);
+    Get.delete<CoursesController>(force: true);
+    Get.delete<CourseDetailController>(force: true);
+    Get.delete<LearningController>(force: true);
+    Get.delete<WishlistController>(force: true);
+    Get.delete<MyCoursesController>(force: true);
+    Get.delete<LoginController>(force: true);
+    Get.delete<RegisterController>(force: true);
+    Get.delete<SearchCourseController>(force: true);
+    Get.delete<InstructorDetailController>(force: true);
+    Get.delete<ProfileController>(force: true);
+    Get.delete<MyProfileController>(force: true);
+    Get.delete<PaymentController>(force: true);
+    
+    // Re-create the binding
+    final binding = LMSDynamicBinding();
+    binding.dependencies();
+  }
 }

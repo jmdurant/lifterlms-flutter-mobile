@@ -133,7 +133,7 @@ class LearningAssignmentStart extends WatchingWidget {
                       children: [
                         ElevatedButton(
                             onPressed: () {
-                              value.onStartAssignment(itemLesson.id.toString());
+                              value.onStartAssignment(itemLesson.id ?? 0);
                             },
                             style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.yellow.shade800,
