@@ -307,12 +307,16 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     }
   }
 
-  // UPDATE Student Progress
+  // UPDATE Student Progress - Note: Uses POST method, not PATCH!
   Future<Response> updateStudentProgress(int studentId, int postId, String status) async {
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/students/$studentId/progress/$postId');
     
+    print('LifterlmsAPI.updateStudentProgress - URL: $url');
+    print('LifterlmsAPI.updateStudentProgress - Method: POST (not PATCH!)');
+    print('LifterlmsAPI.updateStudentProgress - Status: $status');
+    
     try {
-      final response = await http.patch(
+      final response = await http.post(  // Changed from PATCH to POST!
         url,
         headers: {
           'Authorization': _getAuthHeader(),
@@ -325,8 +329,55 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
+      print('LifterlmsAPI.updateStudentProgress - ERROR: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
+  }
+  
+  // Complete a lesson
+  Future<Response> completeLesson({required int lessonId, required int userId}) async {
+    print('LifterlmsAPI.completeLesson - Marking lesson $lessonId complete for user $userId');
+    // Use the updateStudentProgress method with 'complete' status
+    return updateStudentProgress(userId, lessonId, 'complete');
+  }
+  
+  // Get quiz details
+  Future<Response> getQuiz({required int quizId}) async {
+    // Note: Quiz endpoints are not yet implemented in LifterLMS REST API
+    // This is a placeholder that returns 501 Not Implemented
+    print('LifterlmsAPI.getQuiz - Quiz ID: $quizId');
+    print('LifterlmsAPI.getQuiz - Quiz API not yet implemented in LifterLMS REST');
+    
+    // For now, return a 501 to indicate not implemented
+    return const Response(
+      statusCode: 501,
+      statusText: 'Quiz API endpoints are not yet available in LifterLMS REST API',
+      body: {
+        'message': 'Quiz functionality coming soon',
+        'info': 'The LifterLMS REST API does not yet include quiz endpoints. This feature is planned for a future release.'
+      }
+    );
+    
+    // When available, the endpoint would be:
+    // final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/quizzes/$quizId');
+  }
+  
+  // Submit quiz attempt
+  Future<Response> submitQuizAttempt({
+    required int quizId, 
+    required int userId,
+    required Map<String, dynamic> answers,
+  }) async {
+    print('LifterlmsAPI.submitQuizAttempt - Quiz: $quizId, User: $userId');
+    
+    // Placeholder for future implementation
+    return const Response(
+      statusCode: 501,
+      statusText: 'Quiz submission not yet available',
+      body: {
+        'message': 'Quiz submission coming soon',
+      }
+    );
   }
 
   // GET Instructors

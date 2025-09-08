@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
@@ -37,12 +39,15 @@ class LearningController extends GetxController implements GetxService {
   final RxBool isLoadingStructure = false.obs;
   final RxBool isCompletingLesson = false.obs;
   final RxBool isEnrolled = false.obs;
-  final RxInt selectedSectionIndex = 0.obs;
+  final RxInt selectedSectionIndex = (-1).obs; // -1 means no section is selected/expanded
   final RxInt selectedLessonIndex = 0.obs;
   
   // Navigation
   final RxBool canNavigatePrevious = false.obs;
   final RxBool canNavigateNext = false.obs;
+  final RxBool isFirstLesson = false.obs;
+  final RxBool isLastLesson = false.obs;
+  final RxBool autoAdvanceEnabled = true.obs; // Default to true, load from prefs
   
   // Error handling
   final RxString errorMessage = ''.obs;
@@ -60,29 +65,121 @@ class LearningController extends GetxController implements GetxService {
   @override
   void onInit() {
     super.onInit();
-    // Course ID will be set via arguments
+    // Load auto-advance preference
+    _loadAutoAdvancePreference();
+    // Initialize with arguments
+    initializeFromArguments();
+  }
+  
+  /// Load auto-advance preference from SharedPreferences
+  Future<void> _loadAutoAdvancePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      autoAdvanceEnabled.value = prefs.getBool('auto_advance_lessons') ?? true;
+      print('LearningController - Auto-advance enabled: ${autoAdvanceEnabled.value}');
+    } catch (e) {
+      print('Error loading auto-advance preference: $e');
+    }
+  }
+  
+  /// Toggle auto-advance setting and save to preferences
+  Future<void> toggleAutoAdvance() async {
+    autoAdvanceEnabled.value = !autoAdvanceEnabled.value;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('auto_advance_lessons', autoAdvanceEnabled.value);
+      showToast(autoAdvanceEnabled.value 
+        ? 'Auto-advance enabled' 
+        : 'Auto-advance disabled');
+    } catch (e) {
+      print('Error saving auto-advance preference: $e');
+    }
+  }
+  
+  /// Initialize controller from route arguments
+  void initializeFromArguments() {
     final args = Get.arguments;
     int? initialLessonId;
+    int? newCourseId;
+    bool shouldShowOverview = false;
+    
+    print('LearningController.initializeFromArguments - arguments: $args');
     
     if (args != null) {
       if (args is Map && args['id'] != null) {
-        courseId = args['id'];
+        newCourseId = args['id'];
         // Check if a specific lesson was requested
         if (args['lessonId'] != null) {
           initialLessonId = args['lessonId'];
         }
+        // Check if we should show overview (coming from CourseDetail)
+        if (args['showOverview'] == true) {
+          shouldShowOverview = true;
+        }
       } else if (args is int) {
-        courseId = args;
+        newCourseId = args;
       }
       
-      // Load course data first
-      loadCourseData().then((_) {
-        // If a specific lesson was requested, load it
-        if (initialLessonId != null) {
-          print('LearningController - Opening specific lesson: $initialLessonId');
-          loadLesson(initialLessonId);
-        }
-      });
+      // Only reload if it's a different course or we don't have a course yet
+      if (newCourseId != null && (newCourseId != courseId || currentCourse.value == null)) {
+        print('LearningController - Loading course $newCourseId (was: $courseId)');
+        courseId = newCourseId;
+        
+        // Clear previous state
+        currentCourse.value = null;
+        currentLesson.value = null;
+        currentQuiz.value = null;
+        currentAssignment.value = null;
+        sections.clear();
+        _lessonCache.clear();
+        _sectionLoadedStatus.clear();
+        lessonCompletionStatus.clear();
+        cleanedLessonContent.value = '';
+        
+        // Load course data first
+        loadCourseData().then((_) {
+          // If a specific lesson was requested, load it
+          if (initialLessonId != null) {
+            print('LearningController - Opening specific lesson: $initialLessonId');
+            loadLesson(initialLessonId);
+          } else if (!shouldShowOverview) {
+            // Only auto-load first lesson if NOT explicitly showing overview
+            // Schedule first lesson load AFTER the current build frame
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _loadFirstLessonIfNeeded();
+            });
+          } else {
+            print('LearningController - Showing course overview (no auto-advance)');
+          }
+        });
+      } else if (courseId == newCourseId && initialLessonId != null) {
+        // Same course but different lesson requested
+        print('LearningController - Loading lesson $initialLessonId in existing course');
+        loadLesson(initialLessonId);
+      }
+    }
+  }
+  
+  /// Load first lesson if no lesson is currently loaded
+  Future<void> _loadFirstLessonIfNeeded() async {
+    // Only load if we don't have a lesson yet
+    if (currentLesson.value != null) return;
+    
+    print('LearningController - No lesson loaded, loading first lesson');
+    
+    // Ensure sections are loaded
+    if (sections.isEmpty) {
+      await loadCourseSectionsOnly();
+    }
+    
+    // Load first section's lessons if needed
+    if (sections.isNotEmpty && sections[0].lessons.isEmpty) {
+      await loadSectionOnDemand(sections[0].id ?? 0);
+    }
+    
+    // Load the first lesson
+    if (sections.isNotEmpty && sections[0].lessons.isNotEmpty) {
+      await loadLesson(sections[0].lessons[0].id);
     }
   }
   
@@ -254,10 +351,8 @@ class LearningController extends GetxController implements GetxService {
         // Calculate total lessons from cached data
         totalLessons.value = sections.fold(0, (sum, s) => sum + s.lessons.length);
         
-        // If first section has lessons, load the first lesson
-        if (sections.isNotEmpty && sections[0].lessons.isNotEmpty) {
-          await loadLesson(sections[0].lessons[0].id);
-        }
+        // Don't automatically load first lesson - let user choose when to start
+        // The course overview will be shown by default
         
         return; // Exit early, we have cached data
       }
@@ -316,10 +411,8 @@ class LearningController extends GetxController implements GetxService {
           // Calculate lessons for first section
           totalLessons.value = sections[0].lessons.length;
           
-          // Load first lesson if available and not already loaded
-          if (sections[0].lessons.isNotEmpty && currentLesson.value == null) {
-            await loadLesson(sections[0].lessons[0].id);
-          }
+          // Don't automatically load first lesson - show course overview by default
+          // User can click "Start Learning" or select a specific lesson
         }
         
         // Load remaining sections in background (without blocking)
@@ -437,12 +530,16 @@ class LearningController extends GetxController implements GetxService {
         _lessonCache[lessonId] = lesson; // Cache it
         
         print('LearningController - Lesson loaded: ${lesson.title}');
+        print('LearningController - Lesson has quiz: ${lesson.hasQuiz}');
+        print('LearningController - Quiz ID: ${lesson.quizId}');
+        print('LearningController - Requires passing: ${lesson.requiresPassing}');
         
         // Update navigation states
         updateNavigationStates();
         
         // Load quiz/assignment in background if needed
         if (lesson.hasQuiz && lesson.quizId != null) {
+          print('LearningController - Loading quiz ${lesson.quizId}');
           loadQuiz(lesson.quizId!); // Don't await
         }
         
@@ -499,17 +596,29 @@ class LearningController extends GetxController implements GetxService {
   
   /// Load quiz (if available)
   Future<void> loadQuiz(int quizId) async {
+    print('LearningController.loadQuiz - Attempting to load quiz $quizId');
     try {
       final response = await lmsService.api.getQuiz(quizId: quizId);
       
+      print('LearningController.loadQuiz - Response status: ${response.statusCode}');
+      
       if (response.statusCode == 200) {
         currentQuiz.value = LLMSQuizModel.fromJson(response.body);
+        print('LearningController.loadQuiz - Quiz loaded successfully: ${currentQuiz.value?.title}');
       } else if (response.statusCode == 501) {
         // Quiz API not yet available
-        print('Quiz API not yet implemented');
+        print('LearningController.loadQuiz - Quiz API not yet implemented in LifterLMS REST');
+        print('LearningController.loadQuiz - Response: ${response.body}');
+        
+        // For now, clear the quiz so UI doesn't try to show it
+        currentQuiz.value = null;
+      } else {
+        print('LearningController.loadQuiz - Unexpected response: ${response.statusCode}');
+        currentQuiz.value = null;
       }
     } catch (e) {
-      print('Error loading quiz: $e');
+      print('LearningController.loadQuiz - Error: $e');
+      currentQuiz.value = null;
     }
   }
   
@@ -531,16 +640,32 @@ class LearningController extends GetxController implements GetxService {
   
   /// Complete current lesson
   Future<void> completeLesson() async {
-    if (currentLesson.value == null || !lmsService.isLoggedIn) return;
+    if (currentLesson.value == null) {
+      print('ERROR: No current lesson to complete');
+      return;
+    }
+    
+    if (!lmsService.isLoggedIn) {
+      print('ERROR: User not logged in, cannot complete lesson');
+      showToast('Please log in to mark lessons complete', isError: true);
+      return;
+    }
+    
+    final lessonId = currentLesson.value!.id;
+    print('LearningController.completeLesson - Marking lesson $lessonId as complete');
     
     try {
       isCompletingLesson.value = true;
       
-      final response = await lmsService.completeLesson(currentLesson.value!.id);
+      print('LearningController.completeLesson - Calling API...');
+      final response = await lmsService.completeLesson(lessonId);
       
-      if (response.statusCode == 200 || response.statusCode == 204) {
+      print('LearningController.completeLesson - Response: ${response.statusCode} - ${response.statusText}');
+      print('LearningController.completeLesson - Response body: ${response.body}');
+      
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
         // Update completion status
-        lessonCompletionStatus[currentLesson.value!.id] = true;
+        lessonCompletionStatus[lessonId] = true;
         completedLessons.value++;
         
         // Update progress
@@ -548,17 +673,28 @@ class LearningController extends GetxController implements GetxService {
           courseProgress.value = (completedLessons.value / totalLessons.value) * 100;
         }
         
-        showToast('Lesson completed!');
+        print('LearningController.completeLesson - Success! Progress: ${courseProgress.value}%');
+        // Don't show toast - button will change to show completed status
         
-        // Auto-navigate to next lesson if available
-        if (canNavigateNext.value) {
+        // Give user time to see the "Completed" button state (2 seconds)
+        await Future.delayed(const Duration(seconds: 2));
+        
+        // Auto-navigate to next lesson if enabled and available
+        if (autoAdvanceEnabled.value && canNavigateNext.value) {
+          print('LearningController.completeLesson - Auto-advancing to next lesson');
           await navigateToNextLesson();
         } else if (courseProgress.value >= 100) {
           // Course completed
           showCourseCompletionDialog();
+        } else if (!autoAdvanceEnabled.value && canNavigateNext.value) {
+          print('LearningController.completeLesson - Auto-advance disabled, staying on current lesson');
         }
+      } else {
+        print('LearningController.completeLesson - Failed with status: ${response.statusCode}');
+        showToast('Failed to mark lesson complete', isError: true);
       }
     } catch (e) {
+      print('LearningController.completeLesson - ERROR: $e');
       showToast('Error completing lesson', isError: true);
     } finally {
       isCompletingLesson.value = false;
@@ -572,18 +708,93 @@ class LearningController extends GetxController implements GetxService {
     // Find previous lesson
     final previousLesson = findPreviousLesson();
     if (previousLesson != null) {
-      await loadLesson(previousLesson.id);
+      // Check if this is a placeholder for loading previous section
+      if (previousLesson.id == -2 && previousLesson.sectionId != null) {
+        print('LearningController - Loading previous section lessons');
+        // Load the previous section's lessons first
+        await loadSectionOnDemand(previousLesson.sectionId!);
+        
+        // Now find the actual previous lesson again
+        final actualPreviousLesson = findPreviousLesson();
+        if (actualPreviousLesson != null && actualPreviousLesson.id != -2) {
+          await loadLesson(actualPreviousLesson.id);
+        }
+      } else {
+        await loadLesson(previousLesson.id);
+      }
     }
+  }
+  
+  /// Navigate back to course overview
+  void backToOverview() {
+    print('LearningController - Going back to course overview');
+    // Clear current lesson to show overview
+    currentLesson.value = null;
+    currentQuiz.value = null;
+    currentAssignment.value = null;
+    cleanedLessonContent.value = '';
+    selectedSectionIndex.value = -1; // Reset section selection
+    updateNavigationStates();
   }
   
   /// Navigate to next lesson
   Future<void> navigateToNextLesson() async {
+    // Special case: if we're on the overview (no current lesson), start/resume learning
+    if (currentLesson.value == null) {
+      await startOrResumeLearning();
+      return;
+    }
+    
     if (!canNavigateNext.value) return;
     
     // Find next lesson
     final nextLesson = findNextLesson();
     if (nextLesson != null) {
-      await loadLesson(nextLesson.id);
+      // Check if this is a placeholder for loading next section
+      if (nextLesson.id == -1 && nextLesson.sectionId != null) {
+        print('LearningController - Loading next section lessons');
+        // Load the next section's lessons first
+        await loadSectionOnDemand(nextLesson.sectionId!);
+        
+        // Now find the actual next lesson again
+        final actualNextLesson = findNextLesson();
+        if (actualNextLesson != null && actualNextLesson.id != -1) {
+          await loadLesson(actualNextLesson.id);
+        }
+      } else {
+        await loadLesson(nextLesson.id);
+      }
+    }
+  }
+  
+  /// Start or resume learning from overview
+  Future<void> startOrResumeLearning() async {
+    print('LearningController - Starting/resuming learning from overview');
+    
+    // Ensure sections are loaded
+    if (sections.isEmpty) {
+      await loadCourseSectionsOnly();
+    }
+    
+    // Find first incomplete lesson or start from beginning
+    for (var section in sections) {
+      if (section.lessons.isEmpty) {
+        await loadSectionOnDemand(section.id ?? 0);
+      }
+      for (var lesson in section.lessons) {
+        if (!(lessonCompletionStatus[lesson.id] ?? false)) {
+          // Found an incomplete lesson, load it
+          print('LearningController - Resuming at incomplete lesson: ${lesson.id}');
+          await loadLesson(lesson.id);
+          return;
+        }
+      }
+    }
+    
+    // If all lessons are complete or no progress, start from beginning
+    if (sections.isNotEmpty && sections.first.lessons.isNotEmpty) {
+      print('LearningController - Starting from first lesson');
+      await loadLesson(sections.first.lessons.first.id);
     }
   }
   
@@ -604,6 +815,43 @@ class LearningController extends GetxController implements GetxService {
             final previousSection = sections[i - 1];
             if (previousSection.lessons.isNotEmpty) {
               return previousSection.lessons.last;
+            }
+            // If previous section exists but has no lessons loaded
+            if (previousSection.id != null) {
+              // Return a placeholder to indicate navigation is possible
+              return LLMSLessonModel(
+                id: -2, // Special ID to indicate "load previous section"
+                title: "Previous Section",
+                content: "",
+                excerpt: "",
+                permalink: "",
+                slug: "",
+                status: "",
+                courseId: courseId,
+                sectionId: previousSection.id,
+                order: 0,
+                parentId: null,
+                postType: "lesson",
+                drippingEnabled: false,
+                dripDays: 0,
+                dripDate: null,
+                dripMethod: null,
+                publicPreview: false,
+                points: 0,
+                hasQuiz: false,
+                quizId: null,
+                requiresPassing: false,
+                requiresAssignment: false,
+                assignmentId: null,
+                videoEmbed: null,
+                audioEmbed: null,
+                videoSrc: null,
+                audioSrc: null,
+                freeLesson: false,
+                isComplete: false,
+                completedDate: null,
+                progressPercentage: null,
+              );
             }
           }
           return null;
@@ -628,8 +876,47 @@ class LearningController extends GetxController implements GetxService {
           // Check next section
           if (i < sections.length - 1) {
             final nextSection = sections[i + 1];
+            // If next section has lessons, return the first one
             if (nextSection.lessons.isNotEmpty) {
               return nextSection.lessons.first;
+            }
+            // If next section has no lessons loaded but exists, we still have a next lesson
+            // Return a placeholder to indicate navigation is possible
+            if (nextSection.id != null) {
+              // We'll load the lessons when navigating
+              return LLMSLessonModel(
+                id: -1, // Special ID to indicate "load next section"
+                title: "Next Section",
+                content: "",
+                excerpt: "",
+                permalink: "",
+                slug: "",
+                status: "",
+                courseId: courseId,
+                sectionId: nextSection.id,
+                order: 0,
+                parentId: null,
+                postType: "lesson",
+                drippingEnabled: false,
+                dripDays: 0,
+                dripDate: null,
+                dripMethod: null,
+                publicPreview: false,
+                points: 0,
+                hasQuiz: false,
+                quizId: null,
+                requiresPassing: false,
+                requiresAssignment: false,
+                assignmentId: null,
+                videoEmbed: null,
+                audioEmbed: null,
+                videoSrc: null,
+                audioSrc: null,
+                freeLesson: false,
+                isComplete: false,
+                completedDate: null,
+                progressPercentage: null,
+              );
             }
           }
           return null;
@@ -643,6 +930,24 @@ class LearningController extends GetxController implements GetxService {
   void updateNavigationStates() {
     canNavigatePrevious.value = findPreviousLesson() != null;
     canNavigateNext.value = findNextLesson() != null;
+    
+    // Check if this is the first lesson of the first section
+    isFirstLesson.value = false;
+    if (currentLesson.value != null && sections.isNotEmpty && sections[0].lessons.isNotEmpty) {
+      isFirstLesson.value = currentLesson.value!.id == sections[0].lessons[0].id;
+    }
+    
+    // Check if this is the last lesson of the last section
+    isLastLesson.value = false;
+    if (currentLesson.value != null && sections.isNotEmpty) {
+      final lastSection = sections.last;
+      if (lastSection.lessons.isNotEmpty) {
+        isLastLesson.value = currentLesson.value!.id == lastSection.lessons.last.id;
+      }
+    }
+    
+    // Don't auto-expand sections - let user control expansion manually
+    // Keep selectedSectionIndex at -1 to keep all sections collapsed
   }
   
   /// Select lesson from sidebar

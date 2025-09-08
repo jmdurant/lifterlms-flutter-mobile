@@ -67,6 +67,13 @@ class CourseDetailController extends GetxController implements GetxService {
     loadCourseFromArguments();
   }
   
+  @override
+  void onReady() {
+    super.onReady();
+    // Double-check arguments when ready in case they changed
+    loadCourseFromArguments();
+  }
+  
   /// Load course from navigation arguments
   void loadCourseFromArguments() {
     final args = Get.arguments;
@@ -643,10 +650,13 @@ class CourseDetailController extends GetxController implements GetxService {
         
         showToast('Successfully enrolled in course');
         
-        // Navigate to learning page
+        // Navigate to learning page with overview
         Get.toNamed(
           AppRouter.getLearning(),
-          arguments: {'id': courseId},
+          arguments: {
+            'id': courseId,
+            'showOverview': true,  // Show overview after enrollment
+          },
         );
       } else if (response.statusCode == 400) {
         // Already enrolled
@@ -654,10 +664,13 @@ class CourseDetailController extends GetxController implements GetxService {
         hasAccess.value = true;
         showToast('You are already enrolled in this course');
         
-        // Navigate to learning page
+        // Navigate to learning page with overview
         Get.toNamed(
           AppRouter.getLearning(),
-          arguments: {'id': courseId},
+          arguments: {
+            'id': courseId,
+            'showOverview': true,  // Show overview since already enrolled
+          },
         );
       } else {
         showToast(
@@ -706,12 +719,15 @@ class CourseDetailController extends GetxController implements GetxService {
     } else {
       print('CourseDetailController.startLearning - Already enrolled, navigating to learning page');
       print('CourseDetailController.startLearning - Route: ${AppRouter.getLearning()}');
-      print('CourseDetailController.startLearning - Arguments: {id: $courseId}');
+      print('CourseDetailController.startLearning - Arguments: {id: $courseId, showOverview: true}');
       
       try {
         Get.toNamed(
           AppRouter.getLearning(),
-          arguments: {'id': courseId},
+          arguments: {
+            'id': courseId,
+            'showOverview': true,  // Show overview instead of auto-advancing to first lesson
+          },
         );
         print('CourseDetailController.startLearning - Navigation successful');
       } catch (e) {
