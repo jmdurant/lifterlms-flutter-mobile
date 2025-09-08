@@ -182,6 +182,15 @@ class CourseDetailController extends GetxController implements GetxService {
       for (var element in favoriteElements) {
         element.remove();
       }
+
+      // Remove heavy embedded media from overview to improve initial load
+      // Users will see media inside lessons on the Learning page instead.
+      for (final tag in ['iframe', 'video', 'audio']) {
+        final nodes = document.getElementsByTagName(tag);
+        for (var n in nodes) {
+          n.remove();
+        }
+      }
       
       // Remove lesson meta elements (contains favorites and other metadata)
       final lessonMeta = document.querySelectorAll('.llms-lesson-meta');

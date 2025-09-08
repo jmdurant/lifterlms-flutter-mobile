@@ -4,9 +4,10 @@ import 'package:get/get.dart';
 class CourseDetailBinding extends Bindings {
   @override
   void dependencies() async {
-    Get.lazyPut<CourseDetailController>(
+    // Create a fresh instance per navigation to avoid stale course state
+    Get.create<CourseDetailController>(
       () => CourseDetailController(),
-      fenix: true
+      permanent: false,
     );
   }
 }

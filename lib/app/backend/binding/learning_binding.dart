@@ -4,9 +4,10 @@ import 'package:get/get.dart';
 class LearningBinding extends Bindings {
   @override
   void dependencies() async {
-    Get.lazyPut<LearningController>(
+    // Fresh controller per route visit for correct course context
+    Get.create<LearningController>(
       () => LearningController(),
-      fenix: true
+      permanent: false,
     );
   }
 }
