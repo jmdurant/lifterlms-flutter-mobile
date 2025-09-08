@@ -1,6 +1,6 @@
 class Environments {
-  static const String appName = 'Eduma';
-  static const String companyName = 'Phycodes';
+  static const String appName = 'LifterLMS';
+  static const String companyName = 'LifterLMS';
   static const String apiBaseURL = 'https://polite-tree.myliftersite.com/';
   static const String websiteURL = 'https://polite-tree.myliftersite.com/';
   static const String appVersion = '1.2.0';

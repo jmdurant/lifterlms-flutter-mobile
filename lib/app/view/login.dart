@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
 import 'package:flutter_app/app/controller/lifterlms/login_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
+import 'package:flutter_app/app/config/branding_config.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'dart:ui';
@@ -102,17 +103,7 @@ class _LoginPageState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    height: (98 / 375) * screenWidth,
-                    width: (73 / 375) * screenWidth,
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                          image: AssetImage(
-                            'assets/images/logo-school.png',
-                          ),
-                          fit: BoxFit.contain),
-                    ),
-                  ),
+                  BrandingConfig.getAuthLogo(screenWidth: screenWidth),
                   Center(
                     child: Text(
                       tr(LocaleKeys.loginScreen_title),

@@ -14,6 +14,7 @@ import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:indexed/indexed.dart';
+import 'package:flutter_app/app/config/branding_config.dart';
 import 'dart:io' show Platform;
 
 class HomeScreen extends WatchingStatefulWidget {
@@ -95,17 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(children: [
-                          Container(
-                            width: 115,
-                            height: 30,
-                            decoration: const BoxDecoration(
-                              image: DecorationImage(
-                                  image: AssetImage(
-                                    'assets/images/logo.png',
-                                  ),
-                                  fit: BoxFit.contain),
-                            ),
-                          ),
+                          BrandingConfig.getLogo(),
                         ]),
                         !value.lmsService.isLoggedIn
                             ? Row(

@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/register_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
+import 'package:flutter_app/app/config/branding_config.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 import 'package:get/route_manager.dart';
@@ -70,17 +71,7 @@ class _RegisterPageState extends State<RegisterScreen> {
                       SizedBox(
                         height: 100,
                       ),
-                      Container(
-                        height: (98 / 375) * screenWidth,
-                        width: (73 / 375) * screenWidth,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                              image: AssetImage(
-                                'assets/images/logo-school.png',
-                              ),
-                              fit: BoxFit.contain),
-                        ),
-                      ),
+                      BrandingConfig.getAuthLogo(screenWidth: screenWidth),
                        Center(
                         child: Text(
                           tr(LocaleKeys.registerScreen_title),
