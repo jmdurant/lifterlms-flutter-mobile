@@ -4,7 +4,6 @@ import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/util/theme.dart';
 import 'package:get/get.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:shimmer/shimmer.dart';
 
 class MyCertificatesScreen extends StatefulWidget {
   const MyCertificatesScreen({Key? key}) : super(key: key);
@@ -287,14 +286,11 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
   }
 
   Widget _buildLoadingCard() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
+    // Simple skeleton placeholder without external dependency
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }
@@ -344,7 +340,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
           ElevatedButton(
             onPressed: () => Get.offNamed(AppRouter.getCourses()),
             style: ElevatedButton.styleFrom(
-              backgroundColor: ThemeProvider.appColor,
+              backgroundColor: Theme.of(context).primaryColor,
               padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -392,7 +388,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
           ElevatedButton(
             onPressed: controller.refreshCertificates,
             style: ElevatedButton.styleFrom(
-              backgroundColor: ThemeProvider.appColor,
+              backgroundColor: Theme.of(context).primaryColor,
               padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

@@ -26,9 +26,16 @@ subprojects {
                 }
             }
         }
+        // Ensure Kotlin toolchain and JVM target are consistent across all modules
         if (project.hasProperty('kotlin')) {
             kotlin {
                 jvmToolchain(21)
+            }
+        }
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { task ->
+            task.kotlinOptions {
+                // Align Kotlin target with Java target 21 to avoid mismatch errors
+                jvmTarget = '21'
             }
         }
     }
@@ -45,4 +52,3 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-

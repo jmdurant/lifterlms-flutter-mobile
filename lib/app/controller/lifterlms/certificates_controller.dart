@@ -111,7 +111,8 @@ class CertificatesController extends GetxController implements GetxService {
       // Call the certificates API endpoint
       final response = await apiService.getPrivate(
         'wp-json/llms/v1/mobile-app/certificates',
-        queryParameters: {
+        lmsService.currentUserToken ?? '',
+        {
           'page': currentPage.value.toString(),
           'limit': perPage.toString(),
         },
@@ -186,6 +187,8 @@ class CertificatesController extends GetxController implements GetxService {
       // Get download URL from API
       final response = await apiService.getPrivate(
         'wp-json/llms/v1/mobile-app/certificate/${certificate.id}/download',
+        lmsService.currentUserToken ?? '',
+        null,
       );
       
       DialogHelper.hideLoading();
@@ -223,6 +226,7 @@ class CertificatesController extends GetxController implements GetxService {
       final response = await apiService.postPrivate(
         'wp-json/llms/v1/mobile-app/certificate/${certificate.id}/share',
         {'method': 'link'},
+        lmsService.currentUserToken ?? '',
       );
       
       DialogHelper.hideLoading();
@@ -262,6 +266,7 @@ class CertificatesController extends GetxController implements GetxService {
           if (certificate.verificationCode != null) 
             'verification_code': certificate.verificationCode,
         },
+        lmsService.currentUserToken ?? '',
       );
       
       DialogHelper.hideLoading();
@@ -296,6 +301,8 @@ class CertificatesController extends GetxController implements GetxService {
       
       final response = await apiService.getPrivate(
         'wp-json/llms/v1/mobile-app/course/$courseId/certificates',
+        lmsService.currentUserToken ?? '',
+        null,
       );
       
       if (response.statusCode == 200 && response.body['success'] == true) {
