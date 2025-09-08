@@ -348,25 +348,26 @@ class LearningController extends GetxController implements GetxService {
     }
     
     try {
-      final api = lmsService.api as LifterLMSApiService;
-      final response = await api.getSectionContent(sectionId: section.id!);
-      
-      if (response.statusCode == 200 && response.body is List) {
-        section.lessons.clear();
-        for (var lessonData in response.body) {
-          try {
-            final lesson = LLMSLessonModel.fromJson(lessonData);
-            section.lessons.add(lesson);
-            // Cache lesson for quick access
-            _lessonCache[lesson.id] = lesson;
-          } catch (e) {
-            print('Error parsing lesson: $e');
-          }
-        }
+      final lessons = await lmsService.courses.getSectionLessons(section.id!);
+      // Cache
+      for (final l in lessons) {
+        _lessonCache[l.id] = l;
+      }
+      final idx = sections.indexWhere((s) => s.id == section.id);
+      if (idx != -1) {
+        final s = sections[idx];
+        sections[idx] = LLMSSectionModel(
+          id: s.id,
+          title: s.title,
+          courseId: s.courseId,
+          order: s.order,
+          parentId: s.parentId,
+          permalink: s.permalink,
+          postType: s.postType,
+          lessons: lessons,
+        );
         _sectionLoadedStatus[section.id!] = true;
-        print('Loaded ${section.lessons.length} lessons for section ${section.id}');
-        
-        // Update UI
+        print('Loaded ${lessons.length} lessons for section ${section.id} (repo)');
         sections.refresh();
       }
     } catch (e) {

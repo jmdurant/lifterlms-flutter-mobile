@@ -399,159 +399,40 @@ class CourseDetailController extends GetxController implements GetxService {
   
   /// Load course sections and lessons
   Future<void> loadCourseSections() async {
-    // Check cache first
-    if (_lastSectionsFetch != null && 
-        DateTime.now().difference(_lastSectionsFetch!) < _sectionsCacheExpiry &&
-        sections.isNotEmpty) {
-      print('CourseDetailController - Using cached sections (${sections.length} sections)');
-      return;
-    }
-    
     try {
-      print('CourseDetailController.loadCourseSections - Loading sections for course $courseId');
-      final response = await lmsService.api.getSections(courseId: courseId);
-      
-      print('CourseDetailController.loadCourseSections - Response status: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
-        // Keep placeholder data if we have it, will merge with real data
-        final hasPlaceholderData = sections.isNotEmpty;
-        if (!hasPlaceholderData) {
-          sections.clear();
-        }
-        
-        if (response.body is List) {
-          print('CourseDetailController.loadCourseSections - Loading ${response.body.length} sections (merging with placeholder: $hasPlaceholderData)');
-          
-          // Load all section lessons in PARALLEL for speed
-          final api = lmsService.api as LifterLMSApiService;
-          final sectionDataList = response.body as List;
-          
-          // Create futures for all lesson requests
-          final lessonFutures = <Future<Map<String, dynamic>>>[];
-          
-          for (var sectionData in sectionDataList) {
-            final sectionId = sectionData['id'] is String 
-                ? int.tryParse(sectionData['id']) ?? 0
-                : sectionData['id'] as int;
-            
-            // Add future that returns section ID and its lessons
-            lessonFutures.add(
-              api.getSectionContent(sectionId: sectionId).then((lessonsResponse) {
-                final lessons = <LLMSLessonModel>[];
-                if (lessonsResponse.statusCode == 200 && lessonsResponse.body is List) {
-                  print('CourseDetailController.loadCourseSections - Found ${lessonsResponse.body.length} lessons for section $sectionId');
-                  for (var lessonData in lessonsResponse.body) {
-                    try {
-                      lessons.add(LLMSLessonModel.fromJson(lessonData));
-                    } catch (lessonError) {
-                      print('Error parsing lesson: $lessonError');
-                    }
-                  }
-                }
-                return {'sectionId': sectionId, 'lessons': lessons};
-              }).catchError((e) {
-                print('Error loading lessons for section $sectionId: $e');
-                return {'sectionId': sectionId, 'lessons': <LLMSLessonModel>[]};
-              })
-            );
-          }
-          
-          // Wait for ALL lesson requests to complete in parallel
-          print('CourseDetailController.loadCourseSections - Loading all section lessons in parallel...');
-          final allLessonResults = await Future.wait(lessonFutures);
-          
-          // Create a map for quick lookup
-          final lessonMap = <int, List<LLMSLessonModel>>{};
-          for (var result in allLessonResults) {
-            lessonMap[result['sectionId'] as int] = result['lessons'] as List<LLMSLessonModel>;
-          }
-          
-          // Clear sections now that we have real data
-          sections.clear();
-          
-          // Now build sections with their lessons
-          for (var sectionData in sectionDataList) {
-            final sectionId = sectionData['id'] is String 
-                ? int.tryParse(sectionData['id']) ?? 0
-                : sectionData['id'] as int;
-            
-            // Add lessons to section data
-            final sectionLessons = lessonMap[sectionId] ?? [];
-            sectionData['lessons'] = sectionLessons.map((l) => l.toJson()).toList();
-            
-            try {
-              final section = LLMSSectionModel.fromJson(sectionData);
-              sections.add(section);
-            } catch (sectionError) {
-              print('Error creating section model: $sectionError');
-            }
-          }
-          print('CourseDetailController.loadCourseSections - Loaded ${sections.length} sections with lessons');
-          
-          // Update cache timestamp
-          _lastSectionsFetch = DateTime.now();
-          
-          // Also update the course's sections
-          if (course.value != null) {
-            course.value = LLMSCourseModel(
-              id: course.value!.id,
-              title: course.value!.title,
-              content: course.value!.content,
-              excerpt: course.value!.excerpt,
-              permalink: course.value!.permalink,
-              slug: course.value!.slug,
-              status: course.value!.status,
-              featuredImage: course.value!.featuredImage,
-              dateCreated: course.value!.dateCreated,
-              dateModified: course.value!.dateModified,
-              onSale: course.value!.onSale,
-              price: course.value!.price,
-              regularPrice: course.value!.regularPrice,
-              salePrice: course.value!.salePrice,
-              priceType: course.value!.priceType,
-              catalogVisibility: course.value!.catalogVisibility,
-              categories: course.value!.categories,
-              tags: course.value!.tags,
-              tracks: course.value!.tracks,
-              difficulties: course.value!.difficulties,
-              prerequisite: course.value!.prerequisite,
-              prerequisiteTrack: course.value!.prerequisiteTrack,
-              length: course.value!.length,
-              videoEmbed: course.value!.videoEmbed,
-              audioEmbed: course.value!.audioEmbed,
-              averageRating: course.value!.averageRating,
-              reviewCount: course.value!.reviewCount,
-              enrollmentCount: course.value!.enrollmentCount,
-              capacity: course.value!.capacity,
-              capacityEnabled: course.value!.capacityEnabled,
-              capacityMessage: course.value!.capacityMessage,
-              accessOpensDate: course.value!.accessOpensDate,
-              accessClosesDate: course.value!.accessClosesDate,
-              enrollmentOpensDate: course.value!.enrollmentOpensDate,
-              enrollmentClosesDate: course.value!.enrollmentClosesDate,
-              enrollmentPeriod: course.value!.enrollmentPeriod,
-              timePeriod: course.value!.timePeriod,
-              restrictionAddOn: course.value!.restrictionAddOn,
-              restrictedLevels: course.value!.restrictedLevels,
-              restrictionMessage: course.value!.restrictionMessage,
-              instructors: course.value!.instructors,
-              sections: sections, // Update sections here
-              purchasable: course.value!.purchasable,
-              hasAccessPlans: course.value!.hasAccessPlans,
-              accessPlans: course.value!.accessPlans,
-              videoSrc: course.value!.videoSrc,
-              audioSrc: course.value!.audioSrc,
-              passingPercentage: course.value!.passingPercentage,
-              hasCertificate: course.value!.hasCertificate,
-            );
-          }
-        }
-      } else {
-        print('CourseDetailController.loadCourseSections - Failed with status: ${response.statusCode}');
-      }
+      print('CourseDetailController.loadCourseSections - Loading sections for course $courseId (sections only)');
+      final list = await lmsService.courses.getSections(courseId, forceRefresh: true);
+      sections
+        ..clear()
+        ..addAll(list);
+      _lastSectionsFetch = DateTime.now();
     } catch (e) {
       print('Error loading sections: $e');
+    }
+  }
+
+  /// Load lessons for a section on user demand (expand)
+  Future<void> loadSectionOnDemand(int sectionId) async {
+    try {
+      final lessons = await lmsService.courses.getSectionLessons(sectionId);
+      final idx = sections.indexWhere((s) => s.id == sectionId);
+      if (idx != -1) {
+        final s = sections[idx];
+        final updated = LLMSSectionModel(
+          id: s.id,
+          title: s.title,
+          courseId: s.courseId,
+          order: s.order,
+          parentId: s.parentId,
+          permalink: s.permalink,
+          postType: s.postType,
+          lessons: lessons,
+        );
+        sections[idx] = updated;
+        sections.refresh();
+      }
+    } catch (e) {
+      print('Error loading lessons for section $sectionId: $e');
     }
   }
   

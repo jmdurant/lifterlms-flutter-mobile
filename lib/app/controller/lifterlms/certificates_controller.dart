@@ -108,14 +108,10 @@ class CertificatesController extends GetxController implements GetxService {
       errorMessage.value = '';
       hasError.value = false;
       
-      // Call the certificates API endpoint
-      final response = await apiService.getPrivate(
-        'wp-json/llms/v1/mobile-app/certificates',
-        lmsService.currentUserToken ?? '',
-        {
-          'page': currentPage.value.toString(),
-          'limit': perPage.toString(),
-        },
+      // Use LMSService wrapper for plugin endpoint
+      final response = await lmsService.getCertificates(
+        page: currentPage.value,
+        perPage: perPage,
       );
       
       if (response.statusCode == 200) {
@@ -184,12 +180,8 @@ class CertificatesController extends GetxController implements GetxService {
     try {
       DialogHelper.showLoading();
       
-      // Get download URL from API
-      final response = await apiService.getPrivate(
-        'wp-json/llms/v1/mobile-app/certificate/${certificate.id}/download',
-        lmsService.currentUserToken ?? '',
-        null,
-      );
+      // Get download URL from LMSService wrapper
+      final response = await lmsService.getCertificateDownloadData(certificate.id);
       
       DialogHelper.hideLoading();
       
@@ -222,12 +214,8 @@ class CertificatesController extends GetxController implements GetxService {
     try {
       DialogHelper.showLoading();
       
-      // Get share data from API
-      final response = await apiService.postPrivate(
-        'wp-json/llms/v1/mobile-app/certificate/${certificate.id}/share',
-        {'method': 'link'},
-        lmsService.currentUserToken ?? '',
-      );
+      // Get share data via LMSService wrapper
+      final response = await lmsService.shareCertificateLink(certificate.id, method: 'link');
       
       DialogHelper.hideLoading();
       
@@ -259,14 +247,9 @@ class CertificatesController extends GetxController implements GetxService {
     try {
       DialogHelper.showLoading();
       
-      final response = await apiService.postPrivate(
-        'wp-json/llms/v1/mobile-app/certificate/verify',
-        {
-          'certificate_id': certificate.id,
-          if (certificate.verificationCode != null) 
-            'verification_code': certificate.verificationCode,
-        },
-        lmsService.currentUserToken ?? '',
+      final response = await lmsService.verifyCertificate(
+        certificateId: certificate.id,
+        code: certificate.verificationCode,
       );
       
       DialogHelper.hideLoading();
@@ -299,11 +282,7 @@ class CertificatesController extends GetxController implements GetxService {
     try {
       isLoading.value = true;
       
-      final response = await apiService.getPrivate(
-        'wp-json/llms/v1/mobile-app/course/$courseId/certificates',
-        lmsService.currentUserToken ?? '',
-        null,
-      );
+      final response = await lmsService.getCourseCertificates(courseId);
       
       if (response.statusCode == 200 && response.body['success'] == true) {
         // Handle both earned and available certificates

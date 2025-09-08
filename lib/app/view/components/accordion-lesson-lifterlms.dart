@@ -105,6 +105,13 @@ class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifter
               setState(() {
                 _showContent = !_showContent;
               });
+              // If expanding and lessons are not loaded yet, load on demand via controller
+              if (_showContent && widget.section.lessons.isEmpty) {
+                try {
+                  final ctrl = Get.find<CourseDetailController>();
+                  ctrl.loadSectionOnDemand(widget.section.id);
+                } catch (_) {}
+              }
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

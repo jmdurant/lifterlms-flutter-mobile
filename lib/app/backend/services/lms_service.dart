@@ -1,5 +1,9 @@
 import 'package:flutter_app/app/backend/api/lms_api_interface.dart';
 import 'package:flutter_app/app/backend/api/lifterlms_api.dart';
+import 'package:flutter_app/app/backend/api/api.dart';
+import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
+import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
+import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -174,5 +178,165 @@ class LMSService extends GetxService {
       return const Response(statusCode: 401, statusText: 'Not logged in');
     }
     return _api.removeFromWishlist(userId: _currentUserId!, courseId: courseId);
+  }
+}
+
+/// Lightweight repository for course structure with simple in-memory caches
+class CourseRepository {
+  final LMSService _lms;
+  final Duration ttl;
+
+  CourseRepository(this._lms, {this.ttl = const Duration(minutes: 10)});
+
+  final Map<int, LLMSCourseModel> _courseCache = {};
+  final Map<int, DateTime> _courseTs = {};
+
+  final Map<int, List<LLMSSectionModel>> _sectionsCache = {};
+  final Map<int, DateTime> _sectionsTs = {};
+
+  final Map<int, List<LLMSLessonModel>> _sectionLessonsCache = {};
+  final Map<int, DateTime> _sectionLessonsTs = {};
+
+  bool _fresh(DateTime? ts) => ts != null && DateTime.now().difference(ts) < ttl;
+
+  Future<LLMSCourseModel?> getCourse(int courseId, {bool forceRefresh = false}) async {
+    if (!forceRefresh && _courseCache.containsKey(courseId) && _fresh(_courseTs[courseId])) {
+      return _courseCache[courseId];
+    }
+    final res = await _lms.api.getCourse(courseId: courseId);
+    if (res.statusCode == 200) {
+      final model = LLMSCourseModel.fromJson(res.body);
+      _courseCache[courseId] = model;
+      _courseTs[courseId] = DateTime.now();
+      return model;
+    }
+    return null;
+  }
+
+  Future<List<LLMSSectionModel>> getSections(int courseId, {bool forceRefresh = false}) async {
+    if (!forceRefresh && _sectionsCache.containsKey(courseId) && _fresh(_sectionsTs[courseId])) {
+      return _sectionsCache[courseId]!;
+    }
+    final res = await _lms.api.getSections(courseId: courseId);
+    if (res.statusCode == 200 && res.body is List) {
+      final sections = <LLMSSectionModel>[];
+      for (final s in res.body) {
+        try {
+          // Build section with empty lessons list; lessons are fetched on demand
+          final section = LLMSSectionModel.fromJson(s);
+          sections.add(LLMSSectionModel(
+            id: section.id,
+            title: section.title,
+            courseId: section.courseId,
+            order: section.order,
+            parentId: section.parentId,
+            permalink: section.permalink,
+            postType: section.postType,
+            lessons: <LLMSLessonModel>[],
+          ));
+        } catch (_) {}
+      }
+      _sectionsCache[courseId] = sections;
+      _sectionsTs[courseId] = DateTime.now();
+      return sections;
+    }
+    return _sectionsCache[courseId] ?? <LLMSSectionModel>[];
+  }
+
+  Future<List<LLMSLessonModel>> getSectionLessons(int sectionId, {bool forceRefresh = false}) async {
+    if (!forceRefresh && _sectionLessonsCache.containsKey(sectionId) && _fresh(_sectionLessonsTs[sectionId])) {
+      return _sectionLessonsCache[sectionId]!;
+    }
+    // Use concrete API service for section content helper
+    final api = _lms.api as LifterLMSApiService;
+    final res = await api.getSectionContent(sectionId: sectionId);
+    if (res.statusCode == 200 && res.body is List) {
+      final lessons = <LLMSLessonModel>[];
+      for (final l in res.body) {
+        try {
+          lessons.add(LLMSLessonModel.fromJson(l));
+        } catch (_) {}
+      }
+      _sectionLessonsCache[sectionId] = lessons;
+      _sectionLessonsTs[sectionId] = DateTime.now();
+      return lessons;
+    }
+    return _sectionLessonsCache[sectionId] ?? <LLMSLessonModel>[];
+  }
+
+  void invalidateCourse(int courseId) {
+    _courseTs.remove(courseId);
+    _sectionsTs.remove(courseId);
+  }
+
+  void invalidateSection(int sectionId) {
+    _sectionLessonsTs.remove(sectionId);
+  }
+}
+
+extension LMSServiceRepositories on LMSService {
+  CourseRepository get courses => _courses ??= CourseRepository(this);
+  CourseRepository? _courses;
+
+  // Plugin endpoint wrappers (certificates, devices)
+  ApiService get _apiService => Get.find<ApiService>();
+
+  Future<Response> getCertificates({int page = 1, int perPage = 20}) async {
+    final token = _currentUserToken ?? '';
+    return _apiService.getPrivate(
+      'wp-json/llms/v1/mobile-app/certificates',
+      token,
+      {
+        'page': page.toString(),
+        'limit': perPage.toString(),
+      },
+    );
+  }
+
+  Future<Response> getCertificateDownloadData(int certificateId) async {
+    final token = _currentUserToken ?? '';
+    return _apiService.getPrivate(
+      'wp-json/llms/v1/mobile-app/certificate/$certificateId/download',
+      token,
+      null,
+    );
+  }
+
+  Future<Response> shareCertificateLink(int certificateId, {String method = 'link'}) async {
+    final token = _currentUserToken ?? '';
+    return _apiService.postPrivate(
+      'wp-json/llms/v1/mobile-app/certificate/$certificateId/share',
+      {'method': method},
+      token,
+    );
+  }
+
+  Future<Response> verifyCertificate({required int certificateId, String? code}) async {
+    final token = _currentUserToken ?? '';
+    final body = <String, dynamic>{'certificate_id': certificateId};
+    if (code != null) body['verification_code'] = code;
+    return _apiService.postPrivate(
+      'wp-json/llms/v1/mobile-app/certificate/verify',
+      body,
+      token,
+    );
+  }
+
+  Future<Response> getCourseCertificates(int courseId) async {
+    final token = _currentUserToken ?? '';
+    return _apiService.getPrivate(
+      'wp-json/llms/v1/mobile-app/course/$courseId/certificates',
+      token,
+      null,
+    );
+  }
+
+  Future<Response> registerDevice(String fcmToken) async {
+    if (_currentUserId == null) return const Response(statusCode: 401, statusText: 'Not logged in');
+    return _api.registerDeviceToken(token: fcmToken, userId: _currentUserId!);
+  }
+
+  Future<Response> unregisterDevice(String fcmToken) async {
+    return _api.unregisterDeviceToken(token: fcmToken);
   }
 }
