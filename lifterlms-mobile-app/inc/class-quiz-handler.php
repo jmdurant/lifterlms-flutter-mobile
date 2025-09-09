@@ -1013,8 +1013,22 @@ class LLMS_Mobile_Quiz_Handler {
             $question = llms_get_post( $qid );
             $attempt_question = $attempt->get_question( $qid );
             
-            if ( ! $question || ! $attempt_question ) {
+            error_log('Question ' . $qid . ' - attempt data: ' . print_r($attempt_question, true));
+            
+            if ( ! $question ) {
+                error_log('Question ' . $qid . ' not found');
                 continue;
+            }
+            
+            if ( ! $attempt_question ) {
+                error_log('No attempt data for question ' . $qid);
+                // Still include the question with default values
+                $attempt_question = array(
+                    'points' => 0,
+                    'earned' => 0,
+                    'correct' => false,
+                    'answer' => null,
+                );
             }
             
             $result = array(
