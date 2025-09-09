@@ -283,15 +283,8 @@ extension LMSServiceRepositories on LMSService {
   ApiService get _apiService => Get.find<ApiService>();
 
   Future<Response> getCertificates({int page = 1, int perPage = 20}) async {
-    final token = _currentUserToken ?? '';
-    return _apiService.getPrivate(
-      'wp-json/llms/v1/mobile-app/certificates',
-      token,
-      {
-        'page': page.toString(),
-        'limit': perPage.toString(),
-      },
-    );
+    // Call the LifterLMS API directly with Basic Auth
+    return api.getCertificates(page: page, limit: perPage);
   }
 
   Future<Response> getCertificateDownloadData(int certificateId) async {

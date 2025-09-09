@@ -48,6 +48,8 @@ import '../view/components/profile/settings/delete-account.dart';
 import '../view/components/profile/settings/general.dart';
 import '../view/components/profile/settings/language.dart';
 import '../view/components/profile/settings/password.dart';
+import '../view/my_certificates.dart';
+import '../view/certificate_detail.dart';
 
 class AppRouter {
   static const String initial = '/';
@@ -190,5 +192,15 @@ class AppRouter {
     GetPage(name: wishlist, page: () => WishlistScreen(), binding: WishlistBinding()),
     GetPage(name: myCourses, page: () => MyCoursesScreen(), binding: MyCoursesBinding()),
     GetPage(name: courses, page: () => CoursesScreen(), binding: CoursesBinding()),
+    GetPage(
+        name: myCertificates, 
+        page: () => MyCertificatesScreen(),
+        preventDuplicates: false
+    ),
+    GetPage(
+        name: certificateDetail,
+        page: () => CertificateDetailScreen(),
+        preventDuplicates: false
+    ),
   ];
 }

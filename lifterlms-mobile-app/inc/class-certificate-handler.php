@@ -191,11 +191,12 @@ class LLMS_Mobile_Certificate_Handler {
         }
         
         foreach ( $certificate_ids as $cert_id ) {
-            $certificate = new LLMS_User_Certificate( $cert_id );
-            
-            if ( ! $certificate->exists() ) {
+            // Check if certificate post exists
+            if ( ! get_post( $cert_id ) ) {
                 continue;
             }
+            
+            $certificate = new LLMS_User_Certificate( $cert_id );
             
             $certificates_data[] = $this->format_certificate( $certificate );
         }
@@ -215,11 +216,12 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate_id = $request->get_param( 'certificate_id' );
         $user_id = get_current_user_id();
         
-        $certificate = new LLMS_User_Certificate( $certificate_id );
-        
-        if ( ! $certificate->exists() ) {
+        // Check if certificate post exists
+        if ( ! get_post( $certificate_id ) ) {
             return new WP_Error( 'certificate_not_found', 'Certificate not found', array( 'status' => 404 ) );
         }
+        
+        $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
         if ( $certificate->get_user_id() != $user_id ) {
@@ -239,11 +241,12 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate_id = $request->get_param( 'certificate_id' );
         $user_id = get_current_user_id();
         
-        $certificate = new LLMS_User_Certificate( $certificate_id );
-        
-        if ( ! $certificate->exists() ) {
+        // Check if certificate post exists
+        if ( ! get_post( $certificate_id ) ) {
             return new WP_Error( 'certificate_not_found', 'Certificate not found', array( 'status' => 404 ) );
         }
+        
+        $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
         if ( $certificate->get_user_id() != $user_id ) {
@@ -272,11 +275,12 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate_id = $request->get_param( 'certificate_id' );
         $user_id = get_current_user_id();
         
-        $certificate = new LLMS_User_Certificate( $certificate_id );
-        
-        if ( ! $certificate->exists() ) {
+        // Check if certificate post exists
+        if ( ! get_post( $certificate_id ) ) {
             return new WP_Error( 'certificate_not_found', 'Certificate not found', array( 'status' => 404 ) );
         }
+        
+        $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
         if ( $certificate->get_user_id() != $user_id ) {
@@ -321,11 +325,12 @@ class LLMS_Mobile_Certificate_Handler {
         $method = $request->get_param( 'method' );
         $user_id = get_current_user_id();
         
-        $certificate = new LLMS_User_Certificate( $certificate_id );
-        
-        if ( ! $certificate->exists() ) {
+        // Check if certificate post exists
+        if ( ! get_post( $certificate_id ) ) {
             return new WP_Error( 'certificate_not_found', 'Certificate not found', array( 'status' => 404 ) );
         }
+        
+        $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
         if ( $certificate->get_user_id() != $user_id ) {
@@ -382,15 +387,16 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate_id = $request->get_param( 'certificate_id' );
         $verification_code = $request->get_param( 'verification_code' );
         
-        $certificate = new LLMS_User_Certificate( $certificate_id );
-        
-        if ( ! $certificate->exists() ) {
+        // Check if certificate post exists
+        if ( ! get_post( $certificate_id ) ) {
             return array(
                 'success' => false,
                 'valid' => false,
                 'message' => 'Certificate not found',
             );
         }
+        
+        $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate is valid
         $is_valid = true;
@@ -460,11 +466,12 @@ class LLMS_Mobile_Certificate_Handler {
         $certificates_data = array();
         
         foreach ( $certificate_ids as $cert_id ) {
-            $certificate = new LLMS_User_Certificate( $cert_id );
-            
-            if ( ! $certificate->exists() ) {
+            // Check if certificate post exists
+            if ( ! get_post( $cert_id ) ) {
                 continue;
             }
+            
+            $certificate = new LLMS_User_Certificate( $cert_id );
             
             $certificates_data[] = $this->format_certificate( $certificate );
         }
@@ -517,20 +524,20 @@ class LLMS_Mobile_Certificate_Handler {
         $data = array(
             'id' => $certificate->get( 'id' ),
             'title' => $certificate->get( 'title' ),
-            'earned_date' => $certificate->get_earned_date(),
+            'earned_date' => $certificate->get( 'earned_date' ),
             'course_id' => $certificate->get( 'parent' ),
             'course_title' => get_the_title( $certificate->get( 'parent' ) ),
             'preview_url' => get_permalink( $certificate->get( 'id' ) ),
-            'download_url' => $certificate->get_download_url(),
+            'download_url' => add_query_arg( 'download', 'true', get_permalink( $certificate->get( 'id' ) ) ),
         );
         
         if ( $detailed ) {
             // Add more details
-            $user = get_userdata( $certificate->get_user_id() );
+            $user = get_userdata( $certificate->get( 'user_id' ) );
             $course = llms_get_post( $certificate->get( 'parent' ) );
             
             $data['student'] = array(
-                'id' => $certificate->get_user_id(),
+                'id' => $certificate->get( 'user_id' ),
                 'name' => $user ? $user->display_name : '',
                 'email' => $user ? $user->user_email : '',
             );

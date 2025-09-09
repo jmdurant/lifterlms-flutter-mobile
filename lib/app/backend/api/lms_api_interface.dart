@@ -76,7 +76,9 @@ abstract class LMSApiInterface {
   // Quiz (Custom Implementation Required for LifterLMS)
   Future<Response> getQuiz({required int quizId});
   Future<Response> startQuiz({required int quizId, required int userId});
-  Future<Response> submitQuizAnswer({required int quizId, required int questionId, required dynamic answer});
+  Future<Response> startQuizAttempt({required int quizId, required int lessonId});
+  Future<Response> getQuizQuestions({required int quizId});
+  Future<Response> submitQuizAnswer({required int quizId, required int questionId, required dynamic answer, int? attemptId});
   Future<Response> finishQuiz({required int quizId, required int attemptId});
   Future<Response> getQuizResults({required int quizId, required int attemptId});
   
@@ -98,6 +100,9 @@ abstract class LMSApiInterface {
   // In-App Purchases
   Future<Response> verifyPurchase({required String receipt, required String productId});
   Future<Response> getProducts();
+  
+  // Certificates (WordPress Plugin Extension)
+  Future<Response> getCertificates({int page, int limit});
   
   // Social Login (Custom Implementation)
   Future<Response> loginWithGoogle({required String token});

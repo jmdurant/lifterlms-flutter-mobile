@@ -11,6 +11,7 @@ import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:vimeo_video_player/vimeo_video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_app/app/view/components/learning/learning-quiz.dart';
 
 class LearningScreen extends StatefulWidget {
   const LearningScreen({Key? key}) : super(key: key);
@@ -242,14 +243,9 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                       );
                     }
                     
-                    // Show current lesson content
+                    // Show current lesson content (which includes quiz if available)
                     if (controller.currentLesson.value != null) {
                       return _buildLessonContent(controller);
-                    }
-                    
-                    // Show current quiz
-                    if (controller.currentQuiz.value != null) {
-                      return _buildQuizContent(controller);
                     }
                     
                     // Show current assignment
@@ -272,9 +268,11 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   
   Widget _buildHeader(LearningController controller) {
     return Container(
-      height: 80.0,
-      width: screenWidth,
-      padding: const EdgeInsets.fromLTRB(0, 40, 0, 0),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).viewPadding.top + 5,
+        left: 8,
+        right: 8,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
@@ -453,18 +451,22 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     
     // Initialize video player when lesson changes
     if (_currentLessonId != lesson.id) {
+      print('Learning - Lesson changed from $_currentLessonId to ${lesson.id}');
       _currentLessonId = lesson.id;
+      
+      // Immediately clear old video state
+      _youtubeController?.dispose();
+      _youtubeController = null;
+      _vimeoVideoId = null;
+      
+      // Defer new video initialization to after build
       if (lesson.videoEmbed != null && lesson.videoEmbed!.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
+            print('Learning - Initializing video for lesson ${lesson.id}');
             _initializeVideoPlayer(lesson.videoEmbed);
-            setState(() {});
           }
         });
-      } else {
-        _youtubeController?.dispose();
-        _youtubeController = null;
-        _vimeoVideoId = null;
       }
     }
     
@@ -532,9 +534,48 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               ),
             )),
             const SizedBox(height: 32),
+            
+            // Show quiz section if available
+            Obx(() {
+              final currentLesson = controller.currentLesson.value;
+              if (currentLesson == null) return const SizedBox.shrink();
+              
+              if (currentLesson.hasQuiz && controller.currentQuiz.value != null) {
+                final quiz = controller.currentQuiz.value!;
+                // Show the quiz interface directly
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 32),
+                  child: LearningQuiz(
+                    data: currentLesson,
+                    dataQuiz: quiz,
+                  ),
+                );
+              } else if (currentLesson.hasQuiz && currentLesson.quizId != null) {
+                // Quiz is loading
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 32),
+                  child: Center(
+                    child: TextButton.icon(
+                      onPressed: null,
+                      icon: const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      label: const Text('Loading quiz...'),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+            
             Center(
               child: Obx(() {
-                final isCompleted = controller.lessonCompletionStatus[lesson.id] ?? false;
+                final currentLesson = controller.currentLesson.value;
+                if (currentLesson == null) return const SizedBox.shrink();
+                
+                final isCompleted = controller.lessonCompletionStatus[currentLesson.id] ?? false;
                 
                 return ElevatedButton.icon(
                   onPressed: isCompleted || controller.isCompletingLesson.value
@@ -562,31 +603,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     );
   }
   
-  Widget _buildQuizContent(LearningController controller) {
-    final quiz = controller.currentQuiz.value!;
-    
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            quiz.title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('Quiz functionality coming soon'),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () => controller.navigateToNextLesson(),
-            child: const Text('Skip Quiz'),
-          ),
-        ],
-      ),
-    );
-  }
   
   Widget _buildAssignmentContent(LearningController controller) {
     final assignment = controller.currentAssignment.value!;
@@ -666,22 +682,22 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   
   Widget _buildNavigationBar(LearningController controller) {
     return Obx(() {
-      // Special case: if on overview, show different navigation
-      if (controller.currentLesson.value == null) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Row(
+        // Special case: if on overview, show different navigation
+        if (controller.currentLesson.value == null) {
+          return Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 21),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Empty space or back button
@@ -717,7 +733,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
       
       // Normal navigation for lessons
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 21),
         decoration: BoxDecoration(
           color: Colors.grey[100],
           boxShadow: [

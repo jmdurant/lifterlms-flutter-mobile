@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,7 @@ import 'package:flutter_app/app/helper/router.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
 import 'package:flutter_app/app/controller/lifterlms/course_detail_controller.dart';
+import 'package:flutter_app/app/view/quiz_taking_screen.dart';
 
 class LearningController extends GetxController implements GetxService {
   final LMSService lmsService = LMSService.to;
@@ -133,7 +135,8 @@ class LearningController extends GetxController implements GetxService {
         sections.clear();
         _lessonCache.clear();
         _sectionLoadedStatus.clear();
-        lessonCompletionStatus.clear();
+        // Don't clear completion status - we want to preserve it for the session
+        // lessonCompletionStatus.clear();
         cleanedLessonContent.value = '';
         
         // Load course data first
@@ -509,9 +512,32 @@ class LearningController extends GetxController implements GetxService {
     // Check cache first
     if (_lessonCache.containsKey(lessonId)) {
       print('LearningController - Using cached lesson data');
-      currentLesson.value = _lessonCache[lessonId];
+      final cachedLesson = _lessonCache[lessonId]!;
+      
+      // Debug: Show cached lesson details
+      print('==================== CACHED LESSON DATA ====================');
+      print('Lesson ID: ${cachedLesson.id}');
+      print('Title: ${cachedLesson.title}');
+      print('Has Quiz: ${cachedLesson.hasQuiz}');
+      print('Quiz ID: ${cachedLesson.quizId}');
+      print('Has Video: ${cachedLesson.hasVideo}');
+      print('Video Embed: ${cachedLesson.videoEmbed}');
+      print('Video Src: ${cachedLesson.videoSrc}');
+      print('==========================================================');
+      
+      currentLesson.value = cachedLesson;
       cleanedLessonContent.value = _cleanLessonContent(currentLesson.value?.content);
       updateNavigationStates();
+      
+      // Load quiz/assignment if needed (even for cached lessons)
+      if (cachedLesson.hasQuiz && cachedLesson.quizId != null && cachedLesson.quizId != 0) {
+        print('LearningController - Loading quiz ${cachedLesson.quizId} for cached lesson');
+        loadQuiz(cachedLesson.quizId!); // Don't await
+      }
+      
+      if (cachedLesson.requiresAssignment && cachedLesson.assignmentId != null) {
+        loadAssignment(cachedLesson.assignmentId!); // Don't await
+      }
       
       // Prefetch next and previous lessons
       _prefetchAdjacentLessons();
@@ -524,6 +550,11 @@ class LearningController extends GetxController implements GetxService {
       final response = await lmsService.api.getLesson(lessonId: lessonId);
       
       if (response.statusCode == 200) {
+        // Debug: Log the raw lesson data
+        print('==================== RAW LESSON DATA ====================');
+        print(jsonEncode(response.body));
+        print('==========================================================');
+        
         final lesson = LLMSLessonModel.fromJson(response.body);
         currentLesson.value = lesson;
         cleanedLessonContent.value = _cleanLessonContent(lesson.content);
@@ -533,12 +564,17 @@ class LearningController extends GetxController implements GetxService {
         print('LearningController - Lesson has quiz: ${lesson.hasQuiz}');
         print('LearningController - Quiz ID: ${lesson.quizId}');
         print('LearningController - Requires passing: ${lesson.requiresPassing}');
+        print('LearningController - Has video: ${lesson.hasVideo}');
+        print('LearningController - Video embed: ${lesson.videoEmbed}');
+        print('LearningController - Video src: ${lesson.videoSrc}');
+        print('LearningController - Has audio: ${lesson.hasAudio}');
+        print('LearningController - Audio embed: ${lesson.audioEmbed}');
         
         // Update navigation states
         updateNavigationStates();
         
         // Load quiz/assignment in background if needed
-        if (lesson.hasQuiz && lesson.quizId != null) {
+        if (lesson.hasQuiz && lesson.quizId != null && lesson.quizId != 0) {
           print('LearningController - Loading quiz ${lesson.quizId}');
           loadQuiz(lesson.quizId!); // Don't await
         }
@@ -603,8 +639,17 @@ class LearningController extends GetxController implements GetxService {
       print('LearningController.loadQuiz - Response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        currentQuiz.value = LLMSQuizModel.fromJson(response.body);
+        print('LearningController.loadQuiz - Raw quiz response:');
+        print(jsonEncode(response.body));
+        
+        // The response has quiz data nested under 'quiz' key
+        final responseData = response.body;
+        final quizData = responseData['quiz'] ?? responseData;
+        
+        currentQuiz.value = LLMSQuizModel.fromJson(quizData);
         print('LearningController.loadQuiz - Quiz loaded successfully: ${currentQuiz.value?.title}');
+        print('LearningController.loadQuiz - Quiz ID: ${currentQuiz.value?.id}');
+        print('LearningController.loadQuiz - Total questions: ${currentQuiz.value?.totalQuestions ?? 0}');
       } else if (response.statusCode == 501) {
         // Quiz API not yet available
         print('LearningController.loadQuiz - Quiz API not yet implemented in LifterLMS REST');
@@ -995,8 +1040,44 @@ class LearningController extends GetxController implements GetxService {
   Future<void> startQuiz() async {
     if (currentQuiz.value == null || !lmsService.isLoggedIn) return;
     
-    // Navigate to quiz page when implemented
-    showToast('Quiz feature coming soon!');
+    final quiz = currentQuiz.value!;
+    final lesson = currentLesson.value;
+    
+    if (lesson == null) {
+      showToast('Error: No lesson context', isError: true);
+      return;
+    }
+    
+    // Navigate to quiz taking screen
+    Get.to(() => const QuizTakingScreen());
+  }
+  
+  /// Load quiz questions
+  Future<void> loadQuizQuestions(int quizId) async {
+    try {
+      print('LearningController - Loading questions for quiz $quizId');
+      
+      final response = await lmsService.api.getQuizQuestions(quizId: quizId);
+      
+      if (response.statusCode == 200) {
+        final questionsData = response.body;
+        print('LearningController - Loaded ${questionsData['total']} questions');
+        
+        // TODO: Store questions and display them
+        // For now, just log them
+        if (questionsData['questions'] != null) {
+          for (var question in questionsData['questions']) {
+            print('Question ${question['id']}: ${question['content']}');
+          }
+        }
+      } else {
+        print('LearningController - Failed to load questions: ${response.body}');
+        showToast('Failed to load quiz questions', isError: true);
+      }
+    } catch (e) {
+      print('LearningController - Error loading questions: $e');
+      showToast('Error loading quiz questions', isError: true);
+    }
   }
   
   /// Start assignment

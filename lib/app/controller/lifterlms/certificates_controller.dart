@@ -108,17 +108,23 @@ class CertificatesController extends GetxController implements GetxService {
       errorMessage.value = '';
       hasError.value = false;
       
+      print('CertificatesController - Loading certificates, page: ${currentPage.value}');
+      
       // Use LMSService wrapper for plugin endpoint
       final response = await lmsService.getCertificates(
         page: currentPage.value,
         perPage: perPage,
       );
       
+      print('CertificatesController - Response status: ${response.statusCode}');
+      print('CertificatesController - Response body: ${response.body}');
+      
       if (response.statusCode == 200) {
         final data = response.body;
         
         if (data['success'] == true && data['certificates'] != null) {
           final List<dynamic> certificatesList = data['certificates'];
+          print('CertificatesController - Found ${certificatesList.length} certificates');
           
           for (var certData in certificatesList) {
             try {
@@ -139,11 +145,16 @@ class CertificatesController extends GetxController implements GetxService {
           if (certificatesList.length < perPage) {
             hasMoreData.value = false;
           }
+        } else {
+          print('CertificatesController - Response success flag: ${data['success']}');
+          print('CertificatesController - Certificates data: ${data['certificates']}');
         }
       } else {
-        _handleError('Failed to load certificates');
+        print('CertificatesController - HTTP error: ${response.statusCode} - ${response.statusText}');
+        _handleError('Failed to load certificates (${response.statusCode})');
       }
     } catch (e) {
+      print('CertificatesController - Exception: $e');
       _handleError('Error loading certificates: $e');
     } finally {
       isLoading.value = false;

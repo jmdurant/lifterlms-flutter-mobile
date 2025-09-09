@@ -343,23 +343,93 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   
   // Get quiz details
   Future<Response> getQuiz({required int quizId}) async {
-    // Note: Quiz endpoints are not yet implemented in LifterLMS REST API
-    // This is a placeholder that returns 501 Not Implemented
-    print('LifterlmsAPI.getQuiz - Quiz ID: $quizId');
-    print('LifterlmsAPI.getQuiz - Quiz API not yet implemented in LifterLMS REST');
+    print('LifterlmsAPI.getQuiz - Getting quiz ID: $quizId');
     
-    // For now, return a 501 to indicate not implemented
-    return const Response(
-      statusCode: 501,
-      statusText: 'Quiz API endpoints are not yet available in LifterLMS REST API',
-      body: {
-        'message': 'Quiz functionality coming soon',
-        'info': 'The LifterLMS REST API does not yet include quiz endpoints. This feature is planned for a future release.'
+    try {
+      final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/$quizId');
+      
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      );
+      
+      print('LifterlmsAPI.getQuiz - Response: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        return Response(
+          statusCode: response.statusCode,
+          statusText: response.reasonPhrase,
+          body: jsonDecode(response.body),
+        );
+      } else {
+        print('LifterlmsAPI.getQuiz - Error response: ${response.body}');
+        return Response(
+          statusCode: response.statusCode,
+          statusText: response.reasonPhrase,
+          body: response.body.isNotEmpty ? jsonDecode(response.body) : null,
+        );
       }
-    );
+    } catch (e) {
+      print('LifterlmsAPI.getQuiz - Error: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  // Start quiz attempt
+  Future<Response> startQuizAttempt({
+    required int quizId,
+    required int lessonId,
+  }) async {
+    print('LifterlmsAPI.startQuizAttempt - Starting quiz $quizId for lesson $lessonId');
     
-    // When available, the endpoint would be:
-    // final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/quizzes/$quizId');
+    try {
+      final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/$quizId/start');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'lesson_id': lessonId,
+        }),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      print('LifterlmsAPI.startQuizAttempt - Response: ${response.statusCode}');
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('LifterlmsAPI.startQuizAttempt - Error: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  // Get quiz questions
+  Future<Response> getQuizQuestions({required int quizId}) async {
+    print('LifterlmsAPI.getQuizQuestions - Getting questions for quiz $quizId');
+    
+    try {
+      final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/$quizId/questions');
+      
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      print('LifterlmsAPI.getQuizQuestions - Response: ${response.statusCode}');
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('LifterlmsAPI.getQuizQuestions - Error: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
   }
   
   // Submit quiz attempt
@@ -1061,6 +1131,91 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       return parseResponse(response, url.toString());
     } catch (e) {
       print('Error checking wishlist status: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  // Certificate endpoints - using WordPress plugin mobile-app extension
+  Future<Response> getCertificates({int page = 1, int limit = 20}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/certificates?page=$page&limit=$limit');
+    
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error getting certificates: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  // Submit quiz answer - now properly uses attempt_id
+  @override
+  Future<Response> submitQuizAnswer({
+    required int quizId,
+    required int questionId,
+    required dynamic answer,
+    int? attemptId,  // Made optional for backward compatibility
+  }) async {
+    // For backward compatibility, attemptId might come from somewhere else
+    // But this won't work without it
+    if (attemptId == null) {
+      print('ERROR: submitQuizAnswer called without attemptId!');
+      return const Response(
+        statusCode: 400,
+        statusText: 'Attempt ID is required'
+      );
+    }
+    
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/attempt/$attemptId/answer');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'question_id': questionId,
+          'answer': answer,
+        }),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error submitting quiz answer: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  // Complete/finish quiz - properly uses attempt_id
+  @override
+  Future<Response> finishQuiz({
+    required int quizId,
+    required int attemptId,
+  }) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/attempt/$attemptId/complete');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({}),  // Empty body for completion
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error finishing quiz: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }

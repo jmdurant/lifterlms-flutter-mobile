@@ -137,8 +137,12 @@ class LLMSLessonModel {
       dripMethod: json['drip_method'],
       publicPreview: json['public'] ?? json['preview'] ?? false,
       points: json['points'] ?? 0,
-      hasQuiz: json['quiz'] != null || json['quiz_id'] != null,
-      quizId: json['quiz_id'] ?? (json['quiz'] is Map ? json['quiz']['id'] : json['quiz']),
+      hasQuiz: (json['quiz_id'] != null && json['quiz_id'] != 0) || 
+               (json['quiz'] is Map && json['quiz']['id'] != null && json['quiz']['id'] != 0) ||
+               (json['quiz'] is int && json['quiz'] != 0),
+      quizId: json['quiz_id'] != null && json['quiz_id'] != 0 
+          ? json['quiz_id'] 
+          : (json['quiz'] is Map ? json['quiz']['id'] : json['quiz']),
       requiresPassing: json['require_passing_grade'] ?? false,
       requiresAssignment: json['assignment'] != null || json['assignment_id'] != null,
       assignmentId: json['assignment_id'] ?? (json['assignment'] is Map ? json['assignment']['id'] : json['assignment']),

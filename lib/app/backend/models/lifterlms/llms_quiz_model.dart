@@ -54,30 +54,81 @@ class LLMSQuizModel {
   });
   
   factory LLMSQuizModel.fromJson(Map<String, dynamic> json) {
+    // Debug logging
+    print('LLMSQuizModel.fromJson - Parsing quiz data:');
+    print('  id: ${json['id']} (${json['id'].runtimeType})');
+    print('  title: ${json['title']} (${json['title'].runtimeType})');
+    print('  course_id: ${json['course_id']} (${json['course_id'].runtimeType})');
+    print('  lesson_id: ${json['lesson_id']} (${json['lesson_id'].runtimeType})');
+    print('  questions_per_page: ${json['questions_per_page']} (${json['questions_per_page'].runtimeType})');
+    print('  time_limit: ${json['time_limit']} (${json['time_limit'].runtimeType})');
+    print('  allowed_attempts: ${json['allowed_attempts']} (${json['allowed_attempts'].runtimeType})');
+    print('  attempts_allowed: ${json['attempts_allowed']} (${json['attempts_allowed'].runtimeType})');
+    print('  points: ${json['points']} (${json['points'].runtimeType})');
+    print('  points_per_question: ${json['points_per_question']} (${json['points_per_question'].runtimeType})');
+    print('  total_points: ${json['total_points']} (${json['total_points'].runtimeType})');
+    print('  question_count: ${json['question_count']} (${json['question_count'].runtimeType})');
+    print('  total_questions: ${json['total_questions']} (${json['total_questions'].runtimeType})');
+    
+    // Helper function to safely parse int from string or number
+    int? parseIntSafe(dynamic value, int? defaultValue) {
+      if (value == null) return defaultValue;
+      if (value is int) return value;
+      if (value is String) {
+        return int.tryParse(value) ?? defaultValue;
+      }
+      if (value is num) return value.toInt();
+      return defaultValue;
+    }
+    
+    // Handle passing_grade which might be string or number or empty
+    double passingGrade = 65.0;
+    if (json['passing_grade'] != null && json['passing_grade'] != '') {
+      if (json['passing_grade'] is String) {
+        passingGrade = double.tryParse(json['passing_grade']) ?? 65.0;
+      } else if (json['passing_grade'] is num) {
+        passingGrade = json['passing_grade'].toDouble();
+      }
+    } else if (json['passing_percentage'] != null && json['passing_percentage'] != '') {
+      if (json['passing_percentage'] is String) {
+        passingGrade = double.tryParse(json['passing_percentage']) ?? 65.0;
+      } else if (json['passing_percentage'] is num) {
+        passingGrade = json['passing_percentage'].toDouble();
+      }
+    }
+    
     return LLMSQuizModel(
-      id: json['id'] ?? 0,
-      title: json['title']?['rendered'] ?? json['title'] ?? '',
-      content: json['content']?['rendered'] ?? json['content'] ?? '',
+      id: parseIntSafe(json['id'], 0) ?? 0,
+      title: json['title'] is String ? json['title'] : (json['title']?['rendered'] ?? ''),
+      content: json['content'] is String ? json['content'] : (json['content']?['rendered'] ?? ''),
       permalink: json['permalink'] ?? '',
-      courseId: json['course_id'] ?? 0,
-      lessonId: json['lesson_id'] ?? 0,
+      courseId: parseIntSafe(json['course_id'], 0) ?? 0,
+      lessonId: parseIntSafe(json['lesson_id'], 0) ?? 0,
       status: json['status'] ?? 'publish',
-      questionsPerPage: json['questions_per_page'] ?? 1,
+      questionsPerPage: parseIntSafe(json['questions_per_page'], 1) ?? 1,
       randomizeQuestions: json['randomize_questions'] ?? false,
       randomizeAnswers: json['randomize_answers'] ?? false,
-      timeLimit: json['time_limit'] ?? 0,
-      attemptsAllowed: json['attempts_allowed'] ?? 0,
-      passingPercentage: (json['passing_percentage'] ?? 65).toDouble(),
+      timeLimit: parseIntSafe(json['time_limit'], 0) ?? 0,
+      attemptsAllowed: parseIntSafe(json['allowed_attempts'] ?? json['attempts_allowed'], 0) ?? 0,
+      passingPercentage: passingGrade,
       showCorrectAnswers: json['show_correct_answers'] ?? true,
       showResultsOn: json['show_results'] ?? 'completion',
-      pointsPerQuestion: json['points_per_question'] ?? 1,
-      totalPoints: json['total_points'] ?? 0,
-      totalQuestions: json['total_questions'] ?? 0,
-      currentAttemptId: json['current_attempt_id'],
-      attemptsRemaining: json['attempts_remaining'],
+      pointsPerQuestion: parseIntSafe(json['points'] ?? json['points_per_question'], 1) ?? 1,
+      totalPoints: parseIntSafe(json['total_points'], 0) ?? 0,
+      totalQuestions: parseIntSafe(json['question_count'] ?? json['total_questions'], 0) ?? 0,
+      currentAttemptId: parseIntSafe(json['current_attempt_id'], null),
+      attemptsRemaining: parseIntSafe(json['remaining_attempts'] ?? json['attempts_remaining'], null),
       hasPassed: json['has_passed'],
-      highestGrade: json['highest_grade']?.toDouble(),
-      lastGrade: json['last_grade']?.toDouble(),
+      highestGrade: json['highest_grade'] != null 
+          ? (json['highest_grade'] is String 
+              ? double.tryParse(json['highest_grade']) 
+              : (json['highest_grade'] as num?)?.toDouble())
+          : null,
+      lastGrade: json['last_grade'] != null
+          ? (json['last_grade'] is String
+              ? double.tryParse(json['last_grade'])
+              : (json['last_grade'] as num?)?.toDouble())
+          : null,
     );
   }
   
