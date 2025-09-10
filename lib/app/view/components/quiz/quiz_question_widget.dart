@@ -118,6 +118,7 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
   
   Widget _buildMultipleChoice() {
     final choices = widget.question['choices'] as List? ?? [];
+    final bool isMultiChoice = widget.question['multi_choices'] == true;
     
     return Column(
       children: choices.map((choice) {
@@ -125,17 +126,51 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
         final String text = _decodeHtmlEntities(choice['choice'] ?? '');
         final String marker = choice['marker'] ?? '';
         
-        return RadioListTile<String>(
-          title: Text('$marker. $text'),
-          value: id,
-          groupValue: _answer,
-          onChanged: (value) {
-            setState(() {
-              _answer = value;
-            });
-            widget.onAnswerChanged(value);
-          },
-        );
+        if (isMultiChoice) {
+          // Multiple selection - use checkboxes
+          final List<String> selectedIds = _answer is List 
+              ? (_answer as List).map((e) => e.toString()).toList()
+              : (_answer != null ? [_answer.toString()] : []);
+          
+          return CheckboxListTile(
+            title: Text('$marker. $text'),
+            value: selectedIds.contains(id),
+            onChanged: (bool? checked) {
+              List<String> newSelection = List<String>.from(selectedIds);
+              if (checked == true) {
+                if (!newSelection.contains(id)) {
+                  newSelection.add(id);
+                }
+              } else {
+                newSelection.remove(id);
+              }
+              setState(() {
+                _answer = newSelection;
+              });
+              widget.onAnswerChanged(newSelection);
+              print('Multiple choice answer updated: $newSelection');
+            },
+          );
+        } else {
+          // Single selection - use radio buttons
+          // Ensure _answer is a string for single selection
+          final String? currentAnswer = _answer is String ? _answer as String : 
+                                        (_answer is List && (_answer as List).isNotEmpty) ? 
+                                        (_answer as List).first.toString() : null;
+          
+          return RadioListTile<String>(
+            title: Text('$marker. $text'),
+            value: id,
+            groupValue: currentAnswer,
+            onChanged: (value) {
+              setState(() {
+                _answer = value;
+              });
+              widget.onAnswerChanged(value);
+              print('Single choice answer selected: $value');
+            },
+          );
+        }
       }).toList(),
     );
   }
@@ -157,6 +192,7 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
                   _answer = id;
                 });
                 widget.onAnswerChanged(id);
+                print('True/False answer selected: $id');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _answer == id ? Colors.blue : Colors.grey.shade300,
@@ -197,6 +233,7 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
               _answer = id;
             });
             widget.onAnswerChanged(id);
+            print('Picture choice answer selected: $id');
           },
           child: Container(
             decoration: BoxDecoration(
@@ -242,7 +279,7 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
     final Map<String, dynamic> blankData = widget.question['choices'] ?? {};
     final int blankCount = blankData['blank_count'] ?? 1;
     
-    // For single blank, use string; for multiple, use list
+    // For single blank, use string
     if (blankCount == 1) {
       return TextField(
         decoration: const InputDecoration(
@@ -255,12 +292,18 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
             _answer = value;
           });
           widget.onAnswerChanged(value);
+          print('Fill-in-blank answer: $value');
         },
       );
     } else {
-      // Multiple blanks - use a list
+      // Multiple blanks - use a list internally but pass comma-separated string
       if (_answer == null || _answer is! List) {
-        _answer = List.filled(blankCount, '');
+        // Initialize from comma-separated string if needed
+        if (_answer is String && (_answer as String).contains(',')) {
+          _answer = (_answer as String).split(',');
+        } else {
+          _answer = List.filled(blankCount, '');
+        }
       }
       
       return Column(
@@ -277,9 +320,9 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
               ),
               onChanged: (value) {
                 (_answer as List)[index] = value;
-                // For API submission, join multiple blanks with comma
-                final answerString = (_answer as List).join(',');
-                widget.onAnswerChanged(answerString);
+                // For API submission, pass the list (will be converted in submit)
+                widget.onAnswerChanged(_answer);
+                print('Multiple blanks answer updated: $_answer');
               },
             ),
           );
@@ -407,6 +450,7 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
               _answer = value.toInt().toString();
             });
             widget.onAnswerChanged(_answer);
+            print('Scale answer selected: $_answer');
           },
         ),
         Row(

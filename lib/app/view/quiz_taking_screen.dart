@@ -164,15 +164,88 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
       
       // Submit even if answer is null (unanswered)
       print('Submitting answer for question $questionId: ${answer ?? "(unanswered)"}');
+      print('Question type: ${question['type']}');
       try {
-        // Format answer based on question type
+        // Format answer based on question type - MUST match API expectations
         dynamic submissionAnswer = answer ?? '';
         
-        // For reorder questions, convert array to comma-separated string
-        if (question['type'] == 'reorder' && answer is List) {
-          submissionAnswer = (answer as List).join(',');
-          print('Converted reorder answer to string: $submissionAnswer');
+        // Multiple choice, picture choice, and true/false need array format
+        if (question['type'] == 'choice' || 
+            question['type'] == 'picture_choice' || 
+            question['type'] == 'true_false') {
+          if (answer != null && answer is! List) {
+            // Convert single answer to array
+            submissionAnswer = [answer.toString()];
+            print('Converted ${question['type']} answer to array: $submissionAnswer');
+          } else if (answer is List) {
+            // Already an array, ensure all elements are strings
+            submissionAnswer = (answer as List).map((e) => e.toString()).toList();
+            print('Kept ${question['type']} answer as array: $submissionAnswer');
+          } else {
+            // No answer - send empty array
+            submissionAnswer = [];
+            print('No answer for ${question['type']}, sending empty array');
+          }
         }
+        // Reorder questions need comma-separated string
+        else if (question['type'] == 'reorder') {
+          if (answer is List) {
+            submissionAnswer = (answer as List).join(',');
+            print('Converted reorder answer to comma-separated string: $submissionAnswer');
+          } else if (answer != null) {
+            submissionAnswer = answer.toString();
+            print('Reorder answer already string: $submissionAnswer');
+          } else {
+            // No answer means user didn't reorder - send the original order
+            final choices = question['choices'] as List?;
+            if (choices != null && choices.isNotEmpty) {
+              submissionAnswer = choices.map((choice) => 
+                choice is Map ? choice['id'] : choice
+              ).join(',');
+              print('Reorder not changed, sending original order: $submissionAnswer');
+            } else {
+              submissionAnswer = '';
+              print('No reorder choices available');
+            }
+          }
+        }
+        // Scale questions need array format with string value
+        else if (question['type'] == 'scale') {
+          if (answer != null) {
+            submissionAnswer = [answer.toString()];
+            print('Converted scale answer to array: $submissionAnswer');
+          } else {
+            submissionAnswer = [];
+            print('No scale answer, sending empty array');
+          }
+        }
+        // Blank/fill-in-the-blank questions
+        else if (question['type'] == 'blank' || question['type'] == 'fill_in_the_blank') {
+          if (answer != null) {
+            // Check if multiple blanks (answer would be comma-separated)
+            if (answer is List) {
+              submissionAnswer = (answer as List).join(',');
+              print('Converted multiple blanks to comma-separated: $submissionAnswer');
+            } else {
+              // Single blank - send as array
+              submissionAnswer = [answer.toString()];
+              print('Converted blank answer to array: $submissionAnswer');
+            }
+          } else {
+            submissionAnswer = [''];
+            print('No blank answer, sending empty array');
+          }
+        }
+        // Default for other types (short_answer, long_answer, etc.)
+        else {
+          if (answer != null) {
+            submissionAnswer = answer.toString();
+            print('Using string format for ${question['type']}: $submissionAnswer');
+          }
+        }
+        
+        print('Final submission answer type: ${submissionAnswer.runtimeType}');
+        print('Final submission answer value: $submissionAnswer');
         
         // Submit answer to API with attempt ID
         final result = await controller.lmsService.api.submitQuizAnswer(
@@ -208,7 +281,8 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
         print('Quiz results: $result');
         
         final bool passed = result['passed'] ?? false;
-        final double grade = (result['grade'] ?? 0).toDouble();
+        // Use calculated_grade which is based on points, not the raw LifterLMS grade
+        final double grade = (result['calculated_grade'] ?? result['grade'] ?? 0).toDouble();
         final int pointsEarned = result['points_earned'] ?? 0;
         final int pointsPossible = result['points_possible'] ?? 0;
         
@@ -235,6 +309,7 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
                     style: TextStyle(color: Colors.orange)),
               ],
             ),
+            actionsAlignment: MainAxisAlignment.center,
             actions: [
               if (!passed)
                 TextButton(

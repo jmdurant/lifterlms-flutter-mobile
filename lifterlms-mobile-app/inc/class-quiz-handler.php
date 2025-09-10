@@ -33,6 +33,10 @@ class LLMS_Mobile_Quiz_Handler {
     public function __construct() {
         // Register REST API routes
         add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+        
+        // Add grading support for advanced question types (not supported in core LifterLMS)
+        add_filter( 'llms_blank_question_pre_grade', array( $this, 'grade_blank_question' ), 10, 3 );
+        add_filter( 'llms_reorder_question_pre_grade', array( $this, 'grade_reorder_question' ), 10, 3 );
     }
     
     /**
@@ -100,7 +104,14 @@ class LLMS_Mobile_Quiz_Handler {
                 ),
                 'answer' => array(
                     'required' => true,
-                    'type'     => 'string',
+                    'validate_callback' => function( $value ) {
+                        // Accept string, array, or null
+                        return is_string( $value ) || is_array( $value ) || is_null( $value );
+                    },
+                    'sanitize_callback' => function( $value ) {
+                        // Pass through as-is, we'll handle conversion in the method
+                        return $value;
+                    },
                 ),
             ),
         ) );
@@ -117,7 +128,10 @@ class LLMS_Mobile_Quiz_Handler {
                 ),
                 'answers' => array(
                     'required' => true,
-                    'type'     => 'object',
+                    'validate_callback' => function( $value ) {
+                        // Accept object/array of answers
+                        return is_array( $value ) || is_object( $value );
+                    },
                 ),
             ),
         ) );
@@ -240,7 +254,6 @@ class LLMS_Mobile_Quiz_Handler {
             if ( $attempt->get( 'status' ) === 'in-progress' ) {
                 $in_progress_attempts[] = array(
                     'id' => $attempt->get( 'attempt_id' ),
-                    'attempt_key' => $attempt->get( 'attempt_key' ),
                     'start_date' => $attempt->get( 'start_date' ),
                 );
             }
@@ -442,9 +455,43 @@ class LLMS_Mobile_Quiz_Handler {
         }
         
         // Get questions for this attempt
-        // Use the quiz object to get questions, not the attempt
+        // IMPORTANT: We get ALL questions from the quiz, not just what's in the attempt
+        // This ensures all question types are included
         $quiz = llms_get_post( $quiz_id );
         $question_ids = $quiz->get_questions( 'ids' );
+        
+        error_log('START_QUIZ: Quiz has ' . count($question_ids) . ' total questions');
+        error_log('START_QUIZ: Question IDs: ' . implode(', ', $question_ids));
+        
+        // Check what questions are in the attempt
+        $attempt_questions = $attempt->get_questions();
+        $attempt_question_ids = array();
+        if ( is_array( $attempt_questions ) ) {
+            foreach ( $attempt_questions as $q ) {
+                if ( isset( $q['id'] ) ) {
+                    $attempt_question_ids[] = $q['id'];
+                }
+            }
+        }
+        error_log('START_QUIZ: Attempt has ' . count($attempt_question_ids) . ' questions: ' . implode(', ', $attempt_question_ids));
+        
+        // Find missing questions
+        $missing_questions = array_diff( $question_ids, $attempt_question_ids );
+        if ( ! empty( $missing_questions ) ) {
+            error_log('START_QUIZ: Missing questions in attempt: ' . implode(', ', $missing_questions));
+            
+            // Add missing questions to the attempt
+            foreach ( $missing_questions as $missing_qid ) {
+                $missing_question = llms_get_post( $missing_qid );
+                if ( $missing_question ) {
+                    error_log('START_QUIZ: Adding missing question ' . $missing_qid . ' to attempt');
+                    $attempt->add_question( array(
+                        'id' => $missing_qid,
+                        'points' => $missing_question->get( 'points' ) ?: 1,
+                    ) );
+                }
+            }
+        }
         
         // Randomize if needed
         if ( $quiz->get( 'random_questions' ) === 'yes' ) {
@@ -457,11 +504,19 @@ class LLMS_Mobile_Quiz_Handler {
             $question = llms_get_post( $qid );
             
             if ( ! $question ) {
+                error_log('START_QUIZ: Question ' . $qid . ' not found');
                 continue;
             }
             
-            $questions[] = $this->format_question_for_attempt( $question, $attempt );
+            $question_data = $this->format_question_for_attempt( $question, $attempt );
+            error_log('START_QUIZ: Adding question ' . $qid . ' type: ' . $question->get('question_type') . 
+                     ', points: ' . $question->get('points') . 
+                     ', auto_gradable: ' . ($question_data['auto_gradable'] ? 'yes' : 'no') .
+                     ', grading: ' . $question_data['grading_notes']);
+            $questions[] = $question_data;
         }
+        
+        error_log('START_QUIZ: Returning ' . count($questions) . ' questions to app');
         
         // Try to get the attempt ID if we don't have it yet
         if (!isset($attempt_id)) {
@@ -482,8 +537,7 @@ class LLMS_Mobile_Quiz_Handler {
         
         return array(
             'success' => true,
-            'attempt_id' => $attempt_id ?? $attempt->get( 'attempt_id' ),
-            'attempt_key' => $attempt->get( 'attempt_key' ),
+            'attempt_id' => $attempt_id,
             'questions' => $questions,
             'time_limit' => $quiz->get( 'time_limit' ),
             'started_at' => $attempt->get( 'start_date' ),
@@ -535,45 +589,263 @@ class LLMS_Mobile_Quiz_Handler {
             $question_type = $question->get('question_type');
             error_log('SUBMIT_ANSWER: Question type: ' . $question_type);
             error_log('SUBMIT_ANSWER: Multi choices: ' . $question->get('multi_choices'));
+            error_log('SUBMIT_ANSWER: Received answer type: ' . gettype($answer));
+            error_log('SUBMIT_ANSWER: Received answer value: ' . print_r($answer, true));
             
-            // For choice and picture_choice questions, answer must be an array
-            if ( in_array( $question_type, array( 'choice', 'picture_choice' ) ) ) {
+            // Handle answer format based on question type
+            // Regular choice questions - keep as array of IDs
+            if ( $question_type === 'choice' ) {
+                // Keep choice answers as IDs in array format
                 if ( ! is_array( $answer ) ) {
                     $answer = array( $answer );
-                    error_log('SUBMIT_ANSWER: Converted answer to array for ' . $question_type);
                 }
+                error_log('SUBMIT_ANSWER: Choice answer (keeping IDs): ' . print_r($answer, true));
             }
-            // For true_false questions, answer must also be an array
+            // Picture choice - keep as array of IDs (don't convert to markers)
+            elseif ( $question_type === 'picture_choice' ) {
+                // Keep picture choice answers as IDs in array format
+                if ( ! is_array( $answer ) ) {
+                    $answer = array( $answer );
+                }
+                error_log('SUBMIT_ANSWER: Picture choice answer (keeping IDs): ' . print_r($answer, true));
+            }
+            // True/false - convert "true"/"false" strings to actual choice IDs
             elseif ( $question_type === 'true_false' ) {
-                if ( ! is_array( $answer ) ) {
-                    $answer = array( $answer );
-                    error_log('SUBMIT_ANSWER: Converted answer to array for true_false');
+                // If we get "true" or "false" as strings, convert to the actual choice ID
+                $raw_answers = is_array( $answer ) ? $answer : array( $answer );
+                $converted_answers = array();
+                
+                // Get the choices to find the IDs for true/false
+                $choices = $question->get_choices();
+                $true_id = null;
+                $false_id = null;
+                
+                foreach ( $choices as $choice ) {
+                    $choice_text = strtolower( $choice->get( 'choice' ) );
+                    if ( $choice_text === 'true' ) {
+                        $true_id = $choice->get( 'id' );
+                    } elseif ( $choice_text === 'false' ) {
+                        $false_id = $choice->get( 'id' );
+                    }
                 }
+                
+                // Convert each answer
+                foreach ( $raw_answers as $ans ) {
+                    $ans_str = strval( $ans );
+                    if ( strtolower( $ans_str ) === 'true' && $true_id ) {
+                        $converted_answers[] = $true_id;
+                        error_log('SUBMIT_ANSWER: Converted "true" to choice ID: ' . $true_id);
+                    } elseif ( strtolower( $ans_str ) === 'false' && $false_id ) {
+                        $converted_answers[] = $false_id;
+                        error_log('SUBMIT_ANSWER: Converted "false" to choice ID: ' . $false_id);
+                    } else {
+                        // Already an ID or unrecognized - keep as is
+                        $converted_answers[] = $ans;
+                    }
+                }
+                
+                $answer = $converted_answers;
+                error_log('SUBMIT_ANSWER: True/false final answer: ' . print_r($answer, true));
             }
-            // For reorder questions, convert array to comma-separated string
+            // Reorder questions - LifterLMS expects ARRAY of choice IDs
             elseif ( $question_type === 'reorder' ) {
-                if ( is_array( $answer ) ) {
-                    $answer = implode( ',', $answer );
-                    error_log('SUBMIT_ANSWER: Converted array to string for reorder');
+                // Convert to array if string
+                if ( ! is_array( $answer ) ) {
+                    $answer = explode( ',', $answer );
+                    error_log('SUBMIT_ANSWER: Converted comma-separated string to array for reorder');
                 }
+                // Ensure all elements are strings
+                $answer = array_map( 'strval', $answer );
+                error_log('SUBMIT_ANSWER: Reorder answer array: ' . implode(',', $answer));
             }
-            // For scale and blank questions, also need array format
-            elseif ( in_array( $question_type, array( 'scale', 'blank' ) ) ) {
+            // Scale questions - LifterLMS expects array with single value
+            elseif ( $question_type === 'scale' ) {
+                // Accept either format
                 if ( ! is_array( $answer ) ) {
                     $answer = array( strval( $answer ) );
-                    error_log('SUBMIT_ANSWER: Converted answer to array for ' . $question_type);
+                    error_log('SUBMIT_ANSWER: Converted to array for scale');
+                } else {
+                    // Ensure all elements are strings
+                    $answer = array_map( 'strval', $answer );
+                    error_log('SUBMIT_ANSWER: Keeping array format for scale');
+                }
+            }
+            // Blank/fill-in-the-blank questions - LifterLMS expects ARRAY of strings
+            elseif ( in_array( $question_type, array( 'blank', 'fill_in_the_blank' ) ) ) {
+                // Always use array format
+                if ( ! is_array( $answer ) ) {
+                    $answer = array( strval($answer) );
+                    error_log('SUBMIT_ANSWER: Converted string to array for blank');
+                } else {
+                    // Ensure all elements are strings
+                    $answer = array_map( 'strval', $answer );
+                    error_log('SUBMIT_ANSWER: Keeping array format for blank');
+                }
+                error_log('SUBMIT_ANSWER: Blank answer final: ' . print_r($answer, true));
+            }
+            // Other types (short_answer, long_answer, etc.) - keep as string
+            else {
+                if ( is_array( $answer ) ) {
+                    // If we get an array for a text answer, join it
+                    $answer = implode( ' ', $answer );
+                    error_log('SUBMIT_ANSWER: Converted array to string for ' . $question_type);
                 }
             }
         }
+        // Log what the correct answer should be for debugging
+        if ( $question ) {
+            $question_type = $question->get('question_type');
+            error_log('SUBMIT_ANSWER: Question type: ' . $question_type);
+            
+            // Log correct answer format
+            if ( in_array( $question_type, array( 'choice', 'picture_choice' ) ) ) {
+                $choices = $question->get_choices();
+                foreach ( $choices as $choice ) {
+                    if ( $choice->is_correct() ) {
+                        error_log('SUBMIT_ANSWER: Correct choice ID: ' . $choice->get( 'id' ));
+                        error_log('SUBMIT_ANSWER: Correct choice marker: ' . $choice->get( 'marker' ));
+                        $choice_text = $choice->get( 'choice' );
+                        if ( is_array( $choice_text ) ) {
+                            error_log('SUBMIT_ANSWER: Correct choice text: [image array]');
+                        } else {
+                            error_log('SUBMIT_ANSWER: Correct choice text: ' . $choice_text);
+                        }
+                    }
+                }
+            } elseif ( $question_type === 'true_false' ) {
+                error_log('SUBMIT_ANSWER: Correct true/false answer: ' . $question->get( 'correct_answer' ));
+            } elseif ( $question_type === 'blank' ) {
+                // Debug what's in the database for blank questions
+                $this->debug_question_data( $question_id );
+                
+                // Try different field names that LifterLMS might use
+                $correct = $question->get( 'correct_answer' );
+                if ( empty( $correct ) ) {
+                    // Try alternate field name
+                    $correct = $question->get( 'correct_value' );
+                    if ( empty( $correct ) ) {
+                        // Check post meta directly
+                        $correct = get_post_meta( $question_id, '_llms_correct_value', true );
+                    }
+                }
+                
+                if ( empty( $correct ) ) {
+                    error_log('SUBMIT_ANSWER: Blank question - no correct answer defined (manual grading required)');
+                } else {
+                    error_log('SUBMIT_ANSWER: Correct blank answer: ' . $correct);
+                    error_log('SUBMIT_ANSWER:   Correct type: ' . gettype($correct));
+                    error_log('SUBMIT_ANSWER:   Our answer: ' . print_r($answer, true));
+                    error_log('SUBMIT_ANSWER:   Our type: ' . gettype($answer));
+                    
+                    // Check if they match
+                    if ( is_array($answer) && count($answer) === 1 ) {
+                        $our_answer = $answer[0];
+                        if ( $our_answer == $correct ) {
+                            error_log('SUBMIT_ANSWER:   Answers MATCH (loose comparison)');
+                        } else {
+                            error_log('SUBMIT_ANSWER:   Answers DO NOT match');
+                            error_log('SUBMIT_ANSWER:     Our: "' . $our_answer . '" (' . gettype($our_answer) . ')');
+                            error_log('SUBMIT_ANSWER:     Expected: "' . $correct . '" (' . gettype($correct) . ')');
+                        }
+                    }
+                }
+            } elseif ( $question_type === 'reorder' ) {
+                // Debug what's in the database for reorder questions
+                $this->debug_question_data( $question_id );
+                
+                // For reorder questions, the correct answer is the original order of choices
+                $choices = $question->get_choices();
+                error_log('SUBMIT_ANSWER: Reorder has ' . count($choices) . ' choices');
+                
+                // Build the correct sequence from the original order
+                $correct_sequence_array = array();
+                foreach ( $choices as $idx => $choice ) {
+                    $choice_id = $choice->get('id');
+                    $correct_sequence_array[] = $choice_id;
+                    error_log('SUBMIT_ANSWER:   Choice ' . $idx . ' - ID: ' . $choice_id . 
+                             ', marker: ' . $choice->get('marker'));
+                }
+                
+                // The correct answer for reorder is the original order
+                $correct_sequence = implode(',', $correct_sequence_array);
+                error_log('SUBMIT_ANSWER: Correct reorder sequence: ' . $correct_sequence);
+                
+                // Check if the submitted answer matches
+                $submitted_sequence = is_array($answer) ? implode(',', $answer) : $answer;
+                if ( $submitted_sequence === $correct_sequence ) {
+                    error_log('SUBMIT_ANSWER: Reorder answer MATCHES expected sequence');
+                } else {
+                    error_log('SUBMIT_ANSWER: Reorder answer does NOT match');
+                    error_log('SUBMIT_ANSWER:   Submitted: ' . $submitted_sequence);
+                    error_log('SUBMIT_ANSWER:   Expected: ' . $correct_sequence);
+                }
+            } elseif ( $question_type === 'scale' ) {
+                error_log('SUBMIT_ANSWER: Scale question - any answer within range is correct');
+            }
+        }
+        
         error_log('SUBMIT_ANSWER: About to submit answer for question ' . $question_id);
-        error_log('SUBMIT_ANSWER: Answer type: ' . gettype($answer));
-        error_log('SUBMIT_ANSWER: Answer value: ' . print_r($answer, true));
+        error_log('SUBMIT_ANSWER: Final answer type: ' . gettype($answer));
+        error_log('SUBMIT_ANSWER: Final answer value: ' . print_r($answer, true));
         
         // Submit answer using LifterLMS
         $attempt->answer_question( $question_id, $answer );
         
-        // Get the graded result
-        $question_data = $attempt->get_question( $question_id );
+        // Get all questions to find our submitted answer
+        $all_questions = $attempt->get_questions();
+        $stored_answer = null;
+        $is_correct = null;
+        
+        foreach ( $all_questions as $q ) {
+            if ( is_array( $q ) && isset( $q['id'] ) && $q['id'] == $question_id ) {
+                $stored_answer = $q['answer'] ?? null;
+                $is_correct = $q['correct'] ?? null;
+                error_log('SUBMIT_ANSWER: Found question in attempt');
+                error_log('SUBMIT_ANSWER: Stored answer: ' . print_r($stored_answer, true));
+                error_log('SUBMIT_ANSWER: Marked correct: ' . ($is_correct ? 'YES' : 'NO'));
+                error_log('SUBMIT_ANSWER: Points earned: ' . ($q['earned'] ?? 0));
+                
+                // Log what LifterLMS thinks is the correct answer
+                $this->log_correct_answer( $question, $question_type );
+                
+                // For incorrect answers, try to get the correct answer from LifterLMS
+                if ( ! $is_correct ) {
+                    // Try different methods to get the correct answer
+                    if ( method_exists( $attempt, 'get_question_correct_answer' ) ) {
+                        $llms_correct = $attempt->get_question_correct_answer( $question_id );
+                        error_log('SUBMIT_ANSWER: LifterLMS correct answer (method): ' . print_r($llms_correct, true));
+                    }
+                    
+                    // For reorder, log more details about what went wrong
+                    if ( $question_type === 'reorder' ) {
+                        error_log('SUBMIT_ANSWER: Reorder marked incorrect!');
+                        error_log('SUBMIT_ANSWER:   We submitted: ' . print_r($stored_answer, true));
+                        error_log('SUBMIT_ANSWER:   Type: ' . gettype($stored_answer));
+                        
+                        // Check if the question object has the expected answer
+                        // Note: get_array() requires a parameter
+                        error_log('SUBMIT_ANSWER:   Checking what LifterLMS expects...');
+                    }
+                }
+                break;
+            }
+        }
+        
+        if ( $stored_answer === null ) {
+            error_log('SUBMIT_ANSWER: WARNING - Could not find question ' . $question_id . ' in attempt questions');
+            
+            // Try to add it if missing
+            $question_obj = llms_get_post( $question_id );
+            if ( $question_obj ) {
+                $points = $question_obj->get( 'points' ) ?: 1;
+                $attempt->add_question( array(
+                    'id' => $question_id,
+                    'points' => $points,
+                ) );
+                $attempt->answer_question( $question_id, $answer );
+                error_log('SUBMIT_ANSWER: Added missing question and submitted answer');
+            }
+        }
         
         return array(
             'success' => true,
@@ -616,23 +888,51 @@ class LLMS_Mobile_Quiz_Handler {
             if ( $question ) {
                 $question_type = $question->get('question_type');
                 
-                // Reorder questions - convert array to comma-separated string
-                if ( $question_type === 'reorder' ) {
-                    if ( is_array( $answer ) ) {
-                        // Join array elements into comma-separated string
-                        $answer = implode( ',', $answer );
-                    }
-                }
-                // Choice-based questions need array format
-                elseif ( in_array( $question_type, array( 'choice', 'picture_choice', 'true_false' ) ) ) {
+                // Handle answer format based on question type (same logic as submit_answer)
+                // Regular choice questions - keep as array of IDs
+                if ( $question_type === 'choice' ) {
                     if ( ! is_array( $answer ) ) {
                         $answer = array( $answer );
                     }
                 }
-                // Scale and blank questions also need array format
-                elseif ( in_array( $question_type, array( 'scale', 'blank' ) ) ) {
+                // Picture choice - keep as array of IDs
+                elseif ( $question_type === 'picture_choice' ) {
+                    if ( ! is_array( $answer ) ) {
+                        $answer = array( $answer );
+                    }
+                }
+                // True/false - keep as array of IDs
+                elseif ( $question_type === 'true_false' ) {
+                    if ( ! is_array( $answer ) ) {
+                        $answer = array( $answer );
+                    }
+                }
+                // Reorder questions - LifterLMS expects ARRAY
+                elseif ( $question_type === 'reorder' ) {
+                    if ( ! is_array( $answer ) ) {
+                        $answer = explode( ',', $answer );
+                    }
+                }
+                // Scale questions - LifterLMS expects array
+                elseif ( $question_type === 'scale' ) {
                     if ( ! is_array( $answer ) ) {
                         $answer = array( strval( $answer ) );
+                    } else {
+                        $answer = array_map( 'strval', $answer );
+                    }
+                }
+                // Blank questions - LifterLMS expects array
+                elseif ( in_array( $question_type, array( 'blank', 'fill_in_the_blank' ) ) ) {
+                    if ( ! is_array( $answer ) ) {
+                        $answer = array( strval( $answer ) );
+                    } else {
+                        $answer = array_map( 'strval', $answer );
+                    }
+                }
+                // Other types - keep as string
+                else {
+                    if ( is_array( $answer ) ) {
+                        $answer = implode( ' ', $answer );
                     }
                 }
             }
@@ -693,25 +993,93 @@ class LLMS_Mobile_Quiz_Handler {
         error_log('COMPLETE_QUIZ: Quiz has ' . $actual_question_count . ' questions');
         error_log('COMPLETE_QUIZ: Attempt recorded ' . $attempt_question_count . ' questions');
         
+        // Debug log the questions and their answers
+        $all_questions = $attempt->get_questions();
+        $total_points_earned = 0;
+        $total_points_possible = 0;
+        $questions_correct = 0;
+        $auto_gradable_count = 0;
+        
+        foreach ( $all_questions as $idx => $q ) {
+            if ( is_array( $q ) ) {
+                // Get question object to check type
+                $question_obj = llms_get_post( $q['id'] );
+                $question_type = $question_obj ? $question_obj->get( 'question_type' ) : '';
+                
+                // Determine if this question should count toward grade
+                // Include blank questions if they have a correct answer defined
+                $is_auto_gradable = in_array( $question_type, array( 'choice', 'picture_choice', 'true_false', 'reorder', 'blank' ) );
+                
+                $points_possible = isset($q['points']) ? floatval($q['points']) : 0;
+                $points_earned = isset($q['earned']) ? floatval($q['earned']) : 0;
+                $is_correct = isset($q['correct']) && $q['correct'];
+                
+                // Only count auto-gradable questions in total possible points
+                if ( $is_auto_gradable ) {
+                    $total_points_possible += $points_possible;
+                    $total_points_earned += $points_earned;
+                    $auto_gradable_count++;
+                    if ( $is_correct ) {
+                        $questions_correct++;
+                    }
+                }
+                
+                error_log('Question ' . $q['id'] . ' (' . $question_type . ') - answer: ' . print_r($q['answer'] ?? 'null', true) . 
+                         ', correct: ' . ($is_correct ? 'YES' : 'NO') . 
+                         ', earned: ' . $points_earned . '/' . $points_possible . ' points' .
+                         ', auto-gradable: ' . ($is_auto_gradable ? 'YES' : 'NO'));
+            } else {
+                error_log('Question ' . $idx . ' - attempt data: ' . print_r($q, true));
+            }
+        }
+        
+        error_log('COMPLETE_QUIZ: Total points earned (auto-gradable only): ' . $total_points_earned . '/' . $total_points_possible);
+        error_log('COMPLETE_QUIZ: Questions correct: ' . $questions_correct . '/' . $auto_gradable_count . ' (auto-gradable)');
+        
+        // Calculate percentage grade based on points
+        $percentage_grade = $total_points_possible > 0 ? 
+            round(($total_points_earned / $total_points_possible) * 100, 2) : 0;
+        
         $results = array(
             'success' => true,
             'attempt_id' => $attempt_id,
-            'grade' => $attempt->get( 'grade' ),
+            'grade' => $attempt->get( 'grade' ),  // Official LifterLMS grade
+            'calculated_grade' => $percentage_grade,  // Our calculated grade
             'passed' => $attempt->is_passing(),
-            'points_earned' => $attempt->get( 'earned_points' ),
-            'points_possible' => $attempt->get( 'possible_points' ),
-            'questions_correct' => $attempt->get_count( 'correct_answers' ),
-            'questions_total' => $actual_question_count,  // Use actual quiz question count
+            'points_earned' => $total_points_earned,
+            'points_possible' => $total_points_possible,
+            'questions_correct' => $questions_correct,
+            'questions_total' => $actual_question_count,
+            'auto_gradable_total' => $auto_gradable_count,
             'completed_at' => $attempt->get( 'end_date' ),
         );
         
         // Check if certificate was earned
-        $course_id = $quiz->get_course()->get( 'id' );
-        $certificates = $student->get_certificates( $course_id );
-        
-        if ( ! empty( $certificates ) ) {
-            $results['certificate_earned'] = true;
-            $results['certificate_id'] = $certificates[0];
+        $course = $quiz->get_course();
+        if ( $course ) {
+            $course_id = $course->get( 'id' );
+            // Get certificates without specifying order (avoiding SQL error)
+            $certificates = $student->get_certificates();
+            
+            // Filter for this specific course
+            $course_certificates = array();
+            foreach ( $certificates as $cert ) {
+                // Handle both object and array formats
+                $post_id = is_array( $cert ) ? ( $cert['post_id'] ?? null ) : ( isset( $cert->post_id ) ? $cert->post_id : null );
+                if ( $post_id && $post_id == $course_id ) {
+                    $course_certificates[] = $cert;
+                }
+            }
+            
+            if ( ! empty( $course_certificates ) ) {
+                $results['certificate_earned'] = true;
+                // Handle both object and array formats for certificate ID
+                $first_cert = $course_certificates[0];
+                $cert_id = is_array( $first_cert ) ? 
+                    ( $first_cert['certificate_id'] ?? null ) : 
+                    ( isset( $first_cert->certificate_id ) ? $first_cert->certificate_id : null );
+                $results['certificate_id'] = $cert_id;
+            }
         }
         
         // Add question results if showing correct answers
@@ -720,6 +1088,150 @@ class LLMS_Mobile_Quiz_Handler {
         }
         
         return $results;
+    }
+    
+    /**
+     * Log the correct answer for a question
+     */
+    private function log_correct_answer( $question, $question_type ) {
+        error_log('CORRECT_ANSWER: Checking correct answer for ' . $question_type);
+        
+        // Try the standard correct_answer field first
+        $correct_answer = $question->get( 'correct_answer' );
+        if ( ! empty( $correct_answer ) ) {
+            error_log('CORRECT_ANSWER: From correct_answer field: ' . print_r($correct_answer, true));
+        }
+        
+        // Check choices for questions with choices
+        if ( in_array( $question_type, array( 'choice', 'picture_choice', 'true_false', 'reorder' ) ) ) {
+            $choices = $question->get_choices();
+            error_log('CORRECT_ANSWER: Checking ' . count($choices) . ' choices');
+            
+            $correct_choices = array();
+            $all_choices = array();
+            
+            foreach ( $choices as $idx => $choice ) {
+                $choice_id = $choice->get('id');
+                $choice_text = $choice->get('choice');
+                $marker = $choice->get('marker');
+                $is_correct = $choice->is_correct();
+                
+                // Handle image choices (picture_choice) where text might be an array
+                $text_preview = is_array($choice_text) ? '[image]' : substr($choice_text, 0, 50);
+                
+                $all_choices[] = array(
+                    'index' => $idx,
+                    'id' => $choice_id,
+                    'marker' => $marker,
+                    'text' => $text_preview,
+                    'correct' => $is_correct
+                );
+                
+                if ( $is_correct ) {
+                    $correct_choices[] = $choice_id;
+                }
+            }
+            
+            error_log('CORRECT_ANSWER: All choices: ' . print_r($all_choices, true));
+            
+            if ( $question_type === 'reorder' ) {
+                // For reorder, all choices are "correct" but the order matters
+                // The correct answer is the original order
+                $correct_order = array();
+                foreach ( $choices as $idx => $choice ) {
+                    $correct_order[] = $choice->get('id');
+                }
+                error_log('CORRECT_ANSWER: Reorder correct sequence: ' . implode(',', $correct_order));
+            } else {
+                // For other choice questions, log which ones are marked correct
+                if ( ! empty( $correct_choices ) ) {
+                    error_log('CORRECT_ANSWER: Correct choice IDs: ' . implode(',', $correct_choices));
+                }
+            }
+        }
+        
+        // For blank/text questions, check for additional grading options
+        if ( in_array( $question_type, array( 'blank', 'fill_in_the_blank', 'short_answer', 'long_answer' ) ) ) {
+            // Check for conditional answers or other grading options
+            $question_id = $question->get('id');
+            $meta = get_post_meta( $question_id );
+            
+            $grading_options = array();
+            if ( isset( $meta['_llms_case_sensitive'] ) ) {
+                $grading_options['case_sensitive'] = $meta['_llms_case_sensitive'][0];
+            }
+            if ( isset( $meta['_llms_trim_whitespace'] ) ) {
+                $grading_options['trim_whitespace'] = $meta['_llms_trim_whitespace'][0];
+            }
+            if ( isset( $meta['_llms_conditional_answer'] ) ) {
+                $grading_options['conditional_answers'] = $meta['_llms_conditional_answer'][0];
+            }
+            
+            if ( ! empty( $grading_options ) ) {
+                error_log('CORRECT_ANSWER: Grading options: ' . print_r($grading_options, true));
+            }
+        }
+    }
+    
+    /**
+     * Debug function to inspect question data in database
+     */
+    private function debug_question_data( $question_id ) {
+        global $wpdb;
+        
+        // Get ALL post meta for the question to see what's available
+        $all_meta = get_post_meta( $question_id );
+        
+        error_log('DEBUG_QUESTION ' . $question_id . ': All meta keys available:');
+        error_log('  Keys: ' . implode(', ', array_keys($all_meta)));
+        
+        // Look for specific fields that might affect grading
+        $important_fields = array(
+            '_llms_correct_answer',
+            '_llms_correct',
+            '_llms_auto_grade',
+            '_llms_conditional_answer',
+            '_llms_conditional_logic',
+            '_llms_case_sensitive',
+            '_llms_trim_whitespace',
+            '_llms_question_type',
+            '_llms_multi_choices',
+            '_llms_points',
+            '_llms_answer_type',
+            '_llms_answer_options',
+            '_llms_grading_type'
+        );
+        
+        foreach ( $important_fields as $field ) {
+            if ( isset( $all_meta[$field] ) ) {
+                $value = $all_meta[$field][0];
+                // Unserialize if needed
+                $unserialized = @unserialize($value);
+                if ($unserialized !== false) {
+                    error_log('  ' . $field . ' = ' . print_r($unserialized, true));
+                } else {
+                    error_log('  ' . $field . ' = ' . $value);
+                }
+            }
+        }
+        
+        // Also check choice data for this question
+        $choices_meta = $wpdb->get_results( $wpdb->prepare(
+            "SELECT meta_key, meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key LIKE '_llms_choice_%'",
+            $question_id
+        ), ARRAY_A );
+        
+        if ( ! empty($choices_meta) ) {
+            error_log('  Choice data:');
+            foreach ( $choices_meta as $meta ) {
+                $value = @unserialize($meta['meta_value']);
+                if ($value !== false && is_array($value)) {
+                    error_log('    ' . $meta['meta_key'] . ' = ID:' . ($value['id'] ?? '?') . 
+                             ', correct:' . ($value['correct'] ?? 'false') . 
+                             ', marker:' . ($value['marker'] ?? '?'));
+                }
+            }
+        }
     }
     
     /**
@@ -741,6 +1253,22 @@ class LLMS_Mobile_Quiz_Handler {
         
         $quiz = llms_get_post( $attempt->get( 'quiz_id' ) );
         
+        // Calculate actual points from questions
+        $all_questions = $attempt->get_questions();
+        $total_points_earned = 0;
+        $total_points_possible = 0;
+        $questions_correct = 0;
+        
+        foreach ( $all_questions as $q ) {
+            if ( is_array( $q ) ) {
+                $total_points_possible += isset($q['points']) ? floatval($q['points']) : 0;
+                $total_points_earned += isset($q['earned']) ? floatval($q['earned']) : 0;
+                if ( isset($q['correct']) && $q['correct'] ) {
+                    $questions_correct++;
+                }
+            }
+        }
+        
         $results = array(
             'success' => true,
             'attempt' => array(
@@ -748,9 +1276,9 @@ class LLMS_Mobile_Quiz_Handler {
                 'status' => $attempt->get( 'status' ),
                 'grade' => $attempt->get( 'grade' ),
                 'passed' => $attempt->is_passing(),
-                'points_earned' => $attempt->get( 'earned_points' ),
-                'points_possible' => $attempt->get( 'possible_points' ),
-                'questions_correct' => $attempt->get_count( 'correct_answers' ),
+                'points_earned' => $total_points_earned,
+                'points_possible' => $total_points_possible,
+                'questions_correct' => $questions_correct,
                 'questions_total' => $attempt->get_count( 'questions' ),
                 'start_date' => $attempt->get( 'start_date' ),
                 'end_date' => $attempt->get( 'end_date' ),
@@ -912,16 +1440,26 @@ class LLMS_Mobile_Quiz_Handler {
                 $question_choices = $question->get_choices();
                 
                 if ( $question_choices ) {
+                    // Store the correct order first
+                    $correct_order = array();
                     foreach ( $question_choices as $choice ) {
-                        $choices[] = array(
+                        $choice_data = array(
                             'id' => $choice->get( 'id' ),
                             'order' => $choice->get( 'order' ),
                             'choice' => $choice->get( 'choice' ),
                         );
+                        $choices[] = $choice_data;
+                        $correct_order[] = $choice_data['id'];
                     }
                     
-                    // Shuffle for display (correct order is stored)
-                    shuffle( $choices );
+                    error_log('START_QUIZ: Reorder question CORRECT order: ' . implode(',', $correct_order));
+                    
+                    // DON'T shuffle - LifterLMS doesn't know about our shuffle
+                    // The app should display them in the wrong order already from LifterLMS
+                    // shuffle( $choices );
+                    
+                    $display_order = array_column($choices, 'id');
+                    error_log('START_QUIZ: Reorder question order sent to app: ' . implode(',', $display_order));
                 }
                 break;
                 
@@ -977,11 +1515,36 @@ class LLMS_Mobile_Quiz_Handler {
      * Helper: Format question for attempt
      */
     private function format_question_for_attempt( $question, $attempt ) {
+        $question_type = $question->get( 'question_type' );
+        
+        // Determine if this question type can be auto-graded
+        $auto_gradable = false;
+        $grading_notes = '';
+        
+        if ( in_array( $question_type, array( 'choice', 'picture_choice', 'true_false' ) ) ) {
+            $auto_gradable = true;
+            $grading_notes = 'Auto-graded';
+        } elseif ( $question_type === 'blank' || $question_type === 'fill_in_the_blank' ) {
+            // Blank questions need a correct answer to be auto-gradable
+            $correct_answer = $question->get( 'correct_answer' );
+            $auto_gradable = ! empty( $correct_answer );
+            $grading_notes = $auto_gradable ? 'Auto-graded (exact match)' : 'Manual grading (no correct answer)';
+        } elseif ( $question_type === 'scale' ) {
+            // Scale questions typically don't have correct answers
+            $auto_gradable = false;
+            $grading_notes = 'Opinion/scale - not graded';
+        } elseif ( $question_type === 'reorder' ) {
+            $auto_gradable = true;
+            $grading_notes = 'Auto-graded (exact order)';
+        } else {
+            $grading_notes = 'Manual grading required';
+        }
+        
         $question_data = array(
             'id' => $question->get( 'id' ),
             'title' => $question->get( 'title' ),
             'content' => $question->get( 'content' ),
-            'type' => $question->get( 'question_type' ),
+            'type' => $question_type,
             'points' => $question->get( 'points' ),
             'multi_choices' => $question->get( 'multi_choices' ) === 'yes',
             'description' => $question->get( 'description' ),
@@ -989,6 +1552,8 @@ class LLMS_Mobile_Quiz_Handler {
             'video' => $question->get( 'video_src' ),
             'choices' => $this->get_question_choices( $question ),
             'answered' => false,
+            'auto_gradable' => $auto_gradable,
+            'grading_notes' => $grading_notes,
         );
         
         return $question_data;
@@ -1114,6 +1679,70 @@ class LLMS_Mobile_Quiz_Handler {
      */
     public function check_permissions() {
         return is_user_logged_in();
+    }
+    
+    /**
+     * Grade blank/fill-in-the-blank questions (not supported in core LifterLMS)
+     */
+    public function grade_blank_question( $grade, $answer, $question ) {
+        // Get the correct answer
+        $correct_value = get_post_meta( $question->get( 'id' ), '_llms_correct_value', true );
+        
+        if ( empty( $correct_value ) ) {
+            // No correct answer defined, needs manual grading
+            return null;
+        }
+        
+        // Convert answer to string for comparison
+        $user_answer = is_array( $answer ) && count( $answer ) > 0 ? $answer[0] : $answer;
+        $user_answer = strval( $user_answer );
+        
+        // Check case sensitivity setting
+        $case_sensitive = get_post_meta( $question->get( 'id' ), '_llms_case_sensitive', true );
+        
+        if ( $case_sensitive !== 'yes' ) {
+            $user_answer = strtolower( $user_answer );
+            $correct_value = strtolower( $correct_value );
+        }
+        
+        // Grade the answer
+        return ( $user_answer === $correct_value ) ? 'yes' : 'no';
+    }
+    
+    /**
+     * Grade reorder questions (not supported in core LifterLMS)
+     */
+    public function grade_reorder_question( $grade, $answer, $question ) {
+        // Get the correct order from choices
+        $choices = $question->get_choices();
+        if ( empty( $choices ) ) {
+            return null;
+        }
+        
+        // Build correct order array based on marker order
+        $correct_order = array();
+        foreach ( $choices as $choice ) {
+            $marker = $choice->get( 'marker' );
+            $id = $choice->get( 'id' );
+            // Use marker as index to ensure correct order
+            $correct_order[intval($marker)] = $id;
+        }
+        
+        // Sort by marker to get correct sequence
+        ksort( $correct_order );
+        $correct_order = array_values( $correct_order );
+        
+        // Ensure answer is array
+        if ( ! is_array( $answer ) ) {
+            if ( is_string( $answer ) && strpos( $answer, ',' ) !== false ) {
+                $answer = explode( ',', $answer );
+            } else {
+                $answer = array( $answer );
+            }
+        }
+        
+        // Compare arrays
+        return ( $answer === $correct_order ) ? 'yes' : 'no';
     }
 }
 
