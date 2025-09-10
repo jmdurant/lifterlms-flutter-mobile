@@ -5,6 +5,7 @@ import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart'
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
+import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 // import 'package:watch_it/watch_it.dart';
@@ -145,38 +146,12 @@ class TopCourse extends StatelessWidget {
                   Positioned(
                     top: 10,
                     right: 15,
-                    child: wishlistStore.data.any((element) =>
-                                element.id ==
-                                topCoursesList[index].id) ==
-                            true
-                        ? GestureDetector(
-                            onTap: () async => {
-                                  await _controller
-                                      .onToggleWishlist(
-                                          topCoursesList[
-                                              index]),
-                                  courseController
-                                      .refreshScreen(),
-                                },
-                            child: const Icon(
-                              Icons.favorite,
-                              color: Colors.amber,
-                              size: 22,
-                            ))
-                        : GestureDetector(
-                            onTap: () async => {
-                                  await _controller
-                                      .onToggleWishlist(
-                                          topCoursesList[
-                                              index]),
-                                  courseController
-                                      .refreshScreen(),
-                                },
-                            child: const Icon(
-                              Icons.favorite_border,
-                              color: Colors.white,
-                              size: 22,
-                            )),
+                    child: WishlistHeart(
+                      courseId: topCoursesList[index].id,
+                      onToggle: () {
+                        // Optional: refresh if needed
+                      },
+                    ),
                   ),
                   Positioned(
                     left: 0,

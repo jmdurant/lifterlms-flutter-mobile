@@ -50,6 +50,7 @@ import '../view/components/profile/settings/language.dart';
 import '../view/components/profile/settings/password.dart';
 import '../view/my_certificates.dart';
 import '../view/certificate_detail.dart';
+import '../view/certificate_viewer_screen.dart';
 
 class AppRouter {
   static const String initial = '/';
@@ -86,6 +87,7 @@ class AppRouter {
   static const String privacy = '/privacy';
   static const String myCertificates = '/myCertificates';
   static const String certificateDetail = '/certificateDetail';
+  static const String certificateViewer = '/certificateViewer';
 
   static String getInitialRoute() => initial;
   static String getSplashRoute() => splash;
@@ -121,6 +123,7 @@ class AppRouter {
   static String getInstructorDetail() => intructorDetail;
   static String getMyCertificates() => myCertificates;
   static String getCertificateDetail() => certificateDetail;
+  static String getCertificateViewer() => certificateViewer;
 
   static List<GetPage> routes = [
     // GetPage(
@@ -200,6 +203,11 @@ class AppRouter {
     GetPage(
         name: certificateDetail,
         page: () => CertificateDetailScreen(),
+        preventDuplicates: false
+    ),
+    GetPage(
+        name: certificateViewer,
+        page: () => CertificateViewerScreen(),
         preventDuplicates: false
     ),
   ];

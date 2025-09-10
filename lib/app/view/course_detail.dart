@@ -12,6 +12,7 @@ import 'package:flutter_app/app/backend/models/lifterlms/llms_instructor_model.d
 import 'package:flutter_app/app/controller/lifterlms/course_detail_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
+import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/app/controller/lifterlms/payment_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
@@ -67,6 +68,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       refreshData();
     }
   }
+  
 
   refreshData() async {
     await courseDetailController.refreshData();
@@ -425,55 +427,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                 Positioned(
                                   top: 25,
                                   right: 15,
-                                  child: wishlistStore.data.any((element) =>
-                                              element.id ==
-                                              courseStore.detail?.id) ==
-                                          true
-                                      ? GestureDetector(
-                                          onTap: () async => {
-                                                await value.onToggleWishlist(
-                                                    value.course.value?.id?.toString() ?? ''),
-                                                courseController
-                                                    .refreshScreen(),
-                                                homeController.refreshScreen(),
-                                              },
-                                          child: Container(
-                                            width: 40,
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                              BorderRadius.all(Radius.circular(10)),
-                                              color: Colors.amber,
-                                            ),
-                                            child: Icon(
-                                              Icons.favorite_border,
-                                              color: Colors.white,
-                                              size: 22,
-                                            ),
-                                          )
-                                  )
-                                      : GestureDetector(
-                                          onTap: () async => {
-                                                await value.onToggleWishlist(
-                                                    value.course.value?.id?.toString() ?? ''),
-                                                courseController
-                                                    .refreshScreen(),
-                                                homeController.refreshScreen(),
-                                              },
-                                          child: Container(
-                                            width: 40,
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                              BorderRadius.all(Radius.circular(10)),
-                                              color: Colors.black.withOpacity(0.2),
-                                            ),
-                                            child: Icon(
-                                              Icons.favorite_border,
-                                              color: Colors.white,
-                                              size: 22,
-                                            ),
-                                          )
+                                  child: WishlistHeart(
+                                    courseId: value.course.value?.id ?? 0,
+                                    onToggle: () {
+                                      // Optional: refresh if needed
+                                    },
                                   ),
                                 ),
                                 Positioned(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/certificates_controller.dart';
+import 'package:flutter_app/app/backend/services/lms_service.dart';
 import 'package:get/get.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 class CertificateDetailScreen extends StatefulWidget {
@@ -13,9 +14,10 @@ class CertificateDetailScreen extends StatefulWidget {
 
 class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
   final CertificatesController controller = Get.find<CertificatesController>();
-  late WebViewController _webViewController;
+  InAppWebViewController? _webViewController;
   bool isLoading = true;
   CertificateModel? certificate;
+  String? certificateHtml;
 
   @override
   void initState() {
@@ -29,38 +31,35 @@ class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
     }
   }
 
-  void _loadCertificate() {
+  void _loadCertificate() async {
     if (certificate == null) return;
     
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) {
-            setState(() {
-              isLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            setState(() {
-              isLoading = false;
-            });
-          },
-        ),
-      );
-    
-    // Load certificate HTML or preview URL
-    if (certificate!.previewUrl != null) {
-      _webViewController.loadRequest(Uri.parse(certificate!.previewUrl!));
-    } else {
-      _loadCertificateHTML();
+    // Try to fetch the actual certificate HTML from API
+    try {
+      final lmsService = LMSService.to;
+      final response = await lmsService.getCertificateDownloadData(certificate!.id);
+      
+      if (response.statusCode == 200 && response.body['success'] == true) {
+        final htmlContent = response.body['html'];
+        if (htmlContent != null && htmlContent.isNotEmpty) {
+          setState(() {
+            certificateHtml = htmlContent;
+            isLoading = false;
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      print('Error fetching certificate HTML: $e');
     }
+    
+    // Fallback to basic HTML template
+    _loadCertificateHTML();
   }
 
-  void _loadCertificateHTML() async {
+  void _loadCertificateHTML() {
     // Load certificate HTML content
-    final html = '''
+    certificateHtml = '''
     <!DOCTYPE html>
     <html>
     <head>
@@ -170,7 +169,9 @@ class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
     </html>
     ''';
     
-    _webViewController.loadHtmlString(html);
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
@@ -214,9 +215,6 @@ class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
                 case 'download':
                   controller.downloadCertificate(certificate!);
                   break;
-                case 'verify':
-                  controller.verifyCertificate(certificate!);
-                  break;
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -240,80 +238,80 @@ class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
                   ],
                 ),
               ),
-              PopupMenuItem(
-                value: 'verify',
-                child: Row(
-                  children: [
-                    Icon(Icons.verified_user, size: 20, color: Colors.black87),
-                    SizedBox(width: 12),
-                    Text('Verify'),
-                  ],
-                ),
-              ),
             ],
           ),
         ],
       ),
       body: Column(
         children: [
-          // Certificate info header
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade50,
-              border: Border(
-                bottom: BorderSide(color: Colors.amber.shade200),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.workspace_premium,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        certificate!.courseTitle,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Earned on ${certificate!.earnedDate}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
           // WebView for certificate
           Expanded(
             child: Stack(
               children: [
-                WebViewWidget(controller: _webViewController),
+                if (certificateHtml != null)
+                  InAppWebView(
+                    initialData: InAppWebViewInitialData(
+                      data: certificateHtml!,
+                    ),
+                    initialOptions: InAppWebViewGroupOptions(
+                      crossPlatform: InAppWebViewOptions(
+                        useShouldOverrideUrlLoading: true,
+                        javaScriptEnabled: true,
+                        supportZoom: true,
+                        horizontalScrollBarEnabled: false,
+                        verticalScrollBarEnabled: false,
+                        disableHorizontalScroll: false,
+                        disableVerticalScroll: false,
+                      ),
+                      android: AndroidInAppWebViewOptions(
+                        useWideViewPort: true,
+                        loadWithOverviewMode: true,
+                        builtInZoomControls: true,
+                        displayZoomControls: false,
+                      ),
+                      ios: IOSInAppWebViewOptions(
+                        allowsInlineMediaPlayback: true,
+                      ),
+                    ),
+                    onWebViewCreated: (controller) {
+                      _webViewController = controller;
+                    },
+                    onLoadStop: (controller, url) async {
+                      // Inject JavaScript to auto-fit the certificate
+                      await controller.evaluateJavascript(source: '''
+                        // Make certificate responsive and centered
+                        var meta = document.querySelector('meta[name="viewport"]');
+                        if (!meta) {
+                          meta = document.createElement('meta');
+                          meta.name = 'viewport';
+                          document.head.appendChild(meta);
+                        }
+                        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes';
+                        
+                        // Ensure body takes full width
+                        document.body.style.margin = '0';
+                        document.body.style.padding = '0';
+                        document.body.style.width = '100%';
+                        document.body.style.display = 'flex';
+                        document.body.style.justifyContent = 'center';
+                        document.body.style.alignItems = 'center';
+                        document.body.style.minHeight = '100vh';
+                        
+                        // Make certificate container responsive
+                        var certificate = document.querySelector('.certificate-container');
+                        if (certificate) {
+                          certificate.style.maxWidth = '100%';
+                          certificate.style.width = 'calc(100% - 20px)';
+                          certificate.style.margin = '10px';
+                          certificate.style.boxSizing = 'border-box';
+                        }
+                      ''');
+                      
+                      setState(() {
+                        isLoading = false;
+                      });
+                    },
+                  ),
                 if (isLoading)
                   Center(
                     child: CircularProgressIndicator(

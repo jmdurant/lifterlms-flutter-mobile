@@ -8,6 +8,7 @@ import 'package:flutter_app/app/controller/settings_controller.dart';
 import 'package:flutter_app/app/backend/parse/settings_parse.dart';
 import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
+import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/profile/my-order-screen.dart';
 import 'package:flutter_app/app/view/components/profile/profile-screen.dart';
 import 'package:get/get.dart';
@@ -216,6 +217,13 @@ class ProfileView extends StatelessWidget {
                       SizedBox(height: 32),
                       
                       // Menu items
+                      ListTile(
+                        leading: Icon(Icons.workspace_premium),
+                        title: Text('My Certificates'),
+                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () => Get.toNamed(AppRouter.getMyCertificates()),
+                      ),
+                      Divider(),
                       ListTile(
                         leading: Icon(Icons.shopping_cart),
                         title: Text('My Orders'),

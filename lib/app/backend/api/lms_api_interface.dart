@@ -103,6 +103,7 @@ abstract class LMSApiInterface {
   
   // Certificates (WordPress Plugin Extension)
   Future<Response> getCertificates({int page, int limit});
+  Future<Response> getCertificateDownload(int certificateId);
   
   // Social Login (Custom Implementation)
   Future<Response> loginWithGoogle({required String token});

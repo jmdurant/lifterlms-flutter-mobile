@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
 import 'package:flutter_app/app/backend/models/course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
+import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
@@ -13,6 +14,77 @@ import '../../backend/parse/course_detail_parse.dart';
 import '../course_detail.dart';
 
 typedef OnToggleWishlistCallback = void Function();
+
+// Separate widget for the heart icon
+class WishlistHeart extends StatefulWidget {
+  final int courseId;
+  final VoidCallback onToggle;
+  
+  const WishlistHeart({
+    Key? key,
+    required this.courseId,
+    required this.onToggle,
+  }) : super(key: key);
+  
+  @override
+  _WishlistHeartState createState() => _WishlistHeartState();
+}
+
+class _WishlistHeartState extends State<WishlistHeart> {
+  late bool _isInWishlist;
+  late WishlistController _controller;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.find<WishlistController>();
+    _isInWishlist = _controller.isInWishlist(widget.courseId);
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        // Toggle state immediately for visual feedback
+        setState(() {
+          _isInWishlist = !_isInWishlist;
+        });
+        
+        // Call the controller
+        await _controller.toggleWishlist(widget.courseId);
+        
+        // Check actual state and update if needed
+        if (mounted) {
+          final actualState = _controller.isInWishlist(widget.courseId);
+          if (actualState != _isInWishlist) {
+            setState(() {
+              _isInWishlist = actualState;
+            });
+          }
+        }
+        
+        widget.onToggle();
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+          color: _isInWishlist 
+            ? Colors.red.withOpacity(0.8)
+            : Colors.black.withOpacity(0.2),
+        ),
+        child: Icon(
+          _isInWishlist 
+            ? Icons.favorite 
+            : Icons.favorite_border,
+          color: Colors.white,
+          size: 22,
+        ),
+      ),
+    );
+  }
+}
 
 class ItemCourse extends WatchingWidget {
   final dynamic item; // Can be CourseModel or LLMSCourseModel
@@ -36,6 +108,16 @@ class ItemCourse extends WatchingWidget {
   }
 
   final WishlistStore wishlistStore = Get.find<WishlistStore>();
+  
+  // Get course ID for wishlist checking
+  int _getCourseId() {
+    if (item is CourseModel) {
+      return item.id ?? 0;
+    } else if (item is LLMSCourseModel) {
+      return item.id;
+    }
+    return 0;
+  }
 
   // Helper methods to handle both model types
   ImageProvider _getItemImage() {
@@ -163,43 +245,7 @@ class ItemCourse extends WatchingWidget {
                   Positioned(
                     top: 10,
                     right: 15,
-                    child: wishlistStore.data
-                                .any((element) => element.id == item.id) ==
-                            true
-                        ? GestureDetector(
-                            onTap: () => {onToggleWishlist()},
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                color: Colors.amber,
-                              ),
-                              child: Icon(
-                                Icons.favorite_border,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            )
-                    )
-                        : GestureDetector(
-                            onTap: () => {onToggleWishlist()},
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                color: Colors.black.withOpacity(0.2),
-                              ),
-                              child: Icon(
-                                Icons.favorite_border,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            )
-                    ),
+                    child: WishlistHeart(courseId: _getCourseId(), onToggle: onToggleWishlist),
                   ),
                   _isOnSale()
                       ? Positioned(

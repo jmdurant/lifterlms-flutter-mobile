@@ -7,6 +7,21 @@ import 'package:flutter_app/app/util/toast.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+
+// Custom InAppBrowser to handle navigation
+class MyInAppBrowser extends InAppBrowser {
+  @override
+  Future onLoadStart(url) async {
+    // Close browser when navigating to about:blank
+    if (url.toString() == 'about:blank') {
+      close();
+    }
+  }
+}
 
 class CertificateModel {
   final int id;
@@ -186,37 +201,167 @@ class CertificatesController extends GetxController implements GetxService {
     );
   }
   
-  /// Download certificate as PDF
+  /// Download certificate as PDF  
   Future<void> downloadCertificate(CertificateModel certificate) async {
     try {
       DialogHelper.showLoading();
       
-      // Get download URL from LMSService wrapper
+      print('CertificatesController - Downloading certificate ${certificate.id}');
+      
+      // Get certificate HTML content from API
       final response = await lmsService.getCertificateDownloadData(certificate.id);
+      
+      print('CertificatesController - Download response status: ${response.statusCode}');
+      print('CertificatesController - Download response body keys: ${response.body.keys}');
       
       DialogHelper.hideLoading();
       
       if (response.statusCode == 200 && response.body['success'] == true) {
-        final downloadUrl = response.body['download_url'];
+        final htmlContent = response.body['html'];
+        print('CertificatesController - HTML content length: ${htmlContent?.length ?? 0}');
         
-        if (downloadUrl != null) {
-          // Open download URL
-          if (await canLaunchUrl(Uri.parse(downloadUrl))) {
-            await launchUrl(
-              Uri.parse(downloadUrl),
-              mode: LaunchMode.externalApplication,
-            );
-            showToast('Certificate download started');
-          } else {
-            showToast('Could not open download link', isError: true);
-          }
+        if (htmlContent != null && htmlContent.isNotEmpty) {
+          // Create a properly formatted HTML with viewport and auto-fit
+          final wrappedHtml = '''
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+<style>
+  * { box-sizing: border-box; }
+  html, body { 
+    margin: 0; 
+    padding: 0; 
+    width: 100%; 
+    min-height: 100vh;
+  }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #f5f5f5;
+  }
+  .wrapper {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+$htmlContent
+</div>
+<script>
+  // Auto-fit certificate on load and center it
+  window.addEventListener('load', function() {
+    var cert = document.querySelector('.certificate-container');
+    if (cert) {
+      cert.style.maxWidth = '100%';
+      cert.style.margin = 'auto';
+    }
+    // Also update the body from the original HTML if it exists
+    var originalBody = document.querySelector('body > body');
+    if (originalBody) {
+      originalBody.style.margin = '0';
+      originalBody.style.padding = '0';
+    }
+  });
+</script>
+</body>
+</html>
+''';
+          
+          // Add JavaScript for print functionality and close button
+          final enhancedHtml = wrappedHtml.replaceFirst(
+            '</body>',
+            '''
+<div style="position: fixed; top: 50px; right: 20px; z-index: 9999;">
+  <button onclick="window.location.href='about:blank';" style="
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    padding: 0;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  ">
+    ✕
+  </button>
+</div>
+<div style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999;">
+  <button onclick="window.print()" style="
+    background: #f59e0b;
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  ">
+    🖨️ Print / Save PDF
+  </button>
+</div>
+</body>
+'''
+          );
+          
+          // Open in InAppBrowser where user can print/save
+          print('CertificatesController - Opening InAppBrowser with HTML');
+          final browser = MyInAppBrowser();
+          
+          await browser.openData(
+            data: enhancedHtml,
+            mimeType: 'text/html',
+            encoding: 'utf-8',
+            baseUrl: WebUri('https://polite-tree.myliftersite.com'),
+            settings: InAppBrowserClassSettings(
+              browserSettings: InAppBrowserSettings(
+                hideUrlBar: true,
+                hideToolbarTop: true,
+                presentationStyle: ModalPresentationStyle.FULL_SCREEN,
+                transitionStyle: ModalTransitionStyle.COVER_VERTICAL,
+              ),
+              webViewSettings: InAppWebViewSettings(
+                javaScriptEnabled: true,
+                supportZoom: true,
+                useWideViewPort: true,
+                loadWithOverviewMode: true,
+                builtInZoomControls: true,
+                displayZoomControls: false,
+                horizontalScrollBarEnabled: false,
+                verticalScrollBarEnabled: false,
+                allowFileAccessFromFileURLs: true,
+                allowUniversalAccessFromFileURLs: true,
+              ),
+            ),
+          );
+        } else {
+          print('CertificatesController - No HTML content available');
+          showToast('Certificate content not available', isError: true);
         }
       } else {
-        showToast('Failed to get download link', isError: true);
+        print('CertificatesController - Failed response: ${response.statusCode}');
+        print('CertificatesController - Response body: ${response.body}');
+        showToast('Failed to load certificate', isError: true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       DialogHelper.hideLoading();
-      showToast('Error downloading certificate', isError: true);
+      print('CertificatesController - Error downloading certificate: $e');
+      print('CertificatesController - Stack trace: $stackTrace');
+      showToast('Error loading certificate: $e', isError: true);
     }
   }
   
@@ -225,21 +370,60 @@ class CertificatesController extends GetxController implements GetxService {
     try {
       DialogHelper.showLoading();
       
-      // Get share data via LMSService wrapper
-      final response = await lmsService.shareCertificateLink(certificate.id, method: 'link');
+      // Get certificate HTML content from API
+      final response = await lmsService.getCertificateDownloadData(certificate.id);
       
       DialogHelper.hideLoading();
       
       if (response.statusCode == 200 && response.body['success'] == true) {
-        final shareUrl = response.body['share_url'] ?? certificate.previewUrl;
-        final message = response.body['message'] ?? 
-            'Check out my certificate: ${certificate.title}';
+        final htmlContent = response.body['html'];
         
-        // Share using share_plus
-        await Share.share(
-          '$message\n\n$shareUrl',
-          subject: 'Certificate: ${certificate.title}',
-        );
+        if (htmlContent != null && htmlContent.isNotEmpty) {
+          // Create a complete HTML document
+          final fullHtml = '''
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${certificate.title}</title>
+</head>
+<body style="margin: 0; padding: 20px; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
+$htmlContent
+</body>
+</html>
+''';
+          
+          // Create XFile from HTML string
+          final bytes = utf8.encode(fullHtml);
+          final dir = await getTemporaryDirectory();
+          // Use course title for filename, sanitized for filesystem
+          final sanitizedTitle = certificate.courseTitle
+              .replaceAll(RegExp(r'[<>:"/\|?*]'), '')
+              .replaceAll(RegExp(r'\s+'), '_');
+          final fileName = '${sanitizedTitle}_Certificate.html';
+          final file = File('${dir.path}/$fileName');
+          await file.writeAsBytes(bytes);
+          
+          // Share the HTML file
+          final xFile = XFile(file.path, mimeType: 'text/html');
+          await Share.shareXFiles(
+            [xFile],
+            subject: 'Certificate: ${certificate.title}',
+            text: 'I earned a certificate in ${certificate.courseTitle}!',
+          );
+          
+          // Clean up temp file after a delay
+          Future.delayed(Duration(seconds: 10), () {
+            file.deleteSync();
+          });
+        } else {
+          // Fallback to text share
+          await Share.share(
+            'I earned a certificate in ${certificate.courseTitle}!',
+            subject: 'Certificate Earned',
+          );
+        }
       } else {
         // Fallback to basic share
         await Share.share(
@@ -249,6 +433,7 @@ class CertificatesController extends GetxController implements GetxService {
       }
     } catch (e) {
       DialogHelper.hideLoading();
+      print('Error sharing certificate: $e');
       showToast('Error sharing certificate', isError: true);
     }
   }

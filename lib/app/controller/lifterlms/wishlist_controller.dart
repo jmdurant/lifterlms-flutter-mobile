@@ -131,34 +131,47 @@ class WishlistController extends GetxController implements GetxService {
   
   /// Add course to wishlist
   Future<void> addToWishlist(int courseId) async {
+    print('WishlistController - Adding course $courseId to wishlist');
+    
     if (!lmsService.isLoggedIn) {
+      print('WishlistController - User not logged in');
       Get.toNamed(AppRouter.login);
       return;
     }
     
+    // Optimistically add to wishlist for immediate visual feedback
+    wishlistIds.add(courseId);
+    update(); // Update ALL widgets listening to this controller
+    
     try {
-      DialogHelper.showLoading();
-      
+      // No loading dialog for better UX
+      print('WishlistController - Calling API to add course $courseId');
       final response = await lmsService.addToWishlist(courseId);
       
-      DialogHelper.hideLoading();
+      print('WishlistController - API Response: ${response.statusCode}');
+      print('WishlistController - API Response body: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Add to local list
-        wishlistIds.add(courseId);
-        
+        // Success - already added to local list
         // Fetch course details and add to list
         await _fetchAndAddCourse(courseId);
-        
-        showToast('Added to wishlist');
-      } else if (response.statusCode == 501) {
-        _showWishlistNotAvailable();
       } else {
-        showToast('Failed to add to wishlist', isError: true);
+        // Failed - revert the optimistic update
+        wishlistIds.remove(courseId);
+        update(); // Update ALL widgets
+        
+        if (response.statusCode == 501) {
+          print('WishlistController - Wishlist not available (501)');
+          _showWishlistNotAvailable();
+        } else {
+          print('WishlistController - Failed with status: ${response.statusCode}');
+        }
       }
     } catch (e) {
-      DialogHelper.hideLoading();
-      showToast('Error adding to wishlist', isError: true);
+      // Failed - revert the optimistic update
+      wishlistIds.remove(courseId);
+      update(); // Update ALL widgets
+      print('WishlistController - Exception: $e');
     }
   }
   
@@ -166,27 +179,36 @@ class WishlistController extends GetxController implements GetxService {
   Future<void> removeFromWishlist(int courseId) async {
     if (!lmsService.isLoggedIn) return;
     
+    // Optimistically remove from wishlist for immediate visual feedback
+    wishlistIds.remove(courseId);
+    _wishlistCourses.removeWhere((course) => course.id == courseId);
+    update(); // Update ALL widgets
+    
     try {
-      DialogHelper.showLoading();
-      
+      // No loading dialog for better UX
       final response = await lmsService.removeFromWishlist(courseId);
       
-      DialogHelper.hideLoading();
-      
       if (response.statusCode == 200 || response.statusCode == 204) {
-        // Remove from local lists
-        wishlistIds.remove(courseId);
-        _wishlistCourses.removeWhere((course) => course.id == courseId);
-        
-        showToast('Removed from wishlist');
-      } else if (response.statusCode == 501) {
-        _showWishlistNotAvailable();
+        // Success - already removed from local lists
       } else {
-        showToast('Failed to remove from wishlist', isError: true);
+        // Failed - revert the optimistic update
+        wishlistIds.add(courseId);
+        // Re-fetch the course to add it back to the list
+        await _fetchAndAddCourse(courseId);
+        update(); // Update ALL widgets
+        
+        if (response.statusCode == 501) {
+          _showWishlistNotAvailable();
+        } else {
+          print('Failed to remove from wishlist: ${response.statusCode}');
+        }
       }
     } catch (e) {
-      DialogHelper.hideLoading();
-      showToast('Error removing from wishlist', isError: true);
+      // Failed - revert the optimistic update
+      wishlistIds.add(courseId);
+      await _fetchAndAddCourse(courseId);
+      update(); // Update ALL widgets
+      print('Error removing from wishlist: $e');
     }
   }
   

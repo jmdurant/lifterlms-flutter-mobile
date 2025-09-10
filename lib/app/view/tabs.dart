@@ -12,7 +12,7 @@ import 'package:flutter_app/app/view/courses.dart';
 import 'package:flutter_app/app/view/home.dart';
 import 'package:flutter_app/app/view/my_courses.dart';
 import 'package:flutter_app/app/view/my_profile.dart';
-import 'package:flutter_app/app/view/wishlist.dart';
+import 'package:flutter_app/app/view/favorites_screen.dart';
 import 'package:get/get.dart';
 import 'package:watch_it/watch_it.dart';
 import 'dart:io' show Platform;
@@ -34,7 +34,7 @@ class _TabScreenState extends State<TabScreen>
     HomeScreen(),
     const CoursesScreen(),
     const MyCoursesScreen(),
-    const WishlistScreen(),
+    const FavoritesScreen(),
     MyProfileScreen()
   ];
 

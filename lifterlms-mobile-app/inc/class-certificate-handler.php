@@ -253,18 +253,94 @@ class LLMS_Mobile_Certificate_Handler {
             return new WP_Error( 'unauthorized', 'Unauthorized access', array( 'status' => 403 ) );
         }
         
-        // Get download URL
-        $download_url = $certificate->get_download_url();
+        // Get certificate content with merge codes replaced
+        $content = $certificate->get( 'content' );
         
-        if ( ! $download_url ) {
-            // Generate PDF if not exists
-            $download_url = $this->generate_certificate_pdf( $certificate );
+        // Apply merge codes
+        $content = $this->apply_merge_codes( $content, $certificate );
+        
+        // Get certificate title and metadata
+        $title = $certificate->get( 'title' );
+        $earned_date = $certificate->get( 'earned_date' );
+        $course_id = $certificate->get( 'related_post_id' );
+        $course_title = get_the_title( $course_id );
+        
+        // Create full HTML document with print-optimized and responsive styles
+        $html = '<!DOCTYPE html>';
+        $html .= '<html><head>';
+        $html .= '<meta charset="UTF-8">';
+        $html .= '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">';
+        $html .= '<title>' . esc_html( $title ) . '</title>';
+        $html .= '<style>';
+        $html .= '* { box-sizing: border-box; }';
+        $html .= '@page { size: A4 portrait; margin: 0; }';
+        $html .= '@media print { body { margin: 0; } .no-print { display: none; } }';
+        $html .= 'html, body { height: 100%; margin: 0; padding: 0; }';
+        $html .= 'body { ';
+        $html .= '  font-family: "Times New Roman", serif;';
+        $html .= '  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);';
+        $html .= '  display: flex;';
+        $html .= '  justify-content: center;';
+        $html .= '  align-items: center;';
+        $html .= '  min-height: 100vh;';
+        $html .= '  padding: 10px;';
+        $html .= '}';
+        $html .= '.certificate-container { ';
+        $html .= '  width: 100%;';
+        $html .= '  max-width: 800px;';
+        $html .= '  border: 10px solid #1e3a8a;';
+        $html .= '  padding: 5%;';
+        $html .= '  background: white;';
+        $html .= '  box-shadow: 0 20px 40px rgba(0,0,0,0.1);';
+        $html .= '}';
+        $html .= '@media (max-width: 600px) {';
+        $html .= '  .certificate-container { border-width: 5px; padding: 20px; }';
+        $html .= '  .certificate-title { font-size: 32px !important; }';
+        $html .= '  .certificate-subtitle { font-size: 16px !important; }';
+        $html .= '  .certificate-content h1 { font-size: 24px !important; }';
+        $html .= '  .certificate-content h2 { font-size: 20px !important; }';
+        $html .= '  .certificate-content h3 { font-size: 18px !important; }';
+        $html .= '}';
+        $html .= '.certificate-header { text-align: center; margin-bottom: 30px; }';
+        $html .= '.certificate-title { font-size: 3em; color: #1e3a8a; margin: 10px 0; font-weight: bold; text-transform: uppercase; }';
+        $html .= '.certificate-subtitle { font-size: 1.25em; color: #666; margin: 10px 0; }';
+        $html .= '.certificate-content { margin: 30px 0; line-height: 1.8; font-size: 1em; }';
+        $html .= '.certificate-content h1 { font-size: 2.25em; color: #1e3a8a; text-align: center; margin: 20px 0; }';
+        $html .= '.certificate-content h2 { font-size: 1.75em; color: #333; text-align: center; margin: 15px 0; }';
+        $html .= '.certificate-content h3 { font-size: 1.375em; color: #333; text-align: center; margin: 10px 0; }';
+        $html .= '.certificate-content p { text-align: center; margin: 10px 0; }';
+        $html .= '.certificate-footer { text-align: center; margin-top: 40px; }';
+        $html .= '.certificate-date { font-size: 0.875em; color: #666; margin-top: 20px; }';
+        $html .= '.certificate-verify { font-size: 0.75em; color: #999; margin-top: 10px; }';
+        $html .= '.signature-line { border-bottom: 2px solid #333; width: 200px; margin: 30px auto 5px; }';
+        $html .= '.signature-label { font-size: 0.75em; color: #666; }';
+        $html .= '</style>';
+        $html .= '</head><body>';
+        $html .= '<div class="certificate-container">';
+        $html .= '<div class="certificate-header">';
+        $html .= '<h1 class="certificate-title">Certificate of Completion</h1>';
+        $html .= '</div>';
+        $html .= '<div class="certificate-content">';
+        $html .= $content;
+        $html .= '</div>';
+        $html .= '<div class="certificate-footer">';
+        if ( $certificate->get( 'certificate_template_id' ) ) {
+            $html .= '<p class="certificate-verify">Certificate ID: ' . esc_html( $certificate_id ) . '</p>';
         }
+        $html .= '</div>';
+        $html .= '</div>';
+        $html .= '</body></html>';
         
+        // Return the HTML content directly for the app to handle
         return array(
             'success' => true,
-            'download_url' => $download_url,
-            'filename' => sanitize_file_name( $certificate->get( 'title' ) . '.pdf' ),
+            'html' => $html,
+            'filename' => sanitize_file_name( $title . '.pdf' ),
+            'certificate_id' => $certificate_id,
+            'title' => $title,
+            'course_title' => $course_title,
+            'earned_date' => $earned_date,
+            'message' => 'HTML content ready for PDF generation',
         );
     }
     
@@ -521,14 +597,16 @@ class LLMS_Mobile_Certificate_Handler {
      * Helper: Format certificate data
      */
     private function format_certificate( $certificate, $detailed = false ) {
+        $certificate_id = $certificate->get( 'id' );
         $data = array(
-            'id' => $certificate->get( 'id' ),
+            'id' => $certificate_id,
             'title' => $certificate->get( 'title' ),
             'earned_date' => $certificate->get( 'earned_date' ),
             'course_id' => $certificate->get( 'parent' ),
             'course_title' => get_the_title( $certificate->get( 'parent' ) ),
-            'preview_url' => get_permalink( $certificate->get( 'id' ) ),
-            'download_url' => add_query_arg( 'download', 'true', get_permalink( $certificate->get( 'id' ) ) ),
+            'preview_url' => get_permalink( $certificate_id ),
+            // For download, provide the API endpoint which returns proper URLs
+            'download_url' => rest_url( 'llms/v1/mobile-app/certificate/' . $certificate_id . '/download' ),
         );
         
         if ( $detailed ) {

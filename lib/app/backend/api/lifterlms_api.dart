@@ -1045,7 +1045,10 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     try {
       final response = await http.get(
         url,
-        headers: _getAuthenticatedHeaders(),
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
       ).timeout(Duration(seconds: timeoutInSeconds));
       
       if (response.statusCode == 200) {
@@ -1070,19 +1073,37 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   Future<Response> addToWishlist({required int userId, required int courseId}) async {
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/favorites/add');
     
+    print('LifterLMS API - Adding to wishlist');
+    print('LifterLMS API - URL: $url');
+    print('LifterLMS API - Course ID: $courseId');
+    print('LifterLMS API - User ID: $userId');
+    
     try {
+      // Use Basic Auth only, like the working quiz endpoints
+      final headers = {
+        'Authorization': _getAuthHeader(),
+        'Content-Type': 'application/json',
+      };
+      final body = jsonEncode({
+        'object_id': courseId,
+        'object_type': 'course',
+      });
+      
+      print('LifterLMS API - Headers: $headers');
+      print('LifterLMS API - Body: $body');
+      
       final response = await http.post(
         url,
-        headers: _getAuthenticatedHeaders(),
-        body: jsonEncode({
-          'object_id': courseId,
-          'object_type': 'course',
-        }),
+        headers: headers,
+        body: body,
       ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      print('LifterLMS API - Response status: ${response.statusCode}');
+      print('LifterLMS API - Response body: ${response.body}');
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error adding to wishlist: $e');
+      print('LifterLMS API - Error adding to wishlist: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1094,7 +1115,10 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     try {
       final response = await http.delete(
         url,
-        headers: _getAuthenticatedHeaders(),
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({
           'object_id': courseId,
           'object_type': 'course',
@@ -1151,6 +1175,25 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       return parseResponse(response, url.toString());
     } catch (e) {
       print('Error getting certificates: $e');
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+  
+  Future<Response> getCertificateDownload(int certificateId) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/certificate/$certificateId/download');
+    
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      print('Error getting certificate download: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }

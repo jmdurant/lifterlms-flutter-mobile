@@ -288,12 +288,8 @@ extension LMSServiceRepositories on LMSService {
   }
 
   Future<Response> getCertificateDownloadData(int certificateId) async {
-    final token = _currentUserToken ?? '';
-    return _apiService.getPrivate(
-      'wp-json/llms/v1/mobile-app/certificate/$certificateId/download',
-      token,
-      null,
-    );
+    // Use Basic Auth like other certificate methods
+    return api.getCertificateDownload(certificateId);
   }
 
   Future<Response> shareCertificateLink(int certificateId, {String method = 'link'}) async {
