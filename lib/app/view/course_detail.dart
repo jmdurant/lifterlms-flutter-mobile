@@ -425,16 +425,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                   ),
                                 ),
                                 Positioned(
-                                  top: 25,
-                                  right: 15,
-                                  child: WishlistHeart(
-                                    courseId: value.course.value?.id ?? 0,
-                                    onToggle: () {
-                                      // Optional: refresh if needed
-                                    },
-                                  ),
-                                ),
-                                Positioned(
                                     bottom: 16,
                                     left: 16,
                                     child: SizedBox(
