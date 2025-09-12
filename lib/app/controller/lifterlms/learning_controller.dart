@@ -523,6 +523,11 @@ class LearningController extends GetxController implements GetxService {
       print('Has Video: ${cachedLesson.hasVideo}');
       print('Video Embed: ${cachedLesson.videoEmbed}');
       print('Video Src: ${cachedLesson.videoSrc}');
+      print('Has Audio: ${cachedLesson.hasAudio}');
+      print('Audio Embed: ${cachedLesson.audioEmbed}');
+      print('Audio Src: ${cachedLesson.audioSrc}');
+      print('\n--- CONTENT FIELD ---');
+      print(cachedLesson.content ?? 'No content');
       print('==========================================================');
       
       currentLesson.value = cachedLesson;

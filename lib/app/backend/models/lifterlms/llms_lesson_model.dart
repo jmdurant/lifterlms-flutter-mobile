@@ -204,8 +204,10 @@ class LLMSLessonModel {
     // For day-based dripping, would need enrollment date to calculate
     return true;
   }
-  bool get hasVideo => videoEmbed != null || videoSrc != null;
-  bool get hasAudio => audioEmbed != null || audioSrc != null;
+  bool get hasVideo => (videoEmbed != null && videoEmbed!.isNotEmpty) || 
+                       (videoSrc != null && videoSrc!.isNotEmpty);
+  bool get hasAudio => (audioEmbed != null && audioEmbed!.isNotEmpty) || 
+                       (audioSrc != null && audioSrc!.isNotEmpty);
   bool get hasMedia => hasVideo || hasAudio;
   bool get isCompleted => isComplete ?? false;
 }

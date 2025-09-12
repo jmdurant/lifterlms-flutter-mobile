@@ -12,6 +12,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:vimeo_video_player/vimeo_video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_app/app/view/components/learning/learning-quiz.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 class LearningScreen extends StatefulWidget {
   const LearningScreen({Key? key}) : super(key: key);
@@ -523,6 +524,44 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                   factoryBuilder: () => MyWidgetFactory(),
                 ),
               ),
+            // Check for audio in content field
+            if (_hasAudioInContent(lesson.content))
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: _buildAudioPlayer(lesson.content),
+              ),
+            // Check for PDF in content field
+            if (_hasPdfInContent(lesson.content))
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                height: 600,
+                child: _buildPdfViewer(lesson.content),
+              ),
+            // Check for H5P interactive content
+            if (_hasH5pContent(lesson.content))
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                height: 650,
+                child: _buildH5pViewer(lesson.content),
+              ),
+            // Check for PowerPoint content
+            if (_hasPowerPointContent(lesson.content))
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: _buildPowerPointViewer(lesson.content),
+              ),
+            // Check for form content
+            if (_hasFormContent(lesson.content))
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: _buildFormMessage(lesson.content),
+              ),
+            // Check for interactive/JavaScript content (tabs, accordions, etc)
+            if (_hasInteractiveContent(lesson.content))
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: _buildInteractiveViewer(lesson.content),
+              ),
             Obx(() => HtmlWidget(
               controller.cleanedLessonContent.value.isNotEmpty 
                   ? controller.cleanedLessonContent.value 
@@ -810,6 +849,400 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
         ),
       );
     });
+  }
+  
+  // Helper methods for content detection and rendering
+  bool _hasAudioInContent(String content) {
+    final hasAudio = content.contains('<audio') && content.contains('.mp3');
+    if (hasAudio) print('DEBUG: Audio detected in content');
+    return hasAudio;
+  }
+  
+  bool _hasPdfInContent(String content) {
+    final hasPdf = content.contains('type="application/pdf"') || 
+           (content.contains('.pdf') && content.contains('<object'));
+    if (hasPdf) print('DEBUG: PDF detected in content');
+    return hasPdf;
+  }
+  
+  bool _hasH5pContent(String content) {
+    final hasH5p = content.contains('h5p.org/h5p/embed');
+    if (hasH5p) print('DEBUG: H5P detected in content');
+    return hasH5p;
+  }
+  
+  bool _hasPowerPointContent(String content) {
+    final hasPpt = content.contains('[embeddoc') && 
+                   (content.contains('.pptx') || content.contains('.ppt'));
+    if (hasPpt) print('DEBUG: PowerPoint detected in content');
+    return hasPpt;
+  }
+  
+  bool _hasFormContent(String content) {
+    // Detect common form patterns
+    final hasForm = (content.contains('complete the form below') || 
+                    content.contains('fill out the form') ||
+                    content.contains('submit the form') ||
+                    content.contains('[contact-form') ||
+                    content.contains('[wpforms') ||
+                    content.contains('[ninja_form') ||
+                    content.contains('[gravityform')) &&
+                    !content.contains('<form') && // No actual form HTML
+                    !content.contains('<input'); // No input fields
+    if (hasForm) print('DEBUG: Form detected but not rendered in content');
+    return hasForm;
+  }
+  
+  bool _hasInteractiveContent(String content) {
+    // Detect interactive WordPress blocks that need JavaScript
+    final hasInteractive = content.contains('wp-block-kadence-tabs') ||
+                          content.contains('wp-block-kadence-accordion') ||
+                          content.contains('wp-block-toggle') ||
+                          content.contains('wp-block-tabs') ||
+                          content.contains('wp-block-accordion') ||
+                          content.contains('data-toggle') ||
+                          content.contains('onclick=') ||
+                          (content.contains('kt-tabs') && content.contains('kt-tab-title'));
+    if (hasInteractive) print('DEBUG: Interactive content detected (tabs/accordion/etc)');
+    return hasInteractive;
+  }
+  
+  Widget _buildAudioPlayer(String content) {
+    // Extract audio URL from content
+    final audioPattern = RegExp(r'<audio[^>]*src="([^"]+)"');
+    final match = audioPattern.firstMatch(content);
+    if (match != null) {
+      final audioUrl = match.group(1);
+      print('DEBUG: Found audio URL: $audioUrl');
+      
+      // Create HTML with audio player
+      final audioHtml = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { 
+      margin: 0; 
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100px;
+    }
+    audio { 
+      width: 100%; 
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <audio controls>
+    <source src="$audioUrl" type="audio/mpeg">
+    <source src="$audioUrl" type="audio/mp3">
+    Your browser does not support the audio element.
+  </audio>
+</body>
+</html>
+''';
+      
+      return SizedBox(
+        height: 100,
+        child: InAppWebView(
+          initialData: InAppWebViewInitialData(data: audioHtml),
+          initialOptions: InAppWebViewGroupOptions(
+            crossPlatform: InAppWebViewOptions(
+              useShouldOverrideUrlLoading: false,
+              mediaPlaybackRequiresUserGesture: false,
+              javaScriptEnabled: true,
+            ),
+          ),
+        ),
+      );
+    }
+    print('DEBUG: No audio URL found in content');
+    return const SizedBox.shrink();
+  }
+  
+  Widget _buildPdfViewer(String content) {
+    // Extract PDF URL from content
+    final pdfPattern = RegExp(r'data="([^"]+\.pdf[^"]*)"');
+    final match = pdfPattern.firstMatch(content);
+    if (match != null) {
+      final pdfUrl = match.group(1);
+      print('DEBUG: Found PDF URL: $pdfUrl');
+      // Use InAppWebView to display PDF
+      return SizedBox(
+        height: 600,
+        child: InAppWebView(
+          initialUrlRequest: URLRequest(url: WebUri(pdfUrl!)),
+          initialOptions: InAppWebViewGroupOptions(
+            crossPlatform: InAppWebViewOptions(
+              useShouldOverrideUrlLoading: false,
+              mediaPlaybackRequiresUserGesture: false,
+              javaScriptEnabled: true,
+            ),
+          ),
+        ),
+      );
+    }
+    print('DEBUG: No PDF URL found in content');
+    return const SizedBox.shrink();
+  }
+  
+  Widget _buildH5pViewer(String content) {
+    // Extract H5P iframe
+    final h5pPattern = RegExp(r'<iframe[^>]*src="(https://h5p\.org/h5p/embed/[^"]+)"[^>]*>');
+    final match = h5pPattern.firstMatch(content);
+    if (match != null) {
+      final h5pUrl = match.group(1);
+      print('DEBUG: Found H5P URL: $h5pUrl');
+      // Use InAppWebView for better iframe support
+      return SizedBox(
+        height: 650,
+        child: InAppWebView(
+          initialUrlRequest: URLRequest(url: WebUri(h5pUrl!)),
+          initialOptions: InAppWebViewGroupOptions(
+            crossPlatform: InAppWebViewOptions(
+              useShouldOverrideUrlLoading: false,
+              mediaPlaybackRequiresUserGesture: false,
+              javaScriptEnabled: true,
+            ),
+          ),
+        ),
+      );
+    }
+    print('DEBUG: No H5P URL found in content');
+    return const SizedBox.shrink();
+  }
+  
+  Widget _buildInteractiveViewer(String content) {
+    print('DEBUG: Building interactive content viewer');
+    
+    // Create a full HTML page with the content and necessary styles
+    final htmlPage = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { 
+      margin: 0; 
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    /* Hide LifterLMS navigation elements */
+    .llms-parent-course-link,
+    .llms-favorite-wrapper,
+    .llms-lesson-button-wrapper,
+    .llms-lesson-navigation,
+    .llms-lesson-preview { 
+      display: none !important; 
+    }
+    /* Style tabs if present */
+    .kt-tabs-wrap { margin: 20px 0; }
+    .kt-tabs-title-list { display: flex; flex-wrap: wrap; }
+    .kt-title-item { cursor: pointer; padding: 10px 15px; }
+    .kt-title-item.kt-tab-title-active { 
+      background: #007cba; 
+      color: white; 
+    }
+  </style>
+  <!-- Include any necessary JavaScript libraries -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+  $content
+  <script>
+    // Basic tab functionality if jQuery is available
+    if (typeof jQuery !== 'undefined') {
+      jQuery(document).ready(function(\$) {
+        // Kadence tabs
+        \$('.kt-title-item').on('click', function() {
+          var tabId = \$(this).attr('id');
+          var contentId = tabId.replace('tab-', '');
+          
+          // Hide all tab contents
+          \$('.kt-tab-inner-content').hide();
+          // Show selected tab content
+          \$('#' + contentId).show();
+          
+          // Update active states
+          \$('.kt-title-item').removeClass('kt-tab-title-active');
+          \$(this).addClass('kt-tab-title-active');
+        });
+        
+        // Trigger first tab
+        \$('.kt-title-item:first').trigger('click');
+      });
+    }
+  </script>
+</body>
+</html>
+''';
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.purple.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.purple.shade200),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.widgets_outlined, color: Colors.purple.shade700),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Interactive content detected - rendered with JavaScript support',
+                  style: TextStyle(color: Colors.purple.shade700, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 500,
+          child: InAppWebView(
+            initialData: InAppWebViewInitialData(data: htmlPage),
+            initialOptions: InAppWebViewGroupOptions(
+              crossPlatform: InAppWebViewOptions(
+                useShouldOverrideUrlLoading: false,
+                mediaPlaybackRequiresUserGesture: false,
+                javaScriptEnabled: true,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildFormMessage(String content) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.feedback_outlined, color: Colors.blue.shade700, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Form Submission Required',
+                style: TextStyle(
+                  color: Colors.blue.shade700,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'This lesson contains a form that needs to be completed on the website. Forms are not currently supported in the mobile app.',
+            style: TextStyle(color: Colors.blue.shade700),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () async {
+              // Open lesson in browser
+              final controller = Get.find<LearningController>();
+              final lessonId = controller.currentLesson.value?.id;
+              final courseId = controller.courseId;
+              final lessonUrl = 'https://polite-tree.myliftersite.com/course/lesson/$lessonId';
+              
+              if (await canLaunch(lessonUrl)) {
+                await launch(lessonUrl);
+              }
+            },
+            icon: const Icon(Icons.open_in_browser),
+            label: const Text('Open in Browser'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildPowerPointViewer(String content) {
+    // Extract PowerPoint URL from embeddoc shortcode
+    final pptPattern = RegExp(r'\[embeddoc url[=:]"([^"]+\.(pptx?|ppt))"?\]');
+    final match = pptPattern.firstMatch(content);
+    if (match != null) {
+      final pptUrl = match.group(1);
+      print('DEBUG: Found PowerPoint URL: $pptUrl');
+      
+      // Option 1: Try to use Office Online viewer (works for publicly accessible files)
+      final officeViewerUrl = 'https://view.officeapps.live.com/op/view.aspx?src=${Uri.encodeComponent(pptUrl!)}';
+      
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange.shade700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'PowerPoint presentation detected. Attempting to load...',
+                    style: TextStyle(color: Colors.orange.shade700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 600,
+            child: InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(officeViewerUrl)),
+              initialOptions: InAppWebViewGroupOptions(
+                crossPlatform: InAppWebViewOptions(
+                  useShouldOverrideUrlLoading: false,
+                  mediaPlaybackRequiresUserGesture: false,
+                  javaScriptEnabled: true,
+                ),
+              ),
+              onLoadError: (controller, url, code, message) {
+                print('Failed to load PowerPoint viewer: $message');
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (await canLaunch(pptUrl)) {
+                await launch(pptUrl);
+              }
+            },
+            icon: const Icon(Icons.download),
+            label: const Text('Download PowerPoint'),
+          ),
+        ],
+      );
+    }
+    print('DEBUG: No PowerPoint URL found in content');
+    return const SizedBox.shrink();
   }
 }
 
