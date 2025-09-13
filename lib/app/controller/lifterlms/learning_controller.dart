@@ -242,6 +242,20 @@ class LearningController extends GetxController implements GetxService {
   
   /// Load course details
   Future<void> loadCourseDetails() async {
+    // First check if CourseDetailController has the course data
+    try {
+      final courseDetailController = Get.find<CourseDetailController>();
+      if (courseDetailController.courseId == courseId && 
+          courseDetailController.course.value != null) {
+        print('LearningController - Using cached course from CourseDetailController');
+        currentCourse.value = courseDetailController.course.value;
+        return;
+      }
+    } catch (e) {
+      print('CourseDetailController not found, loading from API');
+    }
+    
+    // Fall back to API if no cached data
     final response = await lmsService.api.getCourse(courseId: courseId);
     
     if (response.statusCode == 200) {
@@ -775,7 +789,7 @@ class LearningController extends GetxController implements GetxService {
     }
   }
   
-  /// Navigate back to course overview
+  /// Navigate back to course overview  
   void backToOverview() {
     print('LearningController - Going back to course overview');
     // Clear current lesson to show overview
@@ -1189,6 +1203,21 @@ class LearningController extends GetxController implements GetxService {
   /// Check if lesson is completed
   bool isLessonCompleted(int lessonId) {
     return lessonCompletionStatus[lessonId] ?? false;
+  }
+  
+  /// Handle get index lesson (for accordion compatibility)
+  int handleGetIndexLesson() {
+    // Return current lesson index if available
+    if (currentLesson.value != null) {
+      for (var section in sections) {
+        for (int i = 0; i < section.lessons.length; i++) {
+          if (section.lessons[i].id == currentLesson.value!.id) {
+            return i;
+          }
+        }
+      }
+    }
+    return 0;
   }
   
   /// Get lesson icon based on type and status

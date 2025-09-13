@@ -651,6 +651,7 @@ class CourseDetailController extends GetxController implements GetxService {
         showToast('Successfully enrolled in course');
         
         // Navigate to learning page with overview
+        // The LearningController will automatically use cached data from this controller
         Get.toNamed(
           AppRouter.getLearning(),
           arguments: {
@@ -726,7 +727,7 @@ class CourseDetailController extends GetxController implements GetxService {
           AppRouter.getLearning(),
           arguments: {
             'id': courseId,
-            'showOverview': true,  // Show overview instead of auto-advancing to first lesson
+            'showOverview': true,  // Show overview instead of auto-advancing
           },
         );
         print('CourseDetailController.startLearning - Navigation successful');

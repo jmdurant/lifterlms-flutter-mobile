@@ -13,6 +13,8 @@ import 'package:vimeo_video_player/vimeo_video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_app/app/view/components/learning/learning-quiz.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_app/app/view/components/accordion-lesson-lifterlms.dart';
+import 'package:html/parser.dart' as HtmlParser;
 
 class LearningScreen extends StatefulWidget {
   const LearningScreen({Key? key}) : super(key: key);
@@ -285,16 +287,19 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
             color: Colors.grey[900],
             iconSize: 30,
           ),
-          Obx(() => Text(
-            controller.currentCourse.value?.title ?? 'Learning',
-            style: const TextStyle(
-              fontFamily: 'Poppins-Medium',
-              fontWeight: FontWeight.w500,
-              fontSize: 18,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          )),
+          Expanded(
+            child: Obx(() => Text(
+              controller.currentCourse.value?.title ?? 'Learning',
+              style: const TextStyle(
+                fontFamily: 'Poppins-Medium',
+                fontWeight: FontWeight.w500,
+                fontSize: 18,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            )),
+          ),
           IconButton(
             onPressed: () {
               Get.back();
@@ -669,51 +674,290 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     );
   }
   
+  String _cleanCourseDescription(String content) {
+    // Remove lesson links and navigation elements from course description
+    if (content.isEmpty) return content;
+    
+    try {
+      final document = HtmlParser.parse(content);
+      
+      // Remove the course syllabus section completely - this contains all the lesson links
+      final syllabusElements = document.querySelectorAll('.wp-block-llms-course-syllabus');
+      for (var element in syllabusElements) {
+        element.remove();
+      }
+      
+      // Remove the continue button section
+      final continueButtons = document.querySelectorAll('.wp-block-llms-course-continue-button');
+      for (var element in continueButtons) {
+        element.remove();
+      }
+      
+      // Remove the meta info sections
+      final metaInfo = document.querySelectorAll('.llms-meta-info');
+      for (var element in metaInfo) {
+        element.remove();
+      }
+      
+      // Remove the tracks section
+      final tracks = document.querySelectorAll('.llms-meta.llms-tracks');
+      for (var element in tracks) {
+        element.remove();
+      }
+      
+      // Remove the instructor info section
+      final instructorInfo = document.querySelectorAll('.llms-instructor-info');
+      for (var element in instructorInfo) {
+        element.remove();
+      }
+      
+      // Remove any remaining lesson links just in case
+      final lessonLinks = document.querySelectorAll('a[href*="lesson"], a[href*="topic"]');
+      for (var link in lessonLinks) {
+        link.remove();
+      }
+      
+      // Remove any ul/ol lists that contain lesson links
+      final lists = document.querySelectorAll('ul, ol');
+      for (var list in lists) {
+        final hasLessonLinks = list.querySelectorAll('a[href*="lesson"], a[href*="topic"]').isNotEmpty;
+        if (hasLessonLinks) {
+          list.remove();
+        }
+      }
+      
+      // Remove "Continue" or navigation paragraphs (keeping this as fallback)
+      final paragraphs = document.querySelectorAll('p');
+      for (var p in paragraphs) {
+        final text = p.text.toLowerCase();
+        if (text.contains('continue') || 
+            text.contains('click here') || 
+            text.contains('next lesson') ||
+            text.contains('start here')) {
+          p.remove();
+        }
+      }
+      
+      // Remove any divs with lesson navigation
+      final navDivs = document.querySelectorAll('div[class*="lesson"], div[class*="navigation"]');
+      for (var div in navDivs) {
+        div.remove();
+      }
+      
+      return document.outerHtml;
+    } catch (e) {
+      print('Error cleaning course description: $e');
+      return content;
+    }
+  }
+  
   Widget _buildCourseOverview(LearningController controller) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final course = controller.currentCourse.value;
+    
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(bottom: 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Course Overview',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+          // Course Image and Title
+          Stack(
+            children: [
+              Container(
+                width: screenWidth,
+                constraints: BoxConstraints(
+                  maxHeight: (250 / 375) * screenWidth,
+                ),
+                child: Image.network(
+                  (course?.featuredImage?.isNotEmpty ?? false) &&
+                          !course!.featuredImage.contains('placeholder')
+                      ? course.featuredImage
+                      : "assets/images/placeholder-500x300.png",
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Image.asset("assets/images/placeholder-500x300.png", fit: BoxFit.contain);
+                  },
+                ),
+              ),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: Text(
+                  course?.title ?? '',
+                  maxLines: 2,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins-Medium',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 3.0,
+                        color: Color.fromARGB(150, 0, 0, 0),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Course Stats
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    // Lessons count
+                    Row(
+                      children: [
+                        const Icon(Icons.book_outlined, size: 18, color: Color(0xFFFBC815)),
+                        const SizedBox(width: 4),
+                        Obx(() => Text(
+                          '${controller.totalLessons.value} lessons',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            color: Color(0xFF939393),
+                          ),
+                        )),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    // Progress
+                    Row(
+                      children: [
+                        const Icon(Icons.trending_up, size: 18, color: Color(0xFFFBC815)),
+                        const SizedBox(width: 4),
+                        Obx(() => Text(
+                          '${controller.courseProgress.value.toStringAsFixed(0)}% complete',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            color: Color(0xFF939393),
+                          ),
+                        )),
+                      ],
+                    ),
+                  ],
+                ),
+                // Enrolled students
+                if ((course?.enrollmentCount ?? 0) > 0)
+                  Row(
+                    children: [
+                      Image.asset('assets/images/icon/icon-student.png', 
+                        color: const Color(0xFFFBC815), height: 16, width: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        course?.enrollmentCount?.toString() ?? '0',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: Color(0xFF939393),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          Obx(() {
-            if (controller.currentCourse.value != null) {
-              return HtmlWidget(
-                controller.currentCourse.value?.content ?? '',
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
+          
+          // Course Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'About this course',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              );
-            }
-            return const Text('No course content available');
-          }),
+                const SizedBox(height: 12),
+                if (course != null)
+                  HtmlWidget(
+                    _cleanCourseDescription(course.content ?? ''),
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Curriculum Section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Course Curriculum',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Obx(() => controller.sections.isNotEmpty
+                  ? AccordionLessonLifterLMS(
+                      data: controller.sections,
+                      indexLesson: controller.handleGetIndexLesson(),
+                      onNavigate: (lessonData) {
+                        // Navigate to the lesson
+                        controller.loadLesson(lessonData.id);
+                      },
+                    )
+                  : const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                ),
+              ],
+            ),
+          ),
+          
           const SizedBox(height: 32),
+          
+          // Start/Resume Button
           Center(
             child: Obx(() => ElevatedButton.icon(
               onPressed: () => controller.startOrResumeLearning(),
-              icon: Icon(controller.completedLessons.value > 0 
-                  ? Icons.play_arrow 
-                  : Icons.play_circle_outline),
+              icon: Icon(
+                controller.completedLessons.value > 0 
+                    ? Icons.play_arrow 
+                    : Icons.play_circle_outline,
+                size: 24,
+              ),
               label: Text(
                 controller.completedLessons.value > 0 
                     ? 'Resume Learning' 
                     : 'Start Course',
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
               ),
             )),
           ),
+          
+          const SizedBox(height: 32),
         ],
       ),
     );
