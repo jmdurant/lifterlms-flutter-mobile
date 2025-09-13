@@ -300,9 +300,56 @@ class HomeController extends GetxController implements GetxService {
                 }
               }
               
-              final instructor = LLMSInstructorModel.fromJson(instructorData);
+              // Create initial instructor model
+              var instructor = LLMSInstructorModel.fromJson(instructorData);
+              print('Created instructor: ${instructor.displayName} with ID: ${instructor.id}');
+              
+              // Fetch course count for this instructor
+              try {
+                final coursesResponse = await lmsService.api.getCourses(params: {
+                  'author': instructor.id.toString(),
+                  'per_page': '1', // We only need the total count
+                });
+                
+                if (coursesResponse.statusCode == 200) {
+                  // Get total count from headers
+                  final totalCourses = int.tryParse(
+                    coursesResponse.headers?['x-wp-total']?.toString() ?? '0'
+                  ) ?? 0;
+                  
+                  // Update instructor with actual course count
+                  instructor = LLMSInstructorModel(
+                    id: instructor.id,
+                    name: instructor.name,
+                    email: instructor.email,
+                    username: instructor.username,
+                    firstName: instructor.firstName,
+                    lastName: instructor.lastName,
+                    nickname: instructor.nickname,
+                    displayName: instructor.displayName,
+                    description: instructor.description,
+                    avatarUrl: instructor.avatarUrl,
+                    url: instructor.url,
+                    link: instructor.link,
+                    website: instructor.website,
+                    locale: instructor.locale,
+                    registeredDate: instructor.registeredDate,
+                    roles: instructor.roles,
+                    meta: instructor.meta,
+                    social: instructor.social,
+                    courseCount: totalCourses,
+                    studentCount: instructor.studentCount,
+                    averageRating: instructor.averageRating,
+                    reviewCount: instructor.reviewCount,
+                  );
+                  print('Instructor ${instructor.displayName} has $totalCourses courses');
+                }
+              } catch (e) {
+                print('Error fetching course count for instructor ${instructor.id}: $e');
+              }
+              
               _instructors.add(instructor);
-              print('Loaded instructor: ${instructor.displayName}, avatar: ${instructor.avatarUrl}');
+              print('Loaded instructor: ${instructor.displayName}, courses: ${instructor.courseCount}');
             } catch (e) {
               print('Error parsing instructor: $e');
             }

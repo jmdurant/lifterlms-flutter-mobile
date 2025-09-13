@@ -24,6 +24,29 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
       (window.physicalSize.shortestSide / window.devicePixelRatio);
   var screenHeight =
       (window.physicalSize.longestSide / window.devicePixelRatio);
+  
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the controller with the instructor ID
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final controller = Get.find<InstructorDetailController>();
+      final args = Get.arguments;
+      int instructorId = 0;
+      
+      if (args != null) {
+        if (args is Map && args['id'] != null) {
+          instructorId = args['id'];
+        } else if (args is int) {
+          instructorId = args;
+        }
+      }
+      
+      if (instructorId != 0) {
+        controller.initializeWithInstructor(instructorId);
+      }
+    });
+  }
 
   void _launchUrl(String url) async {
     if (await canLaunch(url)) {
@@ -219,14 +242,6 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                               Text(
                                   "${value.instructor.value!.courseCount} " +
                                       tr(LocaleKeys.home_countCourse),
-                                  style: TextStyle(
-                                    fontFamily: 'medium',
-                                    fontSize: 15,
-                                    color: Colors.black,
-                                  )),
-                              Text(
-                                  "${value.instructor.value!.studentCount} " +
-                                      tr(LocaleKeys.home_countStudent),
                                   style: TextStyle(
                                     fontFamily: 'medium',
                                     fontSize: 15,

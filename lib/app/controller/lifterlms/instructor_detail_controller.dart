@@ -41,16 +41,6 @@ class InstructorDetailController extends GetxController implements GetxService {
   @override
   void onInit() {
     super.onInit();
-    // Get instructor ID from arguments
-    final args = Get.arguments;
-    if (args != null) {
-      if (args is Map && args['id'] != null) {
-        instructorId = args['id'];
-      } else if (args is int) {
-        instructorId = args;
-      }
-      loadInstructorDetails();
-    }
     
     // Setup scroll listener for pagination
     scrollController.addListener(() {
@@ -67,6 +57,27 @@ class InstructorDetailController extends GetxController implements GetxService {
   void onClose() {
     scrollController.dispose();
     super.onClose();
+  }
+  
+  /// Initialize with a new instructor ID
+  void initializeWithInstructor(int id) {
+    print('InstructorDetailController - Initializing with instructor ID: $id');
+    
+    // Clear previous data
+    instructor.value = null;
+    instructorCourses.clear();
+    totalCourses.value = 0;
+    totalStudents.value = 0;
+    averageRating.value = 0.0;
+    totalReviews.value = 0;
+    socialLinks.clear();
+    selectedTab.value = 0;
+    currentPage.value = 1;
+    hasMoreCourses.value = true;
+    
+    // Set new ID and load
+    instructorId = id;
+    loadInstructorDetails();
   }
   
   /// Load instructor details
@@ -109,6 +120,38 @@ class InstructorDetailController extends GetxController implements GetxService {
         print('InstructorDetailController - About to load instructor courses');
         await loadInstructorCourses();
         print('InstructorDetailController - Finished loading instructor courses');
+        
+        // Update the course count with actual data from loaded courses
+        totalCourses.value = instructorCourses.length;
+        print('InstructorDetailController - Updated course count to: ${totalCourses.value}');
+        
+        // Also update the instructor model's course count for display in other places
+        if (instructor.value != null) {
+          instructor.value = LLMSInstructorModel(
+            id: instructor.value!.id,
+            name: instructor.value!.name,
+            email: instructor.value!.email,
+            username: instructor.value!.username,
+            firstName: instructor.value!.firstName,
+            lastName: instructor.value!.lastName,
+            nickname: instructor.value!.nickname,
+            displayName: instructor.value!.displayName,
+            description: instructor.value!.description,
+            avatarUrl: instructor.value!.avatarUrl,
+            url: instructor.value!.url,
+            link: instructor.value!.link,
+            website: instructor.value!.website,
+            locale: instructor.value!.locale,
+            registeredDate: instructor.value!.registeredDate,
+            roles: instructor.value!.roles,
+            meta: instructor.value!.meta,
+            social: instructor.value!.social,
+            courseCount: instructorCourses.length,  // Update with actual count
+            studentCount: instructor.value!.studentCount,
+            averageRating: instructor.value!.averageRating,
+            reviewCount: instructor.value!.reviewCount,
+          );
+        }
       } else if (response.statusCode == 404) {
         print('InstructorDetailController - Instructor not found (404)');
         showToast('Instructor not found', isError: true);
@@ -145,9 +188,12 @@ class InstructorDetailController extends GetxController implements GetxService {
       print('InstructorDetailController - Courses response status: ${response.statusCode}');
       print('InstructorDetailController - Courses response body type: ${response.body.runtimeType}');
       
+      // Debug: Log the actual API request being made
+      print('InstructorDetailController - API Request params: author=$instructorId, per_page=100');
+      
       if (response.statusCode == 200) {
         if (response.body is List) {
-          print('InstructorDetailController - Found ${response.body.length} courses');
+          print('InstructorDetailController - Found ${response.body.length} courses in response');
           
           // Collect oEmbed futures for fetching images
           final oEmbedFutures = <Future<void>>[];
@@ -196,9 +242,41 @@ class InstructorDetailController extends GetxController implements GetxService {
             print('InstructorDetailController - All oEmbed fetches complete');
           }
           
-          // Second pass: parse courses with fetched images
+          // Second pass: parse courses with fetched images AND filter by instructor
+          int filteredCount = 0;
           for (var courseData in response.body) {
             try {
+              // Get course instructors list
+              final courseInstructors = courseData['instructors'];
+              final courseTitle = courseData['title'] is Map ? courseData['title']['rendered'] : courseData['title'];
+              print('InstructorDetailController - Course "$courseTitle" has instructors: $courseInstructors (looking for: $instructorId)');
+              
+              // Check if this instructor is in the course's instructors list
+              bool isInstructorForCourse = false;
+              if (courseInstructors != null && courseInstructors is List) {
+                for (var inst in courseInstructors) {
+                  // Handle both integer IDs and instructor objects
+                  int? instId;
+                  if (inst is int) {
+                    instId = inst;
+                  } else if (inst is Map && inst['id'] != null) {
+                    instId = inst['id'] is int ? inst['id'] : int.tryParse(inst['id'].toString());
+                  }
+                  
+                  if (instId == instructorId) {
+                    isInstructorForCourse = true;
+                    break;
+                  }
+                }
+              }
+              
+              // Filter out courses where this instructor is not listed
+              if (!isInstructorForCourse) {
+                print('InstructorDetailController - Skipping course "$courseTitle" (instructor not in list)');
+                filteredCount++;
+                continue;
+              }
+              
               // Add the fetched image URL to the course data
               final mediaId = courseData['featured_media'];
               if (mediaId != null && mediaUrls.containsKey(mediaId)) {
@@ -212,6 +290,9 @@ class InstructorDetailController extends GetxController implements GetxService {
               print('Error parsing course: $e');
             }
           }
+          
+          print('InstructorDetailController - Filtered out $filteredCount courses (instructor not in list)');
+          print('InstructorDetailController - Final count: ${instructorCourses.length} courses for instructor $instructorId');
           
           // Check if more courses available
           if ((response.body as List).length < coursesPerPage) {
@@ -291,9 +372,41 @@ class InstructorDetailController extends GetxController implements GetxService {
             print('InstructorDetailController - All oEmbed fetches complete');
           }
           
-          // Second pass: parse courses with fetched images
+          // Second pass: parse courses with fetched images AND filter by instructor
+          int filteredCount = 0;
           for (var courseData in response.body) {
             try {
+              // Get course instructors list
+              final courseInstructors = courseData['instructors'];
+              final courseTitle = courseData['title'] is Map ? courseData['title']['rendered'] : courseData['title'];
+              print('InstructorDetailController - Course "$courseTitle" has instructors: $courseInstructors (looking for: $instructorId)');
+              
+              // Check if this instructor is in the course's instructors list
+              bool isInstructorForCourse = false;
+              if (courseInstructors != null && courseInstructors is List) {
+                for (var inst in courseInstructors) {
+                  // Handle both integer IDs and instructor objects
+                  int? instId;
+                  if (inst is int) {
+                    instId = inst;
+                  } else if (inst is Map && inst['id'] != null) {
+                    instId = inst['id'] is int ? inst['id'] : int.tryParse(inst['id'].toString());
+                  }
+                  
+                  if (instId == instructorId) {
+                    isInstructorForCourse = true;
+                    break;
+                  }
+                }
+              }
+              
+              // Filter out courses where this instructor is not listed
+              if (!isInstructorForCourse) {
+                print('InstructorDetailController - Skipping course "$courseTitle" (instructor not in list)');
+                filteredCount++;
+                continue;
+              }
+              
               // Add the fetched image URL to the course data
               final mediaId = courseData['featured_media'];
               if (mediaId != null && mediaUrls.containsKey(mediaId)) {
@@ -307,6 +420,9 @@ class InstructorDetailController extends GetxController implements GetxService {
               print('Error parsing course: $e');
             }
           }
+          
+          print('InstructorDetailController - Filtered out $filteredCount courses (instructor not in list)');
+          print('InstructorDetailController - Final count: ${instructorCourses.length} courses for instructor $instructorId');
           
           // Check if more courses available
           if ((response.body as List).length < coursesPerPage) {

@@ -13,6 +13,7 @@ class Instructors extends StatelessWidget {
   Instructors({super.key, required this.instructorList});
 
   void onNavigate(LLMSInstructorModel item) {
+    print('Navigating to instructor: ${item.displayName} (ID: ${item.id})');
     Get.toNamed(AppRouter.getIntructorDetailRoute(), arguments: {'id': item.id});
   }
 
@@ -104,71 +105,44 @@ class Instructors extends StatelessWidget {
                                                 fontWeight: FontWeight.w500,
                                                 overflow:
                                                     TextOverflow.ellipsis)),
-                                        Row(
-                                          children: [
-                                            Text(LocaleKeys.instructorScreen_countCourse,
-                                                style: TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  fontSize: 9,
-                                                  color: Colors.grey.shade600,
-                                                  fontWeight: FontWeight.w300,
-                                                )).tr(namedArgs: {
-                                              'count': instructorList[index]
-                                                  .courseCount
-                                                  .toString()
-                                            }),
-                                            SizedBox(
-                                              width: 12,
-                                            ),
-                                            Text(
-                                                LocaleKeys
-                                                    .instructorScreen_countStudent,
-                                                style: TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  fontSize: 9,
-                                                  color: Colors.grey.shade600,
-                                                  fontWeight: FontWeight.w300,
-                                                )).tr(namedArgs: {
-                                              'count': instructorList[index]
-                                                  .studentCount
-                                                  .toString()
-                                            }),
-                                          ],
-                                        ),
                                         SizedBox(
                                           height: 4,
                                         ),
                                         Row(
                                           children: [
-                                            Icon(
-                                              FeatherIcons.send,
-                                              size: 12,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                            SizedBox(
-                                              width: 8,
-                                            ),
-                                            Icon(
-                                              FeatherIcons.phoneCall,
-                                              size: 12,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                            SizedBox(
-                                              width: 8,
-                                            ),
-                                            Icon(
-                                              FeatherIcons.instagram,
-                                              size: 12,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                            SizedBox(
-                                              width: 8,
-                                            ),
-                                            Icon(
-                                              FeatherIcons.twitter,
-                                              size: 12,
-                                              color: Colors.grey.shade500,
-                                            ),
+                                            if (instructorList[index].email.isNotEmpty) ...[
+                                              Icon(
+                                                FeatherIcons.send,
+                                                size: 12,
+                                                color: Colors.grey.shade500,
+                                              ),
+                                              SizedBox(width: 8),
+                                            ],
+                                            if (instructorList[index].social?['phone'] != null && 
+                                                instructorList[index].social!['phone']!.isNotEmpty) ...[
+                                              Icon(
+                                                FeatherIcons.phoneCall,
+                                                size: 12,
+                                                color: Colors.grey.shade500,
+                                              ),
+                                              SizedBox(width: 8),
+                                            ],
+                                            if (instructorList[index].social?['instagram'] != null && 
+                                                instructorList[index].social!['instagram']!.isNotEmpty) ...[
+                                              Icon(
+                                                FeatherIcons.instagram,
+                                                size: 12,
+                                                color: Colors.grey.shade500,
+                                              ),
+                                              SizedBox(width: 8),
+                                            ],
+                                            if (instructorList[index].social?['twitter'] != null && 
+                                                instructorList[index].social!['twitter']!.isNotEmpty)
+                                              Icon(
+                                                FeatherIcons.twitter,
+                                                size: 12,
+                                                color: Colors.grey.shade500,
+                                              ),
                                           ],
                                         )
                                       ],

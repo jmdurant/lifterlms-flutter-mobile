@@ -21,8 +21,7 @@ import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
-import 'package:fwfh_just_audio/fwfh_just_audio.dart';
-import 'package:fwfh_webview/fwfh_webview.dart';
+import 'package:html/parser.dart' as HtmlParser;
 import 'package:get/get.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -56,6 +55,77 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   void _launchUrl(String url) async {
     if (await canLaunch(url)) {
       await launch(url);
+    }
+  }
+
+  String _cleanCourseDescription(String content) {
+    // Remove lesson links and navigation elements from course description
+    if (content.isEmpty) return content;
+    
+    try {
+      final document = HtmlParser.parse(content);
+      
+      // Remove the course syllabus section completely - this contains all the lesson links
+      final syllabusElements = document.querySelectorAll('.wp-block-llms-course-syllabus');
+      for (var element in syllabusElements) {
+        element.remove();
+      }
+      
+      // Remove the continue button section
+      final continueButtons = document.querySelectorAll('.wp-block-llms-course-continue-button');
+      for (var element in continueButtons) {
+        element.remove();
+      }
+      
+      // Remove the meta info sections
+      final metaInfo = document.querySelectorAll('.llms-meta-info');
+      for (var element in metaInfo) {
+        element.remove();
+      }
+      
+      // Remove the tracks section
+      final tracks = document.querySelectorAll('.llms-meta.llms-tracks');
+      for (var element in tracks) {
+        element.remove();
+      }
+      
+      // Remove the instructor info section
+      final instructorInfo = document.querySelectorAll('.llms-instructor-info');
+      for (var element in instructorInfo) {
+        element.remove();
+      }
+      
+      // Remove any remaining lesson links just in case
+      final lessonLinks = document.querySelectorAll('a[href*="lesson"], a[href*="topic"]');
+      for (var link in lessonLinks) {
+        link.remove();
+      }
+      
+      // Remove any ul/ol lists that contain lesson links
+      final lists = document.querySelectorAll('ul, ol');
+      for (var list in lists) {
+        final hasLessonLinks = list.querySelectorAll('a[href*="lesson"], a[href*="topic"]').isNotEmpty;
+        if (hasLessonLinks) {
+          list.remove();
+        }
+      }
+      
+      // Remove "Continue" or navigation paragraphs
+      final paragraphs = document.querySelectorAll('p');
+      for (var p in paragraphs) {
+        final text = p.text.toLowerCase();
+        if (text.contains('continue') || 
+            text.contains('click here') || 
+            text.contains('next lesson') ||
+            text.contains('start here')) {
+          p.remove();
+        }
+      }
+      
+      return document.outerHtml;
+    } catch (e) {
+      print('Error cleaning course description: $e');
+      return content;
     }
   }
 
@@ -450,38 +520,60 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                   children: [
                                     Row(
                                       children: [
-                                        Image.asset('assets/images/icon/icon-clock.png',color: Color(0xFFFBC815),height: 18,width: 18,),
-                                        const SizedBox(
-                                          width: 4,
-                                        ),
-                                        Text(
-                                          Helper.handleTranslationsDuration((value.course.value?.length ?? 0).toString()),
+                                        // Sections count
+                                        const Icon(Icons.book_outlined, size: 18, color: Color(0xFFFBC815)),
+                                        const SizedBox(width: 4),
+                                        Obx(() => Text(
+                                          '${value.sections.length} Sections',
                                           style: const TextStyle(
                                             fontFamily: 'Poppins',
                                             fontSize: 12,
                                             color: Color(0xFF939393),
                                           ),
-                                        ),
-                                        const SizedBox(
-                                          width: 16,
-                                        ),
-                                        (value.course.value?.enrollmentCount ?? 0) > 0
-                                            ? Row(children: [
-                                          Image.asset('assets/images/icon/icon-student.png',color: Color(0xFFFBC815),height: 16,width: 16,),
-                                                const SizedBox(
-                                                  width: 4,
-                                                ),
-                                                Text(
-                                                  value.course.value?.enrollmentCount?.toString() ?? '0'
-                                                      .toString(),
-                                                  style: const TextStyle(
-                                                    fontFamily: 'Poppins',
-                                                    fontSize: 12,
-                                                    color: Color(0xFF939393),
-                                                  ),
-                                                ),
-                                              ])
-                                            : const SizedBox(),
+                                        )),
+                                        const SizedBox(width: 16),
+                                        // Progress percentage
+                                        const Icon(Icons.trending_up, size: 18, color: Color(0xFFFBC815)),
+                                        const SizedBox(width: 4),
+                                        Obx(() => Text(
+                                          '${value.userProgress.value.toStringAsFixed(0)}% complete',
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 12,
+                                            color: Color(0xFF939393),
+                                          ),
+                                        )),
+                                        // Duration if available
+                                        if (value.course.value?.length != null && 
+                                            value.course.value!.length.isNotEmpty) ...[
+                                          const SizedBox(width: 16),
+                                          const Icon(Icons.access_time, size: 18, color: Color(0xFFFBC815)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            value.course.value!.length,
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 12,
+                                              color: Color(0xFF939393),
+                                            ),
+                                          ),
+                                        ],
+                                        const SizedBox(width: 16),
+                                        // Student count if available
+                                        if (value.course.value?.enrollmentCount != null && 
+                                            value.course.value!.enrollmentCount > 0) ...[
+                                          Image.asset('assets/images/icon/icon-student.png',
+                                            color: const Color(0xFFFBC815), height: 16, width: 16),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            value.course.value!.enrollmentCount.toString(),
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 12,
+                                              color: Color(0xFF939393),
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                     Row(
@@ -592,11 +684,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                               const EdgeInsets.fromLTRB(16,10,16,0),
                                           alignment: Alignment.center,
                                           child: HtmlWidget(
-                                            value.cleanedContent.value.isNotEmpty 
-                                                ? value.cleanedContent.value 
-                                                : value.course.value?.content?.toString() ?? '',
-                                            factoryBuilder: () =>
-                                                MyWidgetFactory(),
+                                            _cleanCourseDescription(value.course.value?.content?.toString() ?? ''),
                                             textStyle: const TextStyle(
                                               fontFamily: 'Poppins',
                                               fontSize: 14,
@@ -723,39 +811,54 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            GestureDetector(
-                                                child: Icon(
-                                                  FeatherIcons.facebook,
-                                                  size: 16,
-                                                  color: Colors.grey.shade400,
-                                                ),
-                                                onTap: () => {
-                                                      // TODO: Fix instructor social links
-                                                    }),
-                                            const SizedBox(
-                                              width: 12,
-                                            ),
-                                            GestureDetector(
-                                                child: Icon(
-                                                  FeatherIcons.twitter,
-                                                  size: 16,
-                                                  color: Colors.grey.shade400,
-                                                ),
-                                                onTap: () => {
-                                                      // TODO: Fix instructor social links
-                                                    }),
-                                            const SizedBox(
-                                              width: 12,
-                                            ),
-                                            GestureDetector(
-                                                child: Icon(
-                                                  FeatherIcons.youtube,
-                                                  size: 16,
-                                                  color: Colors.grey.shade400,
-                                                ),
-                                                onTap: () => {
-                                                      // TODO: Fix instructor social links
-                                                    }),
+                                            if (value.instructors.isNotEmpty && 
+                                                value.instructors.first.social?['facebook'] != null && 
+                                                value.instructors.first.social!['facebook']!.isNotEmpty)
+                                              GestureDetector(
+                                                  child: Icon(
+                                                    FeatherIcons.facebook,
+                                                    size: 16,
+                                                    color: Colors.grey.shade400,
+                                                  ),
+                                                  onTap: () => {
+                                                        // TODO: Fix instructor social links
+                                                      }),
+                                            if (value.instructors.isNotEmpty && 
+                                                value.instructors.first.social?['facebook'] != null && 
+                                                value.instructors.first.social!['facebook']!.isNotEmpty)
+                                              const SizedBox(
+                                                width: 12,
+                                              ),
+                                            if (value.instructors.isNotEmpty && 
+                                                value.instructors.first.social?['twitter'] != null && 
+                                                value.instructors.first.social!['twitter']!.isNotEmpty)
+                                              GestureDetector(
+                                                  child: Icon(
+                                                    FeatherIcons.twitter,
+                                                    size: 16,
+                                                    color: Colors.grey.shade400,
+                                                  ),
+                                                  onTap: () => {
+                                                        // TODO: Fix instructor social links
+                                                      }),
+                                            if (value.instructors.isNotEmpty && 
+                                                value.instructors.first.social?['twitter'] != null && 
+                                                value.instructors.first.social!['twitter']!.isNotEmpty)
+                                              const SizedBox(
+                                                width: 12,
+                                              ),
+                                            if (value.instructors.isNotEmpty && 
+                                                value.instructors.first.social?['youtube'] != null && 
+                                                value.instructors.first.social!['youtube']!.isNotEmpty)
+                                              GestureDetector(
+                                                  child: Icon(
+                                                    FeatherIcons.youtube,
+                                                    size: 16,
+                                                    color: Colors.grey.shade400,
+                                                  ),
+                                                  onTap: () => {
+                                                        // TODO: Fix instructor social links
+                                                      }),
                                           ],
                                         ),
                                         const SizedBox(
@@ -876,10 +979,15 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    '${tr(LocaleKeys.singleCourse_average)} 0%',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w500,
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      Get.back(); // Go back to course list
+                                    },
+                                    icon: const Icon(Icons.list, size: 20),
+                                    label: const Text('Course List'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.grey[700],
+                                      side: BorderSide(color: Colors.grey[400]!),
                                     ),
                                   ),
                                   ElevatedButton(
@@ -1051,19 +1159,4 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   }
 }
 
-class MyWidgetFactory extends WidgetFactory with WebViewFactory,JustAudioFactory {
-  @override
-  bool get webViewMediaPlaybackAlwaysAllow => true;
-  
-  @override
-  Future<bool> onTapUrl(String url) async {
-    // Handle URL taps - launch in browser or in-app webview
-    if (await canLaunch(url)) {
-      await launch(url, forceSafariVC: true, forceWebView: false);
-      return true;
-    } else {
-      print('Could not launch $url');
-      return false;
-    }
-  }
-}
+// Removed MyWidgetFactory - using simpler HtmlWidget instead

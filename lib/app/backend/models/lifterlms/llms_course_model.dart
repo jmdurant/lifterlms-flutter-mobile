@@ -24,7 +24,7 @@ class LLMSCourseModel {
   final List<int> difficulties;
   final int? prerequisite;
   final int? prerequisiteTrack;
-  final int length; // Course length in minutes
+  final String length; // Course length as string (e.g., "2 hours", "45 minutes")
   final String? videoEmbed;
   final String? audioEmbed;
   final double averageRating;
@@ -134,7 +134,7 @@ class LLMSCourseModel {
       difficulties: _parseIntList(json['difficulties']),
       prerequisite: json['prerequisite'],
       prerequisiteTrack: json['prerequisite_track'],
-      length: _parseInt(json['length']),
+      length: _extractRendered(json['length']),
       videoEmbed: json['video_embed'],
       audioEmbed: json['audio_embed'],
       averageRating: _parseDouble(json['average_rating']),

@@ -31,7 +31,7 @@ class CourseDetailController extends GetxController implements GetxService {
   final RxInt totalLessons = 0.obs;
   final RxInt totalQuizzes = 0.obs;
   final RxInt totalAssignments = 0.obs;
-  final RxInt totalDuration = 0.obs;
+  final RxString totalDuration = ''.obs;
   final RxInt enrolledStudents = 0.obs;
   
   // User status
@@ -134,19 +134,24 @@ class CourseDetailController extends GetxController implements GetxService {
       // Load course basic info
       await loadCourse();
       
-      // Load additional data in parallel
+      // Load critical data first (sections, enrollment status)
       await Future.wait([
         loadCourseSections(),
-        loadCourseInstructors(),
-        loadAccessPlans(),
         checkEnrollmentStatus(),
         checkWishlistStatus(),
+      ]);
+      
+      // Calculate course stats early so UI can update
+      calculateCourseStats();
+      update(); // Update UI with sections immediately
+      
+      // Load less critical data in parallel after sections are shown
+      await Future.wait([
+        loadCourseInstructors(),
+        loadAccessPlans(),
         loadCourseReviews(),
         loadRelatedCourses(),
       ]);
-      
-      // Calculate course stats
-      calculateCourseStats();
       
       // Notify UI to rebuild
       update();
@@ -159,6 +164,7 @@ class CourseDetailController extends GetxController implements GetxService {
     }
   }
   
+  /* Commented out - HTML cleaning is now done in the view for better performance
   /// Remove syllabus and other unnecessary elements from HTML content
   String _removeSyllabusFromHTML(String? htmlContent) {
     if (htmlContent == null || htmlContent.isEmpty) return '';
@@ -242,6 +248,7 @@ class CourseDetailController extends GetxController implements GetxService {
       return htmlContent;
     }
   }
+  */
   
   /// Parse course HTML content to extract structure immediately
   void _parseCourseSyllabusFromHTML(String? htmlContent) {
@@ -399,11 +406,10 @@ class CourseDetailController extends GetxController implements GetxService {
       course.value = LLMSCourseModel.fromJson(courseData);
       print('CourseDetailController.loadCourse - Course loaded: ${course.value?.title}');
       enrolledStudents.value = course.value?.enrollmentCount ?? 0;
-      totalDuration.value = course.value?.length ?? 0;
+      totalDuration.value = course.value?.length ?? '';
       
-      // Set cleaned content (without syllabus) for display only.
-      // Do NOT parse HTML to build curriculum; sections/lessons are loaded via REST on demand.
-      cleanedContent.value = _removeSyllabusFromHTML(course.value?.content);
+      // Cleaned content is now handled directly in the view for better performance
+      // cleanedContent.value = _removeSyllabusFromHTML(course.value?.content);
       
       update(); // Notify UI to rebuild
     } else {
@@ -414,12 +420,42 @@ class CourseDetailController extends GetxController implements GetxService {
   /// Load course sections and lessons
   Future<void> loadCourseSections() async {
     try {
-      print('CourseDetailController.loadCourseSections - Loading sections for course $courseId (sections only)');
-      final list = await lmsService.courses.getSections(courseId, forceRefresh: true);
-      sections
-        ..clear()
-        ..addAll(list);
+      print('CourseDetailController.loadCourseSections - Loading sections for course $courseId');
+      final sectionList = await lmsService.courses.getSections(courseId, forceRefresh: true);
+      sections.clear();
+      
+      // Load all lessons in PARALLEL for speed
+      final lessonFutures = <Future<List<LLMSLessonModel>>>[];
+      for (var section in sectionList) {
+        lessonFutures.add(
+          lmsService.courses.getSectionLessons(section.id).catchError((e) {
+            print('Error loading lessons for section ${section.id}: $e');
+            return <LLMSLessonModel>[]; // Return empty list on error
+          })
+        );
+      }
+      
+      // Wait for all lessons to load in parallel
+      final allLessons = await Future.wait(lessonFutures);
+      
+      // Now combine sections with their lessons
+      for (int i = 0; i < sectionList.length; i++) {
+        final section = sectionList[i];
+        final sectionWithLessons = LLMSSectionModel(
+          id: section.id,
+          title: section.title,
+          courseId: section.courseId,
+          order: section.order,
+          parentId: section.parentId,
+          permalink: section.permalink,
+          postType: section.postType,
+          lessons: allLessons[i],
+        );
+        sections.add(sectionWithLessons);
+      }
+      
       _lastSectionsFetch = DateTime.now();
+      print('CourseDetailController - Loaded ${sections.length} sections with lessons');
     } catch (e) {
       print('Error loading sections: $e');
     }
@@ -454,27 +490,60 @@ class CourseDetailController extends GetxController implements GetxService {
   Future<void> loadCourseInstructors() async {
     try {
       if (course.value?.instructors != null && course.value!.instructors.isNotEmpty) {
+        print('loadCourseInstructors - Starting with ${course.value!.instructors.length} instructor(s)');
+        final startTime = DateTime.now();
+        
         // Clear existing instructors
         instructors.clear();
         
         // For each instructor ID, fetch the actual user data
         for (var instructor in course.value!.instructors) {
           final instructorId = instructor.id;
+          print('loadCourseInstructors - Fetching instructor ID: $instructorId');
           
           // Fetch the actual instructor data from WordPress Users API
           try {
+            final apiStartTime = DateTime.now();
             final response = await lmsService.api.getUsers(params: {
               'include': instructorId.toString(), // Get specific user by ID
             });
+            final apiEndTime = DateTime.now();
+            print('loadCourseInstructors - API call took ${apiEndTime.difference(apiStartTime).inMilliseconds}ms');
             
             if (response.statusCode == 200 && response.body is List && response.body.isNotEmpty) {
               final userData = response.body[0];
+              
+              // Let's see ALL the fields the API returns
+              print('loadCourseInstructors - ALL USER DATA FIELDS:');
+              userData.forEach((key, value) {
+                if (value != null && value.toString().isNotEmpty) {
+                  // Truncate long values for readability
+                  final displayValue = value.toString().length > 100 
+                      ? '${value.toString().substring(0, 100)}...' 
+                      : value.toString();
+                  print('  $key: $displayValue');
+                }
+              });
+              
+              // Check if there's LifterLMS data in meta or other fields
+              if (userData['meta'] != null && userData['meta'] is Map) {
+                print('loadCourseInstructors - META FIELDS:');
+                (userData['meta'] as Map).forEach((key, value) {
+                  print('  meta.$key: $value');
+                });
+              }
+              
               // Create a proper instructor model from the user data
               final fullInstructor = LLMSInstructorModel.fromJson(userData);
               instructors.add(fullInstructor);
-              print('Loaded instructor: ${fullInstructor.displayName}');
+              
+              print('loadCourseInstructors - SUCCESS: Loaded ${fullInstructor.displayName}');
+              print('loadCourseInstructors - Course count: ${fullInstructor.courseCount}');
+              print('loadCourseInstructors - Student count: ${fullInstructor.studentCount}');
             } else {
               // If we can't fetch the user, keep the placeholder
+              print('loadCourseInstructors - FALLBACK: API returned status ${response.statusCode}, body type: ${response.body.runtimeType}, empty: ${response.body.isEmpty}');
+              print('loadCourseInstructors - FALLBACK: Using placeholder data: ${instructor.displayName}');
               instructors.add(instructor);
             }
           } catch (e) {
@@ -483,6 +552,11 @@ class CourseDetailController extends GetxController implements GetxService {
             instructors.add(instructor);
           }
         }
+        
+        final endTime = DateTime.now();
+        print('loadCourseInstructors - Total time: ${endTime.difference(startTime).inMilliseconds}ms');
+      } else {
+        print('loadCourseInstructors - No instructors to load');
       }
     } catch (e) {
       print('Error loading instructors: $e');
@@ -907,7 +981,8 @@ class CourseDetailController extends GetxController implements GetxService {
   
   /// Handle get index lesson (for compatibility)
   int handleGetIndexLesson() {
-    // Return first lesson index
+    // Return 0 to open the first section by default
+    // This matches the section index, not lesson index
     return 0;
   }
   

@@ -95,6 +95,17 @@ class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifter
   }
   
   @override
+  void didUpdateWidget(AccordionItemLessonLifterLMS oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update the state if the showContent prop changes
+    if (widget.showContent != oldWidget.showContent) {
+      setState(() {
+        _showContent = widget.showContent;
+      });
+    }
+  }
+  
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),

@@ -214,8 +214,8 @@ class ItemCourse extends WatchingWidget {
     if (item is CourseModel) {
       return item.duration ?? '';
     } else if (item is LLMSCourseModel) {
-      // LifterLMS stores duration in minutes
-      return '${item.length} minutes';
+      // LifterLMS now stores duration as a formatted string
+      return item.length.isNotEmpty ? item.length : '';
     }
     return '';
   }
@@ -414,36 +414,37 @@ class ItemCourse extends WatchingWidget {
                         )
                       ]),
                 ),
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/icon/icon-clock.png',
-                        width: 20,
-                        height: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        tr(LocaleKeys.durations),
-                        style: const TextStyle(
-                          fontFamily: 'medium',
-                          fontSize: 13,
+                if (_getDuration().isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/icon/icon-clock.png',
+                          width: 20,
+                          height: 20,
                         ),
-                      ),
-                      Text(
-                        Helper.handleTranslationsDuration(_getDuration()),
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'poppins',
-                            color: Color(0xFF939393)),
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        Text(
+                          tr(LocaleKeys.durations),
+                          style: const TextStyle(
+                            fontFamily: 'medium',
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          Helper.handleTranslationsDuration(_getDuration()),
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'poppins',
+                              color: Color(0xFF939393)),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             )));
   }

@@ -109,14 +109,29 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   // GET Courses
   @override
   Future<Response> getCourses({Map<String, dynamic>? params}) async {
+    // Note: LifterLMS API doesn't support author filtering, so we'll do it client-side
+    // Remove author param from API call but keep it for later filtering
+    final authorId = params?.remove('author');
+    
     final queryString = params != null ? "?${Uri(queryParameters: params).query}" : "";
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/courses$queryString');
+    
+    // Debug logging
+    print('LifterLMSApiService.getCourses - Request URL: $url');
+    if (authorId != null) {
+      print('LifterLMSApiService.getCourses - Will filter by author $authorId client-side');
+    }
     
     try {
       final response = await http.get(url, headers: {
         'Authorization': _getAuthHeader(),
         'Content-Type': 'application/json',
       }).timeout(Duration(seconds: timeoutInSeconds));
+      
+      // Put the author param back for client-side filtering
+      if (authorId != null && params != null) {
+        params['author'] = authorId;
+      }
       
       return parseResponse(response, url.toString());
     } catch (e) {
