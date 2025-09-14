@@ -45,24 +45,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
         drawerEnableOpenDragGesture: false,
         body: Stack(
           children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: Container(
+                width: screenWidth,
+                height: (209 / 375) * screenWidth,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColor.withOpacity(0.1),
+                      Theme.of(context).primaryColor.withOpacity(0.05),
+                    ],
                   ),
                 ),
               ),
