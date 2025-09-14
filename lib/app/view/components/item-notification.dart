@@ -29,9 +29,9 @@ class ItemNotification extends StatelessWidget {
           }
         },
         child: Container(
-            width: screenWidth,
+            width: screenWidth - 32,
             padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            margin: const EdgeInsets.fromLTRB(0, 0, 0, 16),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),

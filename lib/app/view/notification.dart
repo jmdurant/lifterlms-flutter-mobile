@@ -146,18 +146,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               date_created: notificationData['timestamp']?.toString() ?? '',
                               status: notificationData['read'] == true ? 'read' : 'unread',
                             );
-                            return Dismissible(
-                              key: Key(model.notification_id ?? index.toString()),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: EdgeInsets.only(right: 20),
-                                color: Colors.red,
-                                child: Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
+                            return Center(
+                              child: Dismissible(
+                                key: Key(model.notification_id ?? index.toString()),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: EdgeInsets.only(right: 20),
+                                  margin: EdgeInsets.symmetric(horizontal: 16),
+                                  color: Colors.red,
+                                  child: Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
                               confirmDismiss: (direction) async {
                                 return await showDialog(
                                   context: context,
@@ -208,6 +210,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     },
                                   );
                                 },
+                              ),
                               ),
                             );
                           } else {

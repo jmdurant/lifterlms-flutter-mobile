@@ -544,7 +544,8 @@ class NotificationController extends GetxController implements GetxService {
     // Update local storage
     saveAllNotifications();
     
-    showToast('Notification deleted');
+    // Trigger UI update
+    update();
   }
   
   /// Clear all notifications
@@ -570,7 +571,8 @@ class NotificationController extends GetxController implements GetxService {
               // Clear local storage
               await _prefs.remove('notifications');
               
-              showToast('All notifications cleared');
+              // Trigger UI update
+              update();
             },
             child: Text('Clear', style: TextStyle(color: Colors.red)),
           ),
