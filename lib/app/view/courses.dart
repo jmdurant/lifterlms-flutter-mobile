@@ -32,24 +32,28 @@ class _CoursesScreenState extends State<CoursesScreen> {
     return GetBuilder<CoursesController>(builder: (controller) {
       return Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
         body: Stack(
           children: <Widget>[
             Indexed(
               index: 1,
               child: Positioned(
+                left: 0,
                 right: 0,
                 top: 0,
                 child: Container(
-                  width: (276 / 375) * screenWidth,
+                  width: screenWidth,
                   height: (209 / 375) * screenWidth,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage(
-                          'assets/images/banner-my-course.png',
-                        ),
-                        fit: BoxFit.contain),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.1),
+                        Theme.of(context).primaryColor.withOpacity(0.05),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -93,7 +97,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             child: Container(
                               height: 40,
                               decoration: BoxDecoration(
-                                color: Colors.grey[100],
+                                color: Theme.of(context).dividerColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: TextField(
@@ -116,11 +120,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             height: 42,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context).cardColor,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.grey.withOpacity(0.5),
+                                  color: Theme.of(context).unselectedWidgetColor.withOpacity(0.5),
                                   spreadRadius: 1,
                                   blurRadius: 1,
                                   offset: const Offset(0, 1),
@@ -188,7 +192,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       return Center(
                         child: Text(
                           tr(LocaleKeys.dataNotFound),
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
                         ),
                       );
                     }

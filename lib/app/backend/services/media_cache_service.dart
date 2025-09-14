@@ -1,8 +1,9 @@
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:flutter_app/app/backend/models/lifterlms/llms_instructor_model.dart';
 
-/// Service to cache and manage media URLs
+/// Service to cache and manage media URLs and instructor data
 /// This helps avoid repeated failures for private media and provides fallbacks
 class MediaCacheService extends GetxService {
   static MediaCacheService get to => Get.find();
@@ -10,6 +11,7 @@ class MediaCacheService extends GetxService {
   late SharedPreferences _prefs;
   final Map<int, String> _memoryCache = {};
   final Map<int, DateTime> _failureCache = {};
+  final Map<int, LLMSInstructorModel> _instructorCache = {};
   
   // Cache for media URLs that have been successfully fetched
   // No longer need hardcoded URLs since we're using oEmbed!
@@ -94,6 +96,39 @@ class MediaCacheService extends GetxService {
   Future<void> clearCache() async {
     _memoryCache.clear();
     _failureCache.clear();
+    _instructorCache.clear();
     await _prefs.remove('media_url_cache');
+    await _prefs.remove('instructor_cache');
+  }
+  
+  // ===== Instructor Caching Methods =====
+  
+  /// Cache an instructor
+  void cacheInstructor(LLMSInstructorModel instructor) {
+    _instructorCache[instructor.id] = instructor;
+    // Note: We don't persist instructors to disk as they may change frequently
+    // and we want fresh data on app restart
+  }
+  
+  /// Cache multiple instructors
+  void cacheInstructors(List<LLMSInstructorModel> instructors) {
+    for (var instructor in instructors) {
+      _instructorCache[instructor.id] = instructor;
+    }
+  }
+  
+  /// Get cached instructor by ID
+  LLMSInstructorModel? getCachedInstructor(int id) {
+    return _instructorCache[id];
+  }
+  
+  /// Check if instructor is cached
+  bool hasInstructorCached(int id) {
+    return _instructorCache.containsKey(id);
+  }
+  
+  /// Clear instructor cache
+  void clearInstructorCache() {
+    _instructorCache.clear();
   }
 }

@@ -81,7 +81,7 @@ class _TabScreenState extends State<TabScreen>
                       Stack(
                         children: [
                           BottomNavigationBar(
-                            backgroundColor: Colors.white,
+                            backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
                             currentIndex: controller.tabId,
                             landscapeLayout: BottomNavigationBarLandscapeLayout.centered,
                             onTap: (index) {
@@ -101,11 +101,11 @@ class _TabScreenState extends State<TabScreen>
                             selectedFontSize: 12,
                             unselectedFontSize: 12,
                             selectedLabelStyle: TextStyle(
-                              color: Colors.black,
+                              color: Theme.of(context).primaryColor,
                             ),
-                            unselectedLabelStyle: TextStyle(color: Colors.grey.shade400),
-                            selectedItemColor: Colors.black,
-                            unselectedItemColor: Colors.grey.shade400,
+                            unselectedLabelStyle: TextStyle(color: Theme.of(context).unselectedWidgetColor),
+                            selectedItemColor: Theme.of(context).primaryColor,
+                            unselectedItemColor: Theme.of(context).unselectedWidgetColor,
                             showUnselectedLabels: true,
                             elevation: 4,
                             items: [
@@ -117,8 +117,8 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 0
-                                        ? Colors.black
-                                        : Colors.grey.shade400,
+                                        ? Theme.of(context).primaryColor
+                                        : Theme.of(context).unselectedWidgetColor,
                                   ),
                                 ),
                                 label: tr(
@@ -134,8 +134,8 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 1
-                                        ? Colors.black
-                                        : Colors.grey.shade400,
+                                        ? Theme.of(context).primaryColor
+                                        : Theme.of(context).unselectedWidgetColor,
                                   ),
                                 ),
                                 label: tr(
@@ -151,8 +151,8 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 2
-                                        ? Colors.black
-                                        : Colors.grey.shade400,
+                                        ? Theme.of(context).primaryColor
+                                        : Theme.of(context).unselectedWidgetColor,
                                   ),
                                 ),
                                 label: tr(
@@ -168,8 +168,8 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 3
-                                        ? Colors.black
-                                        : Colors.grey.shade400,
+                                        ? Theme.of(context).primaryColor
+                                        : Theme.of(context).unselectedWidgetColor,
                                   ),
                                 ),
                                 label: tr(
@@ -185,8 +185,8 @@ class _TabScreenState extends State<TabScreen>
                                     width: 20,
                                     height: 20,
                                     color: controller.tabId == 4
-                                        ? Colors.black
-                                        : Colors.grey.shade400,
+                                        ? Theme.of(context).primaryColor
+                                        : Theme.of(context).unselectedWidgetColor,
                                   ),
                                 ),
                                 label: tr(LocaleKeys.bottomNavigation_profile),
@@ -214,7 +214,7 @@ class _TabScreenState extends State<TabScreen>
 
   Widget bottomHeightLight(){
       return Divider(
-        color: Colors.blue,
+        color: Theme.of(context).primaryColor,
         height: 3,
         thickness: 3,
         indent: 20+(controller.tabId)*(screenWidth/5),

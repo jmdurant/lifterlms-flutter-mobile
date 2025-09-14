@@ -40,18 +40,18 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
           onPressed: () => Get.back(),
         ),
         title: Text(
           'My Certificates',
           style: TextStyle(
-            color: Colors.black,
+            color: Theme.of(context).textTheme.titleLarge?.color,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
@@ -59,7 +59,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
         actions: [
           Obx(() => controller.hasCertificates
               ? IconButton(
-                  icon: Icon(Icons.filter_list, color: Colors.black),
+                  icon: Icon(Icons.filter_list, color: Theme.of(context).iconTheme.color),
                   onPressed: _showFilterOptions,
                 )
               : SizedBox()),
@@ -96,7 +96,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
 
   Widget _buildSearchBar() {
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       padding: EdgeInsets.all(16),
       child: TextField(
         controller: _searchController,
@@ -114,7 +114,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
                 )
               : null,
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: Theme.of(context).dividerColor.withOpacity(0.1),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -127,7 +127,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
 
   Widget _buildCertificateStats() {
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -178,7 +178,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
       onTap: () => controller.viewCertificate(certificate),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -209,13 +209,13 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
                     Icon(
                       Icons.workspace_premium,
                       size: 48,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                     SizedBox(height: 8),
                     Text(
                       'CERTIFICATE',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 2,
@@ -241,7 +241,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -289,7 +289,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
     // Simple skeleton placeholder without external dependency
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: Theme.of(context).dividerColor.withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
       ),
     );
@@ -317,7 +317,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
           Icon(
             Icons.card_membership_outlined,
             size: 80,
-            color: Colors.grey.shade400,
+            color: Theme.of(context).dividerColor,
           ),
           SizedBox(height: 16),
           Text(
@@ -407,7 +407,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
   void _showFilterOptions() {
     Get.bottomSheet(
       Container(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         padding: EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,

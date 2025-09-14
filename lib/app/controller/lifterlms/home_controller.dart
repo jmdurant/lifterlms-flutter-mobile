@@ -355,6 +355,12 @@ class HomeController extends GetxController implements GetxService {
             }
           }
           print('Total instructors loaded: ${_instructors.length}');
+          
+          // Cache all loaded instructors using the existing MediaCacheService
+          if (_instructors.isNotEmpty) {
+            mediaCache.cacheInstructors(_instructors);
+            print('Cached ${_instructors.length} instructors in MediaCacheService');
+          }
         }
       } else {
         _handleError('Failed to load instructors');

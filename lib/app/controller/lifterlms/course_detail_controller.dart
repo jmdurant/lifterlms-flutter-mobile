@@ -499,9 +499,18 @@ class CourseDetailController extends GetxController implements GetxService {
         // For each instructor ID, fetch the actual user data
         for (var instructor in course.value!.instructors) {
           final instructorId = instructor.id;
-          print('loadCourseInstructors - Fetching instructor ID: $instructorId');
+          print('loadCourseInstructors - Looking for instructor ID: $instructorId');
           
-          // Fetch the actual instructor data from WordPress Users API
+          // Check if instructor is cached first
+          final cachedInstructor = mediaCache.getCachedInstructor(instructorId);
+          if (cachedInstructor != null) {
+            print('loadCourseInstructors - Found in cache: ${cachedInstructor.displayName}');
+            instructors.add(cachedInstructor);
+            continue; // Skip API call
+          }
+          
+          // Not in cache, fetch from API
+          print('loadCourseInstructors - Not in cache, fetching from API');
           try {
             final apiStartTime = DateTime.now();
             final response = await lmsService.api.getUsers(params: {
@@ -536,6 +545,10 @@ class CourseDetailController extends GetxController implements GetxService {
               // Create a proper instructor model from the user data
               final fullInstructor = LLMSInstructorModel.fromJson(userData);
               instructors.add(fullInstructor);
+              
+              // Cache the newly fetched instructor
+              mediaCache.cacheInstructor(fullInstructor);
+              print('loadCourseInstructors - Cached instructor: ${fullInstructor.displayName}');
               
               print('loadCourseInstructors - SUCCESS: Loaded ${fullInstructor.displayName}');
               print('loadCourseInstructors - Course count: ${fullInstructor.courseCount}');

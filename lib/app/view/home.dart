@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           key: _scaffoldKey,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           drawerEnableOpenDragGesture: false,
           body: SingleChildScrollView(
             scrollDirection: Axis.vertical,
@@ -79,12 +79,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Container(
                       width: screenWidth,
                       height: (198 / 375) * screenWidth,
-                      decoration: const BoxDecoration(
-                        image: DecorationImage(
-                            image: AssetImage(
-                              'assets/images/banner-home.png',
-                            ),
-                            fit: BoxFit.contain),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Theme.of(context).primaryColor.withOpacity(0.1),
+                            Theme.of(context).primaryColor.withOpacity(0.05),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -107,11 +110,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         padding: EdgeInsets.all(8),
                                         child: Text(
                                           tr(LocaleKeys.login),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontFamily: "Poppins",
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
-                                              color: Colors.black),
+                                              color: Theme.of(context).textTheme.bodyLarge?.color),
                                         )),
                                   ),
                                   const Text("|"),
@@ -121,11 +124,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         padding: EdgeInsets.all(8),
                                         child: Text(
                                           tr(LocaleKeys.register),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontFamily: "Poppins",
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
-                                              color: Colors.black),
+                                              color: Theme.of(context).textTheme.bodyLarge?.color),
                                         )),
                                   )
                                 ],
@@ -140,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: Stack(
                                   children: [
-                                    Icon(Icons.notifications,color: Colors.black,),
+                                    Icon(Icons.notifications,color: Theme.of(context).iconTheme.color,),
                                     if(value.isNewNotification.value)
                                     Positioned(child: Icon(Icons.brightness_1,size: 10,color: Colors.red,))
                                   ],
@@ -176,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       value.lmsService.currentUser?['email'] ?? "",
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.grey[600],
+                                        color: Theme.of(context).textTheme.bodySmall?.color,
                                       ),
                                     ),
                                   ],

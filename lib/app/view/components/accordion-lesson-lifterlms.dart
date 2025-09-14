@@ -127,7 +127,7 @@ class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifter
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -148,7 +148,7 @@ class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifter
                           'Section ${widget.section.order}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: Theme.of(context).textTheme.bodySmall?.color,
                           ),
                         ),
                       ],
@@ -156,7 +156,7 @@ class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifter
                   ),
                   Icon(
                     _showContent ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.grey[700],
+                    color: Theme.of(context).iconTheme.color,
                   ),
                 ],
               ),
@@ -173,9 +173,9 @@ class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifter
                       margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[300]!),
+                        border: Border.all(color: Theme.of(context).dividerColor),
                       ),
                       child: Row(
                         children: [
@@ -203,7 +203,7 @@ class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifter
                                     '${lesson.points} points',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey[600],
+                                      color: Theme.of(context).textTheme.bodySmall?.color,
                                     ),
                                   ),
                               ],

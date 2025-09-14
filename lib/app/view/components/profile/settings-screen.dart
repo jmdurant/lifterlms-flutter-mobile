@@ -52,17 +52,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Indexed(
             index: 1,
             child: Positioned(
+              left: 0,
               right: 0,
               top: 0,
               child: Container(
-                width: (276 / 375) * screenWidth,
+                width: screenWidth,
                 height: (209 / 375) * screenWidth,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                      image: AssetImage(
-                        'assets/images/banner-my-course.png',
-                      ),
-                      fit: BoxFit.contain),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColor.withOpacity(0.1),
+                      Theme.of(context).primaryColor.withOpacity(0.05),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -55,11 +55,11 @@ class Instructors extends StatelessWidget {
                             child: Container(
                                 padding: EdgeInsets.all(20),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(14),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.grey.withOpacity(0.5),
+                                      color: Theme.of(context).shadowColor.withOpacity(0.1),
                                       spreadRadius: 1,
                                       blurRadius: 1,
                                       offset: const Offset(
@@ -99,10 +99,11 @@ class Instructors extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(instructorList[index].name,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 fontFamily: 'medium',
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w500,
+                                                color: Theme.of(context).textTheme.bodyLarge?.color,
                                                 overflow:
                                                     TextOverflow.ellipsis)),
                                         SizedBox(
@@ -114,7 +115,7 @@ class Instructors extends StatelessWidget {
                                               Icon(
                                                 FeatherIcons.send,
                                                 size: 12,
-                                                color: Colors.grey.shade500,
+                                                color: Theme.of(context).textTheme.bodySmall?.color,
                                               ),
                                               SizedBox(width: 8),
                                             ],
@@ -123,7 +124,7 @@ class Instructors extends StatelessWidget {
                                               Icon(
                                                 FeatherIcons.phoneCall,
                                                 size: 12,
-                                                color: Colors.grey.shade500,
+                                                color: Theme.of(context).textTheme.bodySmall?.color,
                                               ),
                                               SizedBox(width: 8),
                                             ],
@@ -132,7 +133,7 @@ class Instructors extends StatelessWidget {
                                               Icon(
                                                 FeatherIcons.instagram,
                                                 size: 12,
-                                                color: Colors.grey.shade500,
+                                                color: Theme.of(context).textTheme.bodySmall?.color,
                                               ),
                                               SizedBox(width: 8),
                                             ],
@@ -141,7 +142,7 @@ class Instructors extends StatelessWidget {
                                               Icon(
                                                 FeatherIcons.twitter,
                                                 size: 12,
-                                                color: Colors.grey.shade500,
+                                                color: Theme.of(context).textTheme.bodySmall?.color,
                                               ),
                                           ],
                                         )

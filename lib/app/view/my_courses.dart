@@ -72,7 +72,7 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
       builder: (controller) {
       return Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
         body: Stack(
           children: <Widget>[
@@ -81,15 +81,19 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
               child: Positioned(
                 right: 0,
                 top: 0,
+                left: 0,
                 child: Container(
-                  width: (276 / 375) * screenWidth,
+                  width: screenWidth,
                   height: (209 / 375) * screenWidth,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage(
-                          'assets/images/banner-my-course.png',
-                        ),
-                        fit: BoxFit.contain),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.1),
+                        Theme.of(context).primaryColor.withOpacity(0.05),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -106,10 +110,10 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
                             children: [
                               Text(
                                 tr(LocaleKeys.needLogin),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 16,
-                                  color: Colors.black87,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
                                 ),
                               ),
                               SizedBox(
@@ -117,7 +121,7 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black,
+                                  backgroundColor: Theme.of(context).primaryColor,
                                   padding: const EdgeInsets.symmetric(
                                       vertical: 10, horizontal: 30),
                                   shape: RoundedRectangleBorder(
@@ -127,10 +131,10 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
                                 onPressed: onLogin,
                                 child: Text(
                                   tr(LocaleKeys.login),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize: 14,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 ),
                               ),
@@ -206,7 +210,7 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
                                                 : 'No courses in this category',
                                             style: TextStyle(
                                               fontSize: 14,
-                                              color: Colors.grey.shade500,
+                                              color: Theme.of(context).textTheme.bodySmall?.color,
                                             ),
                                           ),
                                           if (controller.selectedTab.value == 0)
@@ -280,15 +284,15 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
         decoration: BoxDecoration(
           color: controller.selectedTab.value == index 
               ? Theme.of(context).primaryColor 
-              : Colors.grey[200],
+              : Theme.of(context).dividerColor.withOpacity(0.2),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: controller.selectedTab.value == index 
-                ? Colors.white 
-                : Colors.black87,
+                ? Theme.of(context).colorScheme.onPrimary 
+                : Theme.of(context).textTheme.bodyLarge?.color,
             fontWeight: controller.selectedTab.value == index 
                 ? FontWeight.bold 
                 : FontWeight.normal,

@@ -178,7 +178,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             ["display_name"],
                         style: TextStyle(
                           fontSize: 14, fontFamily: 'poppins',
-                          color: Colors.grey.shade700
+                          color: Theme.of(context).textTheme.bodySmall?.color
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -192,7 +192,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         allowHalfRating: true,
                         itemCount: 5,
                         itemSize: 12,
-                        unratedColor: Colors.grey,
+                        unratedColor: Theme.of(context).disabledColor,
                         itemBuilder: (context, _) => Icon(
                           Icons.star,
                           color: Colors.amber,
@@ -374,13 +374,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   tr(LocaleKeys.singleCourse_reviewSubmit),
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontFamily: 'Poppins-Medium',
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -406,7 +406,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       if (value.course.value == null || value.course.value?.title == null) {
         return Scaffold(
           key: _scaffoldKey,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: Center(
             child: CircularProgressIndicator(),
           ),
@@ -417,24 +417,28 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
         return Scaffold(
           key: _scaffoldKey,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           drawerEnableOpenDragGesture: false,
           body: Stack(
             children: <Widget>[
               Indexed(
                 index: 1,
                 child: Positioned(
+                  left: 0,
                   right: 0,
                   top: 0,
                   child: Container(
-                    width: (276 / 375) * screenWidth,
+                    width: screenWidth,
                     height: (209 / 375) * screenWidth,
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                          image: AssetImage(
-                            'assets/images/banner-my-course.png',
-                          ),
-                          fit: BoxFit.contain),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).primaryColor.withOpacity(0.1),
+                          Theme.of(context).primaryColor.withOpacity(0.05),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -457,7 +461,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                               homeController.getOverview();
                               value.onBack();
                             },
-                            icon: Image.asset('assets/images/icon/icon-back.png',color: Colors.black,height: 14,width: 14,),
+                            icon: Image.asset('assets/images/icon/icon-back.png',color: Theme.of(context).iconTheme.color,height: 14,width: 14,),
                           ),
                         ),
                         Spacer(),
@@ -502,11 +506,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                       child: Text(
                                         value.course.value?.title ?? '',
                                         maxLines: 2,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'Poppins-Medium',
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
-                                          color: Colors.white,
+                                          color: Theme.of(context).colorScheme.onPrimary,
                                         ),
                                       ),
                                     )
@@ -589,20 +593,20 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   (value.course.value?.salePrice ?? 0) > 0)
                                                 Text(
                                                     '\$${value.course.value?.salePrice?.toStringAsFixed(2) ?? "0.00"}',
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontFamily: 'Poppins',
                                                       fontSize: 14,
-                                                      color: Colors.black,
+                                                      color: Theme.of(context).textTheme.bodyLarge?.color,
                                                       fontWeight:
                                                           FontWeight.w500,
                                                     ))
                                               else
                                                 Text(
                                                     '\$${value.course.value?.salePrice}',
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontFamily: 'Poppins',
                                                       fontSize: 14,
-                                                      color: Colors.black,
+                                                      color: Theme.of(context).textTheme.bodyLarge?.color,
                                                       fontWeight:
                                                           FontWeight.w500,
                                                     )),
@@ -613,10 +617,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   (value.course.value?.price ?? 0) > 0)
                                                 Text(
                                                   '\$${value.course.value?.price?.toStringAsFixed(2) ?? "0.00"}',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontFamily: 'Poppins',
                                                     fontSize: 14,
-                                                    color: Colors.black45,
+                                                    color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.45),
                                                     fontWeight: FontWeight.w500,
                                                     decoration: TextDecoration
                                                         .lineThrough,
@@ -625,10 +629,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                               else
                                                 Text(
                                                   '\$${value.course.value?.regularPrice}',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontFamily: 'Poppins',
                                                     fontSize: 14,
-                                                    color: Colors.black45,
+                                                    color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.45),
                                                     fontWeight: FontWeight.w500,
                                                     decoration: TextDecoration
                                                         .lineThrough,
@@ -671,10 +675,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                               const EdgeInsets.only(left: 16),
                                           child: Text(
                                             tr(LocaleKeys.singleCourse_overview),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontFamily: 'medium',
                                               fontSize: 18,
-                                              color: Colors.black,
+                                              color: Theme.of(context).textTheme.bodyLarge?.color,
                                             ),
                                           ),
                                         ),
@@ -685,10 +689,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                           alignment: Alignment.center,
                                           child: HtmlWidget(
                                             _cleanCourseDescription(value.course.value?.content?.toString() ?? ''),
-                                            textStyle: const TextStyle(
+                                            textStyle: TextStyle(
                                               fontFamily: 'Poppins',
                                               fontSize: 14,
-                                              color: Colors.black,
+                                              color: Theme.of(context).textTheme.bodyLarge?.color,
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
@@ -702,10 +706,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                     const EdgeInsets.fromLTRB(16, 16, 0, 0),
                                 child: Text(
                                   tr(LocaleKeys.singleCourse_curriculum),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Poppins-Medium',
                                     fontSize: 18,
-                                    color: Colors.black,
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -734,7 +738,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                 thickness: 0.7,
                                 indent: 15,
                                 endIndent: 15,
-                                color: Colors.grey.shade400,
+                                color: Theme.of(context).dividerColor,
                               ),
                               Column(children: [
                                 Container(
@@ -743,10 +747,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                       horizontal: 0, vertical: 8),
                                   child: Text(
                                     tr(LocaleKeys.singleCourse_instructor),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'Poppins-Medium',
                                       fontSize: 18,
-                                      color: Colors.black,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -818,7 +822,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   child: Icon(
                                                     FeatherIcons.facebook,
                                                     size: 16,
-                                                    color: Colors.grey.shade400,
+                                                    color: Theme.of(context).dividerColor,
                                                   ),
                                                   onTap: () => {
                                                         // TODO: Fix instructor social links
@@ -836,7 +840,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   child: Icon(
                                                     FeatherIcons.twitter,
                                                     size: 16,
-                                                    color: Colors.grey.shade400,
+                                                    color: Theme.of(context).dividerColor,
                                                   ),
                                                   onTap: () => {
                                                         // TODO: Fix instructor social links
@@ -854,7 +858,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   child: Icon(
                                                     FeatherIcons.youtube,
                                                     size: 16,
-                                                    color: Colors.grey.shade400,
+                                                    color: Theme.of(context).dividerColor,
                                                   ),
                                                   onTap: () => {
                                                         // TODO: Fix instructor social links
@@ -882,10 +886,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                     children: [
                                       Text(
                                         tr(LocaleKeys.singleCourse_review),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'Poppins-Medium',
                                           fontSize: 18,
-                                          color: Colors.black,
+                                          color: Theme.of(context).textTheme.bodyLarge?.color,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -930,13 +934,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                     tr(LocaleKeys.singleCourse_rating),
                                                 style: TextStyle(
                                                     color:
-                                                        Colors.grey.shade500),
+                                                        Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey),
                                               ),
                                               SizedBox(height: 20),
                                               Text(
                                                 value.reviewMessage,
                                                 style: TextStyle(
-                                                  color: Colors.grey.shade700,
+                                                  color: Theme.of(context).textTheme.bodySmall?.color,
                                                   fontSize: 12,
                                                 ),
                                                 textAlign: TextAlign.center,
@@ -965,7 +969,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   bottom: 0,
                   left: 0,
                   child: Container(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).dividerColor.withOpacity(0.1),
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -986,14 +990,14 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                     icon: const Icon(Icons.list, size: 20),
                                     label: const Text('Course List'),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.grey[700],
-                                      side: BorderSide(color: Colors.grey[400]!),
+                                      foregroundColor: Theme.of(context).textTheme.bodyMedium?.color,
+                                      side: BorderSide(color: Theme.of(context).dividerColor),
                                     ),
                                   ),
                                   ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        backgroundColor: Colors.black,
+                                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                        backgroundColor: Theme.of(context).primaryColor,
                                         padding: const EdgeInsets.symmetric(
                                             vertical: 12,
                                             horizontal: 24), // foreground color

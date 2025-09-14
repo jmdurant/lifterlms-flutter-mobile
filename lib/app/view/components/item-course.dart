@@ -71,14 +71,14 @@ class _WishlistHeartState extends State<WishlistHeart> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.all(Radius.circular(10)),
           color: _isInWishlist 
-            ? Colors.red.withOpacity(0.8)
-            : Colors.black.withOpacity(0.2),
+            ? Theme.of(context).colorScheme.error.withOpacity(0.8)
+            : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
         ),
         child: Icon(
           _isInWishlist 
             ? Icons.favorite 
             : Icons.favorite_border,
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onPrimary,
           size: 22,
         ),
       ),
@@ -261,8 +261,8 @@ class ItemCourse extends WatchingWidget {
                             child: Center(
                               child: Text(
                                 tr(LocaleKeys.sale),
-                                style: const TextStyle(
-                                    color: Colors.white,
+                                style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onPrimary,
                                     fontSize: 12,
                                     fontFamily: 'medium'),
                               ),
@@ -293,17 +293,17 @@ class ItemCourse extends WatchingWidget {
                                   horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
-                                color: Colors.white,
+                                color: Theme.of(context).cardColor,
                               ),
                               child: Wrap(
                                 direction: Axis.horizontal,
                                 children: [
                                   Text(
                                     _formatPrice(_getSalePrice()),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 14,
-                                      color: Colors.black,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -312,10 +312,10 @@ class ItemCourse extends WatchingWidget {
                                   ),
                                   Text(
                                     _formatPrice(_getRegularPrice()),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 14,
-                                      color: Colors.black45,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.45),
                                       fontWeight: FontWeight.w500,
                                       decoration: TextDecoration.lineThrough,
                                     ),
@@ -329,7 +329,7 @@ class ItemCourse extends WatchingWidget {
                                   horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
-                                color: Colors.white,
+                                color: Theme.of(context).cardColor,
                               ),
                               child: Text(
                                 _formatPrice(_getItemPrice()),
@@ -346,14 +346,14 @@ class ItemCourse extends WatchingWidget {
                                   horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
-                                color: Colors.white,
+                                color: Theme.of(context).cardColor,
                               ),
                               child: Text(
                                 tr(LocaleKeys.free),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'medium',
                                   fontSize: 14,
-                                  color: Colors.black,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -371,8 +371,8 @@ class ItemCourse extends WatchingWidget {
                                 ),
                                 Text(
                                   _getRating().toStringAsFixed(1),
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
                                       fontSize: 14,
                                       fontFamily: 'medium',
                                       fontWeight: FontWeight.w500),

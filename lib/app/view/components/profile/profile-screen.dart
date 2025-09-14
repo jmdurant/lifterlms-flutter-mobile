@@ -62,23 +62,27 @@ class _Profile extends State<Profile> {
     final value = widget.profileController;
     return Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
         body: Stack(children: <Widget>[
           Indexed(
             index: 1,
             child: Positioned(
+              left: 0,
               right: 0,
               top: 0,
               child: Container(
-                width: (276 / 375) * screenWidth,
+                width: screenWidth,
                 height: (209 / 375) * screenWidth,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                      image: AssetImage(
-                        'assets/images/banner-my-course.png',
-                      ),
-                      fit: BoxFit.contain),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColor.withOpacity(0.1),
+                      Theme.of(context).primaryColor.withOpacity(0.05),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -107,10 +111,10 @@ class _Profile extends State<Profile> {
                         children: [
                           Text(
                             tr(LocaleKeys.needLogin),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 16,
-                              color: Colors.black87,
+                              color: Theme.of(context).textTheme.bodyLarge?.color,
                             ),
                           ),
                           SizedBox(
@@ -118,7 +122,7 @@ class _Profile extends State<Profile> {
                           ),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
+                              backgroundColor: Theme.of(context).primaryColor,
                               padding: const EdgeInsets.symmetric(
                                   vertical: 10, horizontal: 30),
                               shape: RoundedRectangleBorder(
@@ -128,10 +132,10 @@ class _Profile extends State<Profile> {
                             onPressed: onLogin,
                             child: Text(
                               tr(LocaleKeys.login),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Poppins',
                                 fontSize: 14,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
                           ),
@@ -191,7 +195,7 @@ class _Profile extends State<Profile> {
                                                 style: TextStyle(
                                                     fontSize: 14,
                                                     color:
-                                                        Colors.grey.shade700)),
+                                                        Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey)),
                                           SizedBox(
                                             height: 4,
                                           ),
@@ -209,8 +213,7 @@ class _Profile extends State<Profile> {
                                                 Text(value.email.value,
                                                     style: TextStyle(
                                                         fontSize: 14,
-                                                        color: Colors
-                                                            .grey.shade700)),
+                                                        color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey)),
                                               ],
                                             ),
                                         ],
@@ -224,7 +227,7 @@ class _Profile extends State<Profile> {
                                 thickness: 0.7,
                                 indent: 35,
                                 endIndent: 35,
-                                color: Colors.grey.shade400,
+                                color: Theme.of(context).dividerColor,
                               ),
                               Align(
                                 alignment: Alignment.center,
@@ -248,7 +251,7 @@ class _Profile extends State<Profile> {
                                               ),
                                               child: Icon(Feather.settings,
                                                   size: 20,
-                                                  color: Colors.white),
+                                                  color: Theme.of(context).colorScheme.onPrimary),
                                             ),
                                             SizedBox(width: 10),
                                             Text(
@@ -276,7 +279,7 @@ class _Profile extends State<Profile> {
                                               ),
                                               child: Icon(Icons.card_membership,
                                                   size: 20,
-                                                  color: Colors.white),
+                                                  color: Theme.of(context).colorScheme.onPrimary),
                                             ),
                                             SizedBox(width: 10),
                                             Text(
@@ -302,7 +305,7 @@ class _Profile extends State<Profile> {
                                               ),
                                               child: Icon(Feather.shopping_bag,
                                                   size: 20,
-                                                  color: Colors.white),
+                                                  color: Theme.of(context).colorScheme.onPrimary),
                                             ),
                                             SizedBox(width: 10),
                                             Text(
@@ -320,7 +323,7 @@ class _Profile extends State<Profile> {
                                         thickness: 0.7,
                                         indent: 0,
                                         endIndent: 0,
-                                        color: Colors.grey.shade400,
+                                        color: Theme.of(context).dividerColor,
                                       ),
                                       SizedBox(height: 50),
                                       GestureDetector(

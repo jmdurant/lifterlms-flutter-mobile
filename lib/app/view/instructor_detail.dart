@@ -59,24 +59,28 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
     return GetBuilder<InstructorDetailController>(builder: (value) {
       return Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
         body: Stack(
           children: <Widget>[
             Indexed(
               index: 1,
               child: Positioned(
+                left: 0,
                 right: 0,
                 top: 0,
                 child: Container(
-                  width: (276 / 375) * screenWidth,
+                  width: screenWidth,
                   height: (209 / 375) * screenWidth,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage(
-                          'assets/images/banner-my-course.png',
-                        ),
-                        fit: BoxFit.contain),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.1),
+                        Theme.of(context).primaryColor.withOpacity(0.05),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -86,34 +90,36 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
                 Container(
-                  height: 80.0,
-                  width: screenWidth,
-                  // color: Colors.blue,
-                  padding: const EdgeInsets.fromLTRB(0, 40, 0, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Container(
-                        // width: 40,
-                        child: IconButton(
-                          onPressed: () {
-                            Get.back();
-                          },
-                          icon: const Icon(Icons.arrow_back),
-                          color: Colors.grey[900],
-                          iconSize: 24,
+                  padding: EdgeInsets.only(top: MediaQuery.of(context).viewPadding.top),
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: Container(
+                    height: 56.0,
+                    width: screenWidth,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Container(
+                          // width: 40,
+                          child: IconButton(
+                            onPressed: () {
+                              Get.back();
+                            },
+                            icon: const Icon(Icons.arrow_back),
+                            color: Theme.of(context).iconTheme.color,
+                            iconSize: 24,
+                          ),
                         ),
-                      ),
-                      Text(
-                        tr(LocaleKeys.instructorScreen_title),
-                        style: const TextStyle(
-                          fontFamily: 'Poppins-Medium',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 24,
+                        Text(
+                          tr(LocaleKeys.instructorScreen_title),
+                          style: const TextStyle(
+                            fontFamily: 'Poppins-Medium',
+                            fontWeight: FontWeight.w500,
+                            fontSize: 24,
+                          ),
                         ),
-                      ),
-                      Container(width: 40),
-                    ],
+                        Container(width: 40),
+                      ],
+                    ),
                   ),
                 ),
                 value.isLoading.value
@@ -173,10 +179,10 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                                     if (value.instructor.value?.description != null &&
                                         value.instructor.value!.description.isNotEmpty)
                                       Text(value.instructor.value!.description,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontFamily: 'Poppins',
                                             fontSize: 12,
-                                            color: Colors.grey,
+                                            color: Theme.of(context).textTheme.bodySmall?.color,
                                           )),
                                   ],
                                 ))
@@ -193,7 +199,7 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                                   child: Icon(
                                     FeatherIcons.facebook,
                                     size: 16,
-                                    color: Colors.grey.shade800,
+                                    color: Theme.of(context).iconTheme.color,
                                   ),
                                   onTap: () => _launchUrl(value.socialLinks['facebook']!)),
                               SizedBox(width: 10),
@@ -204,7 +210,7 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                                   child: Icon(
                                     FeatherIcons.twitter,
                                     size: 16,
-                                    color: Colors.grey.shade800,
+                                    color: Theme.of(context).iconTheme.color,
                                   ),
                                   onTap: () => _launchUrl(value.socialLinks['twitter']!)),
                               SizedBox(width: 10),
@@ -215,7 +221,7 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                                   child: Icon(
                                     FeatherIcons.youtube,
                                     size: 16,
-                                    color: Colors.grey.shade800,
+                                    color: Theme.of(context).iconTheme.color,
                                   ),
                                   onTap: () => _launchUrl(value.socialLinks['youtube']!)),
                             ],
@@ -225,7 +231,7 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                                   child: Icon(
                                     FeatherIcons.globe,
                                     size: 16,
-                                    color: Colors.grey.shade800,
+                                    color: Theme.of(context).iconTheme.color,
                                   ),
                                   onTap: () => _launchUrl(value.socialLinks['website']!)),
                             ],
@@ -245,7 +251,7 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                                   style: TextStyle(
                                     fontFamily: 'medium',
                                     fontSize: 15,
-                                    color: Colors.black,
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
                                   )),
                             ],
                           ),

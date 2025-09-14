@@ -178,7 +178,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     return GetBuilder<LearningController>(builder: (controller) {
       return Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
         drawer: _buildDrawer(controller),
         body: Stack(
@@ -186,17 +186,21 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
             Indexed(
               index: 1,
               child: Positioned(
+                left: 0,
                 right: 0,
                 top: 0,
                 child: Container(
-                  width: (276 / 375) * screenWidth,
+                  width: screenWidth,
                   height: (209 / 375) * screenWidth,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage(
-                          'assets/images/banner-my-course.png',
-                        ),
-                        fit: BoxFit.contain),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.1),
+                        Theme.of(context).primaryColor.withOpacity(0.05),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -284,7 +288,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               _scaffoldKey.currentState?.openDrawer();
             },
             icon: const Icon(Icons.menu),
-            color: Colors.grey[900],
+            color: Theme.of(context).iconTheme.color,
             iconSize: 30,
           ),
           Expanded(
@@ -305,7 +309,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               Get.back();
             },
             icon: const Icon(Icons.close),
-            color: Colors.grey[900],
+            color: Theme.of(context).iconTheme.color,
             iconSize: 30,
           ),
         ],
@@ -377,12 +381,12 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 }
                 
                 if (controller.sections.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
                       child: Text(
                         'No sections available',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
                       ),
                     ),
                   );
@@ -435,7 +439,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 children: [
                   LinearProgressIndicator(
                     value: controller.courseProgress.value / 100,
-                    backgroundColor: Colors.grey[300],
+                    backgroundColor: Theme.of(context).dividerColor,
                     valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
                   ),
                   const SizedBox(height: 8),
@@ -627,16 +631,16 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                       : () => controller.completeLesson(),
                   icon: Icon(
                     isCompleted ? Icons.check_circle : Icons.check,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                   label: Text(
                     isCompleted ? 'Completed' : 'Mark as Complete',
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isCompleted ? Colors.grey : Colors.green,
+                    backgroundColor: isCompleted ? Theme.of(context).disabledColor : Colors.green,
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    disabledBackgroundColor: isCompleted ? Colors.grey : Colors.green.shade300,
+                    disabledBackgroundColor: isCompleted ? Theme.of(context).disabledColor : Colors.green.shade300,
                   ),
                 );
               }),
@@ -786,11 +790,11 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 child: Text(
                   course?.title ?? '',
                   maxLines: 2,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins-Medium',
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     shadows: [
                       Shadow(
                         offset: Offset(0, 1),
@@ -948,7 +952,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -970,10 +974,10 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
           return Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 21),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: Theme.of(context).dividerColor.withOpacity(0.1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Theme.of(context).dividerColor.withOpacity(0.3),
                   spreadRadius: 1,
                   blurRadius: 5,
                   offset: const Offset(0, -2),
@@ -1005,7 +1009,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                       : Icons.play_circle_outline,
                 ),
                 style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   backgroundColor: Theme.of(context).primaryColor,
                 ),
               ),
@@ -1018,10 +1022,10 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
       return Container(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 21),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
+              color: Theme.of(context).dividerColor.withOpacity(0.3),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, -2),
@@ -1038,7 +1042,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                     icon: const Icon(Icons.home),
                     label: const Text('Overview'),
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       backgroundColor: Theme.of(context).primaryColor,
                     ),
                   )
@@ -1050,11 +1054,11 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                     label: const Text('Previous'),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: controller.canNavigatePrevious.value 
-                          ? Colors.white 
-                          : Colors.grey,
+                          ? Theme.of(context).colorScheme.onPrimary 
+                          : Theme.of(context).disabledColor,
                       backgroundColor: controller.canNavigatePrevious.value 
                           ? Theme.of(context).primaryColor 
-                          : Colors.grey[300],
+                          : Theme.of(context).dividerColor,
                     ),
                   ),
             Text(
@@ -1070,7 +1074,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                     label: const Text('Overview'),
                     icon: const Icon(Icons.home),
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       backgroundColor: Theme.of(context).primaryColor,
                     ),
                   )
@@ -1082,11 +1086,11 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                     icon: const Icon(Icons.arrow_forward),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: controller.canNavigateNext.value 
-                          ? Colors.white 
-                          : Colors.grey,
+                          ? Theme.of(context).colorScheme.onPrimary 
+                          : Theme.of(context).disabledColor,
                       backgroundColor: controller.canNavigateNext.value 
                           ? Theme.of(context).primaryColor 
-                          : Colors.grey[300],
+                          : Theme.of(context).dividerColor,
                     ),
                   ),
           ],
@@ -1546,7 +1550,7 @@ class _SectionTileState extends State<_SectionTile> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1622,7 +1626,7 @@ class _SectionTileState extends State<_SectionTile> {
       return ListTile(
         leading: Icon(
           isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: isCompleted ? Colors.green : Colors.grey,
+          color: isCompleted ? Colors.green : Theme.of(context).disabledColor,
           size: 20,
         ),
         title: Text(

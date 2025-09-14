@@ -143,20 +143,25 @@ class ProfileView extends StatelessWidget {
     var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
     
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Background image
           Positioned(
+            left: 0,
             right: 0,
             top: 0,
             child: Container(
-              width: (276 / 375) * screenWidth,
+              width: screenWidth,
               height: (209 / 375) * screenWidth,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/banner-my-course.png'),
-                  fit: BoxFit.contain,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Theme.of(context).primaryColor.withOpacity(0.1),
+                    Theme.of(context).primaryColor.withOpacity(0.05),
+                  ],
                 ),
               ),
             ),
@@ -211,7 +216,7 @@ class ProfileView extends StatelessWidget {
                                 : 'No email'),
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: Theme.of(context).textTheme.bodySmall?.color,
                         ),
                       ),
                       SizedBox(height: 32),
@@ -255,9 +260,9 @@ class Page3 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      child: const Text(
+      child: Text(
         "page 3",
-        style: TextStyle(fontFamily: 'bold', color: Colors.black),
+        style: TextStyle(fontFamily: 'bold', color: Theme.of(context).textTheme.bodyLarge?.color),
       ),
     );
   }
