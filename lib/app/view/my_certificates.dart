@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter_app/app/controller/lifterlms/certificates_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/util/theme.dart';
 import 'package:get/get.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:indexed/indexed.dart';
 
 class MyCertificatesScreen extends StatefulWidget {
   const MyCertificatesScreen({Key? key}) : super(key: key);
@@ -39,58 +42,103 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
+    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
-          onPressed: () => Get.back(),
-        ),
-        title: Text(
-          'My Certificates',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.titleLarge?.color,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        actions: [
-          Obx(() => controller.hasCertificates
-              ? IconButton(
-                  icon: Icon(Icons.filter_list, color: Theme.of(context).iconTheme.color),
-                  onPressed: _showFilterOptions,
-                )
-              : SizedBox()),
-        ],
-      ),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.certificates.isEmpty) {
-          return _buildLoadingState();
-        }
-
-        if (controller.hasError.value) {
-          return _buildErrorState();
-        }
-
-        if (!controller.hasCertificates) {
-          return _buildEmptyState();
-        }
-
-        return Column(
-          children: [
-            if (controller.hasCertificates) _buildSearchBar(),
-            _buildCertificateStats(),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: controller.refreshCertificates,
-                child: _buildCertificatesList(),
+      body: Stack(
+        children: [
+          // Gradient background
+          Indexed(
+            index: 1,
+            child: Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: Container(
+                width: screenWidth,
+                height: (209 / 375) * screenWidth,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColor.withOpacity(0.1),
+                      Theme.of(context).primaryColor.withOpacity(0.05),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
-        );
-      }),
+          ),
+          Column(
+            children: [
+              // Custom header
+              Container(
+                padding: EdgeInsets.fromLTRB(
+                    0, MediaQuery.of(context).viewPadding.top + 10, 0, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    IconButton(
+                      onPressed: () {
+                        Get.back();
+                      },
+                      icon: const Icon(Icons.arrow_back),
+                      color: Theme.of(context).iconTheme.color,
+                      iconSize: 24,
+                    ),
+                    Text(
+                      'My Certificates',
+                      style: TextStyle(
+                        fontFamily: 'Poppins-Medium',
+                        fontWeight: FontWeight.w500,
+                        fontSize: 24,
+                        color: Theme.of(context).textTheme.titleLarge?.color,
+                      ),
+                    ),
+                    Obx(() => controller.hasCertificates
+                        ? IconButton(
+                            icon: Icon(Icons.filter_list, color: Theme.of(context).iconTheme.color),
+                            onPressed: _showFilterOptions,
+                          )
+                        : Container(width: 40)),
+                  ],
+                ),
+              ),
+              // Body content
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value && controller.certificates.isEmpty) {
+                    return _buildLoadingState();
+                  }
+
+                  if (controller.hasError.value) {
+                    return _buildErrorState();
+                  }
+
+                  if (!controller.hasCertificates) {
+                    return _buildEmptyState();
+                  }
+
+                  return Column(
+                    children: [
+                      if (controller.hasCertificates) _buildSearchBar(),
+                      _buildCertificateStats(),
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: controller.refreshCertificates,
+                          child: _buildCertificatesList(),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

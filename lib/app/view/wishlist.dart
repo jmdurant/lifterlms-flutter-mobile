@@ -69,7 +69,25 @@ class _WishlistScreenState extends State<WishlistScreen> {
             ),
             Column(
               children: <Widget>[
-                SizedBox(height: math.max(20, MediaQuery.of(context).viewPadding.top)),
+                // Add header like other screens
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                      0, MediaQuery.of(context).viewPadding.top + 10, 0, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        'Favorites',
+                        style: TextStyle(
+                          fontFamily: 'Poppins-Medium',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 24,
+                          color: Theme.of(context).textTheme.titleLarge?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 if (value.lmsService.isLoggedIn &&
                     value.wishlistCourses.isEmpty &&
                     !value.isLoading.value &&
