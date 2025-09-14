@@ -9,8 +9,9 @@ import '../../helper/router.dart';
 
 class ItemNotification extends StatelessWidget {
   final NotificationModel item;
+  final VoidCallback? onDelete;
 
-  ItemNotification({super.key, required this.item});
+  ItemNotification({super.key, required this.item, this.onDelete});
 
   void onNavigate() {}
   var screenWidth =
@@ -32,21 +33,23 @@ class ItemNotification extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.5),
+                  color: Theme.of(context).shadowColor.withOpacity(0.2),
                   spreadRadius: 1,
                   blurRadius: 1,
                   offset: const Offset(0, 1), // Thay đổi hướng đổ bóng
                 ),
               ],
             ),
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: Stack(
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   if (item.image != null &&
                       item.image != '' &&
                       item.image != 'null')
@@ -75,9 +78,29 @@ class ItemNotification extends StatelessWidget {
                   SizedBox(height: 10,),
                   Text(
                     item.date_created!,
-                    style: TextStyle(color: Colors.grey.shade700,fontFamily: "poppins"),
+                    style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color,fontFamily: "poppins"),
                   ),
-                ]))
+                ]),
+                if (onDelete != null)
+                  Positioned(
+                    top: -8,
+                    right: -8,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.close,
+                        size: 20,
+                        color: Colors.grey.shade600,
+                      ),
+                      onPressed: onDelete,
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(
+                        minWidth: 30,
+                        minHeight: 30,
+                      ),
+                    ),
+                  ),
+              ],
+            ))
     );
   }
 }

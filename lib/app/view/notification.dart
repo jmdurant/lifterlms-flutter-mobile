@@ -102,7 +102,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           fontSize: 24,
                         ),
                       ),
-                      Container(width: 40),
+                      value.notifications.isNotEmpty
+                          ? IconButton(
+                              onPressed: () {
+                                value.clearAllNotifications();
+                              },
+                              icon: const Icon(Icons.clear_all),
+                              color: Colors.grey[900],
+                              iconSize: 24,
+                              tooltip: 'Clear All',
+                            )
+                          : Container(width: 40),
                     ],
                   ),
                 ),
@@ -136,8 +146,69 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               date_created: notificationData['timestamp']?.toString() ?? '',
                               status: notificationData['read'] == true ? 'read' : 'unread',
                             );
-                            return ItemNotification(
-                              item: model,
+                            return Dismissible(
+                              key: Key(model.notification_id ?? index.toString()),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: EdgeInsets.only(right: 20),
+                                color: Colors.red,
+                                child: Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              confirmDismiss: (direction) async {
+                                return await showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: Text('Delete Notification'),
+                                      content: Text('Are you sure you want to delete this notification?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(false),
+                                          child: Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(true),
+                                          child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              onDismissed: (direction) {
+                                value.deleteNotification(model.notification_id ?? '');
+                              },
+                              child: ItemNotification(
+                                item: model,
+                                onDelete: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: Text('Delete Notification'),
+                                        content: Text('Are you sure you want to delete this notification?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                              value.deleteNotification(model.notification_id ?? '');
+                                            },
+                                            child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
                             );
                           } else {
                             return Container(

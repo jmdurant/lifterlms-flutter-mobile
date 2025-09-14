@@ -41,7 +41,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return GetBuilder<WishlistController>(builder: (value) {
       return Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
         body: Stack(
           children: <Widget>[
@@ -70,8 +70,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
             Column(
               children: <Widget>[
                 SizedBox(height: math.max(20, MediaQuery.of(context).viewPadding.top)),
-                if (wishlistController.lmsService.isLoggedIn &&
-                    wishlistController.wishlistCourses.isEmpty)
+                if (value.lmsService.isLoggedIn &&
+                    value.wishlistCourses.isEmpty &&
+                    !value.isLoading.value &&
+                    !value.hasError.value)
                   Container(
                     margin: EdgeInsets.only(top: 50),
                     child: Text(
@@ -80,7 +82,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           TextStyle(fontSize: 12, color: Colors.grey.shade500),
                     ),
                   ),
-                !wishlistController.lmsService.isLoggedIn
+                !value.lmsService.isLoggedIn
                     ? Expanded(
                         child: Center(
                           child: Column(
@@ -89,10 +91,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             children: [
                               Text(
                                 tr(LocaleKeys.needLogin),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 16,
-                                  color: Colors.black87,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
                                 ),
                               ),
                               SizedBox(
@@ -100,7 +102,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black,
+                                  backgroundColor: Theme.of(context).primaryColor,
                                   padding: const EdgeInsets.symmetric(
                                       vertical: 10, horizontal: 30),
                                   shape: RoundedRectangleBorder(
@@ -121,28 +123,83 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           ),
                         ),
                       )
+                    : value.hasError.value
+                    ? Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.extension_off,
+                                  size: 60,
+                                  color: Colors.grey.shade400,
+                                ),
+                                SizedBox(height: 20),
+                                Text(
+                                  'Unable to connect to companion WordPress extension.\n\nPlease install WordPress extension to utilize wishlist and favorites features.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 16,
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).primaryColor,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 30),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                  ),
+                                  onPressed: () => value.refreshWishlist(),
+                                  child: Text(
+                                    'Retry',
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : value.isLoading.value && value.wishlistCourses.isEmpty
+                    ? Expanded(
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
                     : Expanded(
                         child: RefreshIndicator(
-                          onRefresh: () => wishlistController.refreshWishlist(),
+                          onRefresh: () => value.refreshWishlist(),
                           child: ListView.builder(
-                              controller: wishlistController.scrollController,
-                              itemCount: wishlistController.wishlistCourses.length +
-                                  (wishlistController.isLoadingMore.value ? 1 : 0),
+                              controller: value.scrollController,
+                              itemCount: value.wishlistCourses.length +
+                                  (value.isLoadingMore.value ? 1 : 0),
                               itemBuilder: (context, index) {
-                                if (index == wishlistController.wishlistCourses.length) {
+                                if (index == value.wishlistCourses.length) {
                                   return const Center(
                                       child: SizedBox(
                                     width: 20.0,
                                     height: 20.0,
                                           child: CircularProgressIndicator(),
                                   ));
-                                } else if (index < wishlistController.wishlistCourses.length) {
-                                  final course = wishlistController.wishlistCourses[index];
+                                } else if (index < value.wishlistCourses.length) {
+                                  final course = value.wishlistCourses[index];
                                   return ItemCourse(
                                       item: course,
                                       courseDetailParser: Get.find(),
                                       onToggleWishlist: () async => {
-                                            await wishlistController.removeFromWishlist(
+                                            await value.removeFromWishlist(
                                                 course.id),
                                             // Refresh other screens if needed
                                             if (homeController.onInit != null)

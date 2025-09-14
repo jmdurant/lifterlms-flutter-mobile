@@ -233,7 +233,7 @@ class ProfileView extends StatelessWidget {
                         leading: Icon(Icons.shopping_cart),
                         title: Text('My Orders'),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () => goToPage(2),
+                        onTap: () => goToPage(3),
                       ),
                       Divider(),
                       ListTile(

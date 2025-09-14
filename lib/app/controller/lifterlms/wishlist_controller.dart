@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/services/lms_service.dart';
+import 'package:flutter_app/app/backend/services/media_cache_service.dart';
 import 'package:flutter_app/app/helper/dialog_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/util/toast.dart';
@@ -8,6 +9,18 @@ import 'package:get/get.dart';
 
 class WishlistController extends GetxController implements GetxService {
   final LMSService lmsService = LMSService.to;
+  MediaCacheService? _mediaCache;
+  
+  MediaCacheService get mediaCache {
+    if (_mediaCache == null) {
+      if (Get.isRegistered<MediaCacheService>()) {
+        _mediaCache = Get.find<MediaCacheService>();
+      } else {
+        _mediaCache = MediaCacheService();
+      }
+    }
+    return _mediaCache!;
+  }
   
   // Observable lists
   final RxList<LLMSCourseModel> _wishlistCourses = <LLMSCourseModel>[].obs;
@@ -86,8 +99,44 @@ class WishlistController extends GetxController implements GetxService {
       
       if (response.statusCode == 200) {
         if (response.body is List) {
-          for (var courseData in response.body) {
+          final coursesData = response.body as List;
+          
+          // Process courses and fetch images
+          for (int i = 0; i < coursesData.length; i++) {
             try {
+              var courseData = Map<String, dynamic>.from(coursesData[i]);
+              
+              // Check if course has a featured_media ID
+              final mediaId = courseData['featured_media'];
+              if (mediaId != null && mediaId != 0) {
+                // Check cache first
+                final cachedUrl = mediaCache.getCachedUrl(mediaId);
+                if (cachedUrl != null) {
+                  courseData['featured_image_url'] = cachedUrl;
+                  print('WishlistController - Using cached image for media $mediaId');
+                } else {
+                  // Try to fetch the image URL using permalink
+                  final permalink = courseData['link'];
+                  if (permalink != null && permalink.isNotEmpty) {
+                    try {
+                      print('WishlistController - Fetching oEmbed for course: $permalink');
+                      final oEmbedResponse = await lmsService.api.getOEmbedData(courseUrl: permalink);
+                      if (oEmbedResponse.statusCode == 200) {
+                        final thumbnailUrl = oEmbedResponse.body['thumbnail_url'];
+                        if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) {
+                          courseData['featured_image_url'] = thumbnailUrl;
+                          // Cache the URL for future use
+                          mediaCache.cacheUrl(mediaId, thumbnailUrl);
+                          print('WishlistController - Cached image for media $mediaId: $thumbnailUrl');
+                        }
+                      }
+                    } catch (e) {
+                      print('WishlistController - Error fetching oEmbed: $e');
+                    }
+                  }
+                }
+              }
+              
               final course = LLMSCourseModel.fromJson(courseData);
               _wishlistCourses.add(course);
               wishlistIds.add(course.id);
@@ -97,20 +146,22 @@ class WishlistController extends GetxController implements GetxService {
           }
           
           // Check if there's more data
-          if ((response.body as List).length < perPage) {
+          if (coursesData.length < perPage) {
             hasMoreData.value = false;
           }
         }
-      } else if (response.statusCode == 501) {
-        // Wishlist not implemented
-        _showWishlistNotAvailable();
+      } else if (response.statusCode == 501 || response.statusCode == 404) {
+        // Wishlist not implemented or endpoint not found
+        _handleError('Unable to connect to companion WordPress extension. Please install WordPress extension to utilize wishlist and favorites features.');
       } else {
-        _handleError('Failed to load wishlist');
+        _handleError('Unable to connect to companion WordPress extension. Please install WordPress extension to utilize wishlist and favorites features.');
       }
     } catch (e) {
-      _handleError('Error loading wishlist: $e');
+      // Network or other error - likely means extension isn't installed
+      _handleError('Unable to connect to companion WordPress extension. Please install WordPress extension to utilize wishlist and favorites features.');
     } finally {
       isLoading.value = false;
+      update(); // Make sure UI updates when loading is done
     }
   }
   
@@ -232,7 +283,40 @@ class WishlistController extends GetxController implements GetxService {
       final response = await lmsService.api.getCourse(courseId: courseId);
       
       if (response.statusCode == 200) {
-        final course = LLMSCourseModel.fromJson(response.body);
+        var courseData = Map<String, dynamic>.from(response.body);
+        
+        // Check if course has a featured_media ID
+        final mediaId = courseData['featured_media'];
+        if (mediaId != null && mediaId != 0) {
+          // Check cache first
+          final cachedUrl = mediaCache.getCachedUrl(mediaId);
+          if (cachedUrl != null) {
+            courseData['featured_image_url'] = cachedUrl;
+            print('WishlistController - Using cached image for added course media $mediaId');
+          } else {
+            // Try to fetch the image URL using permalink
+            final permalink = courseData['link'];
+            if (permalink != null && permalink.isNotEmpty) {
+              try {
+                print('WishlistController - Fetching oEmbed for added course: $permalink');
+                final oEmbedResponse = await lmsService.api.getOEmbedData(courseUrl: permalink);
+                if (oEmbedResponse.statusCode == 200) {
+                  final thumbnailUrl = oEmbedResponse.body['thumbnail_url'];
+                  if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) {
+                    courseData['featured_image_url'] = thumbnailUrl;
+                    // Cache the URL for future use
+                    mediaCache.cacheUrl(mediaId, thumbnailUrl);
+                    print('WishlistController - Cached image for added course media $mediaId: $thumbnailUrl');
+                  }
+                }
+              } catch (e) {
+                print('WishlistController - Error fetching oEmbed for added course: $e');
+              }
+            }
+          }
+        }
+        
+        final course = LLMSCourseModel.fromJson(courseData);
         
         // Check if not already in list
         if (!_wishlistCourses.any((c) => c.id == courseId)) {
@@ -343,21 +427,7 @@ class WishlistController extends GetxController implements GetxService {
   
   /// Show wishlist not available message
   void _showWishlistNotAvailable() {
-    Get.dialog(
-      AlertDialog(
-        title: Text('Favorites Not Available'),
-        content: Text(
-          'The favorites feature is not yet available on your LifterLMS site. '
-          'Please contact your site administrator to enable this feature.'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('OK'),
-          ),
-        ],
-      ),
-    );
+    _handleError('Unable to connect to companion WordPress extension. Please install WordPress extension to utilize wishlist and favorites features.');
   }
   
   /// Handle errors
@@ -365,6 +435,7 @@ class WishlistController extends GetxController implements GetxService {
     errorMessage.value = message;
     hasError.value = true;
     print(message);
+    update(); // Trigger UI update
   }
   
   /// Clear error
