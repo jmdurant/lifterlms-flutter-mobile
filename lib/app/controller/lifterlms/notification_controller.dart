@@ -93,8 +93,8 @@ class NotificationController extends GetxController implements GetxService {
   
   /// Initialize notifications
   Future<void> initializeNotifications() async {
-    // Skip Firebase on Linux
-    if (Platform.isLinux) {
+    // Skip Firebase on Linux and macOS
+    if (Platform.isLinux || Platform.isMacOS) {
       return;
     }
     

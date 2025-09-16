@@ -76,8 +76,8 @@ void main() async {
   Get.lazyPut(() => ReviewController());
   Get.lazyPut(() => FinishLearningController());
   Get.lazyPut(() => ForgotPasswordController());
-  //firebase - skip on Linux desktop
-  if (!Platform.isLinux) {
+  //firebase - skip on Linux and macOS desktop
+  if (!Platform.isLinux && !Platform.isMacOS) {
     await Firebase.initializeApp();
     await FirebaseApiController().initNotifications();
   }
