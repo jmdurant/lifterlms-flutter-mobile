@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:jwt_decode/jwt_decode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../helper/router.dart';
+import '../../util/secure_storage.dart';
 
 class LoginController extends GetxController implements GetxService {
   final LMSService lmsService = LMSService.to;
@@ -29,8 +30,23 @@ class LoginController extends GetxController implements GetxService {
   @override
   void onInit() {
     super.onInit();
-    initPreferences();
-    checkSavedCredentials();
+    _initAndMigrate();
+  }
+
+  /// Initialize preferences, migrate plaintext passwords, then check credentials
+  Future<void> _initAndMigrate() async {
+    await initPreferences();
+
+    // Migrate: clear any plaintext password from old storage
+    if (prefs.containsKey('saved_password')) {
+      final oldPassword = prefs.getString('saved_password');
+      if (oldPassword != null && oldPassword.isNotEmpty) {
+        await SecureStorageService.savePassword(oldPassword);
+      }
+      await prefs.remove('saved_password');
+    }
+
+    await checkSavedCredentials();
   }
   
   @override
@@ -51,7 +67,7 @@ class LoginController extends GetxController implements GetxService {
     
     if (prefs.getBool('remember_me') ?? false) {
       usernameController.text = prefs.getString('saved_username') ?? '';
-      passwordController.text = prefs.getString('saved_password') ?? '';
+      passwordController.text = await SecureStorageService.getPassword() ?? '';
       rememberMe.value = true;
     }
   }
@@ -109,9 +125,6 @@ class LoginController extends GetxController implements GetxService {
         password: password,
       );
       
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
-      
       if (response.statusCode == 200) {
         // Parse login response
         final loginData = response.body;
@@ -124,11 +137,11 @@ class LoginController extends GetxController implements GetxService {
           if (rememberMe.value) {
             await prefs.setBool('remember_me', true);
             await prefs.setString('saved_username', username);
-            await prefs.setString('saved_password', password);
+            await SecureStorageService.savePassword(password);
           } else {
             await prefs.remove('remember_me');
             await prefs.remove('saved_username');
-            await prefs.remove('saved_password');
+            await SecureStorageService.deletePassword();
           }
           
           // Get user details
@@ -173,7 +186,6 @@ class LoginController extends GetxController implements GetxService {
     } catch (e) {
       DialogHelper.hideLoading();
       showToast("An error occurred. Please try again.", isError: true);
-      print('Login error: $e');
     } finally {
       isLoading.value = false;
     }
@@ -190,8 +202,7 @@ class LoginController extends GetxController implements GetxService {
     if (token.isNotEmpty) {
       try {
         Map<String, dynamic> payload = Jwt.parseJwt(token);
-        print('JWT payload: $payload');
-        
+
         // The user ID is in data.user.id
         if (payload.containsKey('data') && payload['data'] is Map) {
           final data = payload['data'] as Map;
@@ -199,11 +210,10 @@ class LoginController extends GetxController implements GetxService {
             final user = data['user'] as Map;
             // Convert string ID to int
             userId = int.tryParse(user['id'].toString()) ?? 0;
-            print('Extracted user ID from JWT: $userId');
           }
         }
-      } catch (e) {
-        print('Error decoding JWT token: $e');
+      } catch (_) {
+        // JWT decode failed
       }
     }
     
@@ -243,8 +253,8 @@ class LoginController extends GetxController implements GetxService {
           if (userInfo is Map) ...userInfo,
         };
       }
-    } catch (e) {
-      print('Error getting user details: $e');
+    } catch (_) {
+      // Failed to get user details
     }
   }
   
@@ -264,11 +274,9 @@ class LoginController extends GetxController implements GetxService {
       );
     } else {
       // Navigate to home or tabs
-      print('Navigating to route: ${AppRouter.getTabsBarRoute()}');
       try {
         Get.offAllNamed(AppRouter.getTabsBarRoute());
-      } catch (e) {
-        print('Navigation error: $e');
+      } catch (_) {
         // Fallback to tabs directly
         Get.offAllNamed('/tabs');
       }
@@ -309,7 +317,6 @@ class LoginController extends GetxController implements GetxService {
     } catch (e) {
       DialogHelper.hideLoading();
       showToast("Error logging out", isError: true);
-      print('Logout error: $e');
     }
   }
   

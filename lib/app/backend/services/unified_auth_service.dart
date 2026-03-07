@@ -1,6 +1,7 @@
 import 'package:flutter_app/app/config/lms_config.dart';
 import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/backend/services/lms_platform_service.dart';
+import 'package:flutter_app/app/util/secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,8 +38,8 @@ class UnifiedAuthService extends GetxService {
     _userId.value = _prefs.getInt('user_id') ?? 0;
     _userEmail.value = _prefs.getString('user_email') ?? '';
     _userName.value = _prefs.getString('user_name') ?? '';
-    _authToken.value = _prefs.getString('auth_token') ?? '';
-    
+    _authToken.value = await SecureStorageService.getToken() ?? '';
+
     _isLoggedIn.value = _userId.value > 0 || _authToken.value.isNotEmpty;
     
     // Update platform service
@@ -53,7 +54,9 @@ class UnifiedAuthService extends GetxService {
     await _prefs.setInt('user_id', _userId.value);
     await _prefs.setString('user_email', _userEmail.value);
     await _prefs.setString('user_name', _userName.value);
-    await _prefs.setString('auth_token', _authToken.value);
+    if (_authToken.value.isNotEmpty) {
+      await SecureStorageService.saveToken(_authToken.value);
+    }
   }
   
   /// Clear session
@@ -63,11 +66,11 @@ class UnifiedAuthService extends GetxService {
     _userName.value = '';
     _authToken.value = '';
     _isLoggedIn.value = false;
-    
+
     await _prefs.remove('user_id');
     await _prefs.remove('user_email');
     await _prefs.remove('user_name');
-    await _prefs.remove('auth_token');
+    await SecureStorageService.deleteToken();
     
     // Clear platform service session
     if (Get.isRegistered<LMSPlatformService>()) {

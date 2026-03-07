@@ -81,3 +81,4 @@ learnpress-mobile-flutter-orig/
 # Environment files
 .env
 .env.local
+purchase-code.txt

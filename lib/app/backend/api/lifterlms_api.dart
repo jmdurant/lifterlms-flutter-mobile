@@ -116,12 +116,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     final queryString = params != null ? "?${Uri(queryParameters: params).query}" : "";
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/courses$queryString');
     
-    // Debug logging
-    print('LifterLMSApiService.getCourses - Request URL: $url');
-    if (authorId != null) {
-      print('LifterLMSApiService.getCourses - Will filter by author $authorId client-side');
-    }
-    
     try {
       final response = await http.get(url, headers: {
         'Authorization': _getAuthHeader(),
@@ -205,7 +199,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error getting section content: $e');
+      // Error getting section content
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -326,10 +320,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   Future<Response> updateStudentProgress(int studentId, int postId, String status) async {
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/students/$studentId/progress/$postId');
     
-    print('LifterlmsAPI.updateStudentProgress - URL: $url');
-    print('LifterlmsAPI.updateStudentProgress - Method: POST (not PATCH!)');
-    print('LifterlmsAPI.updateStudentProgress - Status: $status');
-    
     try {
       final response = await http.post(  // Changed from PATCH to POST!
         url,
@@ -344,21 +334,20 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('LifterlmsAPI.updateStudentProgress - ERROR: $e');
+      // updateStudentProgress error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
   
   // Complete a lesson
   Future<Response> completeLesson({required int lessonId, required int userId}) async {
-    print('LifterlmsAPI.completeLesson - Marking lesson $lessonId complete for user $userId');
     // Use the updateStudentProgress method with 'complete' status
     return updateStudentProgress(userId, lessonId, 'complete');
   }
   
   // Get quiz details
   Future<Response> getQuiz({required int quizId}) async {
-    print('LifterlmsAPI.getQuiz - Getting quiz ID: $quizId');
+    // Get quiz details
     
     try {
       final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/$quizId');
@@ -371,8 +360,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         },
       );
       
-      print('LifterlmsAPI.getQuiz - Response: ${response.statusCode}');
-      
       if (response.statusCode == 200) {
         return Response(
           statusCode: response.statusCode,
@@ -380,7 +367,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
           body: jsonDecode(response.body),
         );
       } else {
-        print('LifterlmsAPI.getQuiz - Error response: ${response.body}');
         return Response(
           statusCode: response.statusCode,
           statusText: response.reasonPhrase,
@@ -388,7 +374,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         );
       }
     } catch (e) {
-      print('LifterlmsAPI.getQuiz - Error: $e');
+      // getQuiz error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -398,8 +384,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     required int quizId,
     required int lessonId,
   }) async {
-    print('LifterlmsAPI.startQuizAttempt - Starting quiz $quizId for lesson $lessonId');
-    
     try {
       final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/$quizId/start');
       
@@ -414,19 +398,14 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         }),
       ).timeout(Duration(seconds: timeoutInSeconds));
       
-      print('LifterlmsAPI.startQuizAttempt - Response: ${response.statusCode}');
-      
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('LifterlmsAPI.startQuizAttempt - Error: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
   
   // Get quiz questions
   Future<Response> getQuizQuestions({required int quizId}) async {
-    print('LifterlmsAPI.getQuizQuestions - Getting questions for quiz $quizId');
-    
     try {
       final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/$quizId/questions');
       
@@ -438,11 +417,8 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         },
       ).timeout(Duration(seconds: timeoutInSeconds));
       
-      print('LifterlmsAPI.getQuizQuestions - Response: ${response.statusCode}');
-      
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('LifterlmsAPI.getQuizQuestions - Error: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -453,8 +429,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     required int userId,
     required Map<String, dynamic> answers,
   }) async {
-    print('LifterlmsAPI.submitQuizAttempt - Quiz: $quizId, User: $userId');
-    
     // Placeholder for future implementation
     return const Response(
       statusCode: 501,
@@ -701,12 +675,8 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         }),
       ).timeout(Duration(seconds: timeoutInSeconds));
       
-      print('Enrollment response status: ${response.statusCode}');
-      print('Enrollment response body: ${response.body}');
-      
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error enrolling in course: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -725,7 +695,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error unenrolling from course: $e');
+      // unenroll error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -744,7 +714,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error checking enrollment status: $e');
+      // enrollment status check error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -764,7 +734,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error getting enrollments: $e');
+      // enrollments error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -775,7 +745,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     try {
       body = jsonDecode(res.body);
     } catch (e) {
-      print('Error parsing response: $e');
+      // JSON parse error
     }
 
     Response response = Response(
@@ -798,8 +768,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       // Handle authentication errors globally
       if (response.statusCode == 401 || response.statusCode == 403) {
-        print('Auth error from URL: $uri');
-        print('Response status: ${response.statusCode}, body: ${response.body}');
         _handleAuthError(response.statusCode ?? 0, response.body, uri);
       }
     }
@@ -812,13 +780,10 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     if (statusCode == 401) {
       // Skip auth error handling for media endpoints - these often fail due to privacy settings
       if (url.contains('/wp-json/wp/v2/media/')) {
-        print('Media access denied (private media): $url');
         return;
       }
       
       // Token expired or invalid credentials
-      print('Authentication failed: Token expired or invalid');
-      
       // Clear stored credentials
       if (Get.isRegistered<LMSService>()) {
         final lmsService = Get.find<LMSService>();
@@ -839,7 +804,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       }
     } else if (statusCode == 403) {
       // Forbidden - user doesn't have permission
-      print('Access forbidden: User lacks permission');
       Get.snackbar(
         'Access Denied',
         body?['message'] ?? 'You do not have permission to access this resource',
@@ -1006,7 +970,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error getting course progress: $e');
+      // course progress error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1079,7 +1043,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error getting wishlist: $e');
+      // wishlist error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1087,11 +1051,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   @override
   Future<Response> addToWishlist({required int userId, required int courseId}) async {
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/favorites/add');
-    
-    print('LifterLMS API - Adding to wishlist');
-    print('LifterLMS API - URL: $url');
-    print('LifterLMS API - Course ID: $courseId');
-    print('LifterLMS API - User ID: $userId');
     
     try {
       // Use Basic Auth only, like the working quiz endpoints
@@ -1104,21 +1063,14 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         'object_type': 'course',
       });
       
-      print('LifterLMS API - Headers: $headers');
-      print('LifterLMS API - Body: $body');
-      
       final response = await http.post(
         url,
         headers: headers,
         body: body,
       ).timeout(Duration(seconds: timeoutInSeconds));
       
-      print('LifterLMS API - Response status: ${response.statusCode}');
-      print('LifterLMS API - Response body: ${response.body}');
-      
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('LifterLMS API - Error adding to wishlist: $e');
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1142,7 +1094,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error removing from wishlist: $e');
+      // remove from wishlist error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1169,7 +1121,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error checking wishlist status: $e');
+      // wishlist status check error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1189,7 +1141,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error getting certificates: $e');
+      // certificates error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1208,7 +1160,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error getting certificate download: $e');
+      // certificate download error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1224,7 +1176,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     // For backward compatibility, attemptId might come from somewhere else
     // But this won't work without it
     if (attemptId == null) {
-      print('ERROR: submitQuizAnswer called without attemptId!');
+      // submitQuizAnswer called without attemptId
       return const Response(
         statusCode: 400,
         statusText: 'Attempt ID is required'
@@ -1248,7 +1200,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error submitting quiz answer: $e');
+      // quiz answer submission error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -1273,7 +1225,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       
       return parseResponse(response, url.toString());
     } catch (e) {
-      print('Error finishing quiz: $e');
+      // finish quiz error
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }

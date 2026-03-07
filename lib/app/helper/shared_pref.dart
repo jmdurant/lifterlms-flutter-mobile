@@ -1,8 +1,13 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Note: Auth tokens (JWT, access tokens) should NOT be stored via
+/// SharedPreferencesManager. Use [SecureStorageService] from
+/// 'package:flutter_app/app/util/secure_storage.dart' instead.
 class SharedPreferencesManager {
   SharedPreferences? sharedPreferences;
 
+  @Deprecated('Use SecureStorageService.saveToken / getToken instead. '
+      'Auth tokens must not be stored in plaintext SharedPreferences.')
   static const String keyAccessToken = 'accessToken';
   static const String keyUserData = 'user_data';
   static const String keyRole = 'user_role';

@@ -4,6 +4,7 @@ import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
+import 'package:flutter_app/app/util/secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -52,8 +53,8 @@ class LMSService extends GetxService {
   
   Future<void> _loadUserSession() async {
     _currentUserId = _prefs.getInt('current_user_id');
-    _currentUserToken = _prefs.getString('current_user_token');
-    
+    _currentUserToken = await SecureStorageService.getToken();
+
     // Validate session on startup
     if (_currentUserId != null) {
       await validateSession();
@@ -65,22 +66,17 @@ class LMSService extends GetxService {
     if (_currentUserId == null) return false;
     
     try {
-      print('Validating session for user ID: $_currentUserId');
       final response = await _api.getStudent(studentId: _currentUserId);
-      
-      print('Session validation response: ${response.statusCode}, body: ${response.body}');
-      
+
       if (response.statusCode == 200) {
-        print('Session validated successfully');
         return true;
       } else if (response.statusCode == 401 || response.statusCode == 403) {
-        print('Session invalid (${response.statusCode}), clearing credentials');
         // Don't clear session automatically - let user re-login manually
         // await clearSession();
         return false;
       }
-    } catch (e) {
-      print('Error validating session: $e');
+    } catch (_) {
+      // Session validation failed
     }
     
     return false;
@@ -113,19 +109,19 @@ class LMSService extends GetxService {
   Future<void> setCurrentUser(int userId, String? token) async {
     _currentUserId = userId;
     _currentUserToken = token;
-    
+
     await _prefs.setInt('current_user_id', userId);
     if (token != null) {
-      await _prefs.setString('current_user_token', token);
+      await SecureStorageService.saveToken(token);
     }
   }
   
   Future<void> clearSession() async {
     _currentUserId = null;
     _currentUserToken = null;
-    
+
     await _prefs.remove('current_user_id');
-    await _prefs.remove('current_user_token');
+    await SecureStorageService.deleteToken();
   }
   
   Future<void> logout() async {

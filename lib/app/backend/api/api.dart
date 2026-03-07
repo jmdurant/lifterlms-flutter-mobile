@@ -30,8 +30,6 @@ class ApiService extends GetxService {
   Future<Response> getPublic(String uri, Map<String, dynamic>? params) async {
     final String queryString = "?${Uri(queryParameters: params).query}";
     final Uri url = Uri.parse(appBaseUrl + uri + queryString);
-    print('uri: $url');
-
     try {
       http.Response response = await http.get(url, headers: {
         'Content-Type': 'application/json;',
@@ -107,8 +105,7 @@ class ApiService extends GetxService {
       http.Response response =
           await http.Response.fromStream(await request.send());
       return parseResponse(response, uri);
-    } catch (e) {
-      print(e);
+    } catch (_) {
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
@@ -231,8 +228,8 @@ class ApiService extends GetxService {
     dynamic body;
     try {
       body = jsonDecode(res.body);
-    } catch (e) {
-      print(e);
+    } catch (_) {
+      // JSON decode failed
     }
     Response response = Response(
       body: body != '' ? body : res.body,

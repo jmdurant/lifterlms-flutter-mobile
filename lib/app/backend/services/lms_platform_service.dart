@@ -1,6 +1,7 @@
 import 'package:flutter_app/app/backend/api/lifterlms_api.dart';
 import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/config/lms_config.dart';
+import 'package:flutter_app/app/util/secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -73,8 +74,8 @@ class LMSPlatformService extends GetxService {
   /// Load user session from storage
   Future<void> _loadUserSession() async {
     _currentUserId = _prefs.getInt('current_user_id');
-    _authToken = _prefs.getString('auth_token');
-    
+    _authToken = await SecureStorageService.getToken();
+
     // LifterLMS uses consumer key/secret, not auth tokens
   }
   
@@ -134,10 +135,10 @@ class LMSPlatformService extends GetxService {
   Future<void> setCurrentUser(int userId, String? token) async {
     _currentUserId = userId;
     _authToken = token;
-    
+
     await _prefs.setInt('current_user_id', userId);
     if (token != null) {
-      await _prefs.setString('auth_token', token);
+      await SecureStorageService.saveToken(token);
       // LifterLMS uses consumer key/secret, not auth tokens
     }
   }
@@ -146,9 +147,9 @@ class LMSPlatformService extends GetxService {
   Future<void> clearSession() async {
     _currentUserId = null;
     _authToken = null;
-    
+
     await _prefs.remove('current_user_id');
-    await _prefs.remove('auth_token');
+    await SecureStorageService.deleteToken();
   }
   
   /// Logout
