@@ -61,7 +61,6 @@ class InstructorDetailController extends GetxController implements GetxService {
   
   /// Initialize with a new instructor ID
   void initializeWithInstructor(int id) {
-    print('InstructorDetailController - Initializing with instructor ID: $id');
     
     // Clear previous data
     instructor.value = null;
@@ -82,7 +81,6 @@ class InstructorDetailController extends GetxController implements GetxService {
   
   /// Load instructor details
   Future<void> loadInstructorDetails() async {
-    print('InstructorDetailController.loadInstructorDetails - Starting with ID: $instructorId');
     if (instructorId == 0) {
       showToast('Invalid instructor ID', isError: true);
       return;
@@ -91,21 +89,15 @@ class InstructorDetailController extends GetxController implements GetxService {
     try {
       isLoading.value = true;
       update(); // Trigger UI rebuild
-      print('InstructorDetailController - Setting isLoading to true');
       
       // Load instructor info using WordPress Users API
-      print('InstructorDetailController - Fetching user data for ID: $instructorId');
       final response = await lmsService.api.getUsers(params: {
         'include': instructorId.toString(),
       });
       
-      print('InstructorDetailController - Response status: ${response.statusCode}');
-      print('InstructorDetailController - Response body type: ${response.body.runtimeType}');
       
       if (response.statusCode == 200 && response.body is List && response.body.isNotEmpty) {
-        print('InstructorDetailController - Parsing instructor data');
         instructor.value = LLMSInstructorModel.fromJson(response.body[0]);
-        print('InstructorDetailController - Instructor loaded: ${instructor.value?.displayName}');
         
         // Extract stats
         totalCourses.value = instructor.value?.courseCount ?? 0;
@@ -117,13 +109,10 @@ class InstructorDetailController extends GetxController implements GetxService {
         extractSocialLinks();
         
         // Load instructor courses
-        print('InstructorDetailController - About to load instructor courses');
         await loadInstructorCourses();
-        print('InstructorDetailController - Finished loading instructor courses');
         
         // Update the course count with actual data from loaded courses
         totalCourses.value = instructorCourses.length;
-        print('InstructorDetailController - Updated course count to: ${totalCourses.value}');
         
         // Also update the instructor model's course count for display in other places
         if (instructor.value != null) {
@@ -153,18 +142,14 @@ class InstructorDetailController extends GetxController implements GetxService {
           );
         }
       } else if (response.statusCode == 404) {
-        print('InstructorDetailController - Instructor not found (404)');
         showToast('Instructor not found', isError: true);
         Get.back();
       } else {
-        print('InstructorDetailController - Failed with status: ${response.statusCode}');
         showToast('Failed to load instructor details', isError: true);
       }
     } catch (e) {
       showToast('Error loading instructor details', isError: true);
-      print('InstructorDetailController - Error loading instructor: $e');
     } finally {
-      print('InstructorDetailController - Setting isLoading to false');
       isLoading.value = false;
       update(); // Trigger UI rebuild
     }
@@ -172,28 +157,22 @@ class InstructorDetailController extends GetxController implements GetxService {
   
   /// Load instructor courses
   Future<void> loadInstructorCourses() async {
-    print('InstructorDetailController.loadInstructorCourses - Starting for instructor: $instructorId');
     try {
       isLoadingCourses.value = true;
       currentPage.value = 1;
       instructorCourses.clear();
       
-      print('InstructorDetailController - Fetching courses for author: $instructorId');
       // Get courses by instructor/author
       final response = await lmsService.api.getCourses(params: {
         'author': instructorId.toString(),
         'per_page': '100',
       });
       
-      print('InstructorDetailController - Courses response status: ${response.statusCode}');
-      print('InstructorDetailController - Courses response body type: ${response.body.runtimeType}');
       
       // Debug: Log the actual API request being made
-      print('InstructorDetailController - API Request params: author=$instructorId, per_page=100');
       
       if (response.statusCode == 200) {
         if (response.body is List) {
-          print('InstructorDetailController - Found ${response.body.length} courses in response');
           
           // Collect oEmbed futures for fetching images
           final oEmbedFutures = <Future<void>>[];
@@ -209,7 +188,6 @@ class InstructorDetailController extends GetxController implements GetxService {
               final cachedUrl = mediaCache.getCachedUrl(mediaId);
               if (cachedUrl != null) {
                 mediaUrls[mediaId] = cachedUrl;
-                print('InstructorDetailController - Using cached image for media $mediaId');
               } else if (permalink != null && permalink.isNotEmpty) {
                 // Fetch via oEmbed
                 oEmbedFutures.add(
@@ -221,14 +199,12 @@ class InstructorDetailController extends GetxController implements GetxService {
                         // Cache the URL
                         try {
                           mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                        } catch (e) {
-                          print('Could not cache URL: $e');
+                        } catch (_) {
+                          // Silently handle error
                         }
-                        print('InstructorDetailController - Got image via oEmbed: $thumbnailUrl');
                       }
                     }
                   }).catchError((e) {
-                    print('Error fetching oEmbed for $permalink: $e');
                   })
                 );
               }
@@ -237,20 +213,16 @@ class InstructorDetailController extends GetxController implements GetxService {
           
           // Wait for all oEmbed fetches to complete
           if (oEmbedFutures.isNotEmpty) {
-            print('InstructorDetailController - Waiting for ${oEmbedFutures.length} oEmbed fetches');
             await Future.wait(oEmbedFutures);
-            print('InstructorDetailController - All oEmbed fetches complete');
           }
           
           // Second pass: parse courses with fetched images AND filter by instructor
-          int filteredCount = 0;
+
           for (var courseData in response.body) {
             try {
               // Get course instructors list
               final courseInstructors = courseData['instructors'];
-              final courseTitle = courseData['title'] is Map ? courseData['title']['rendered'] : courseData['title'];
-              print('InstructorDetailController - Course "$courseTitle" has instructors: $courseInstructors (looking for: $instructorId)');
-              
+
               // Check if this instructor is in the course's instructors list
               bool isInstructorForCourse = false;
               if (courseInstructors != null && courseInstructors is List) {
@@ -272,8 +244,6 @@ class InstructorDetailController extends GetxController implements GetxService {
               
               // Filter out courses where this instructor is not listed
               if (!isInstructorForCourse) {
-                print('InstructorDetailController - Skipping course "$courseTitle" (instructor not in list)');
-                filteredCount++;
                 continue;
               }
               
@@ -285,14 +255,11 @@ class InstructorDetailController extends GetxController implements GetxService {
               
               final course = LLMSCourseModel.fromJson(courseData);
               instructorCourses.add(course);
-              print('InstructorDetailController - Added course: ${course.title}');
-            } catch (e) {
-              print('Error parsing course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
-          print('InstructorDetailController - Filtered out $filteredCount courses (instructor not in list)');
-          print('InstructorDetailController - Final count: ${instructorCourses.length} courses for instructor $instructorId');
           
           // Check if more courses available
           if ((response.body as List).length < coursesPerPage) {
@@ -301,7 +268,6 @@ class InstructorDetailController extends GetxController implements GetxService {
         }
       }
     } catch (e) {
-      print('Error loading instructor courses: $e');
     } finally {
       isLoadingCourses.value = false;
     }
@@ -323,7 +289,6 @@ class InstructorDetailController extends GetxController implements GetxService {
       
       if (response.statusCode == 200) {
         if (response.body is List) {
-          print('InstructorDetailController - Found ${response.body.length} courses');
           
           // Collect oEmbed futures for fetching images
           final oEmbedFutures = <Future<void>>[];
@@ -339,7 +304,6 @@ class InstructorDetailController extends GetxController implements GetxService {
               final cachedUrl = mediaCache.getCachedUrl(mediaId);
               if (cachedUrl != null) {
                 mediaUrls[mediaId] = cachedUrl;
-                print('InstructorDetailController - Using cached image for media $mediaId');
               } else if (permalink != null && permalink.isNotEmpty) {
                 // Fetch via oEmbed
                 oEmbedFutures.add(
@@ -351,14 +315,12 @@ class InstructorDetailController extends GetxController implements GetxService {
                         // Cache the URL
                         try {
                           mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                        } catch (e) {
-                          print('Could not cache URL: $e');
+                        } catch (_) {
+                          // Silently handle error
                         }
-                        print('InstructorDetailController - Got image via oEmbed: $thumbnailUrl');
                       }
                     }
                   }).catchError((e) {
-                    print('Error fetching oEmbed for $permalink: $e');
                   })
                 );
               }
@@ -367,20 +329,16 @@ class InstructorDetailController extends GetxController implements GetxService {
           
           // Wait for all oEmbed fetches to complete
           if (oEmbedFutures.isNotEmpty) {
-            print('InstructorDetailController - Waiting for ${oEmbedFutures.length} oEmbed fetches');
             await Future.wait(oEmbedFutures);
-            print('InstructorDetailController - All oEmbed fetches complete');
           }
           
           // Second pass: parse courses with fetched images AND filter by instructor
-          int filteredCount = 0;
+
           for (var courseData in response.body) {
             try {
               // Get course instructors list
               final courseInstructors = courseData['instructors'];
-              final courseTitle = courseData['title'] is Map ? courseData['title']['rendered'] : courseData['title'];
-              print('InstructorDetailController - Course "$courseTitle" has instructors: $courseInstructors (looking for: $instructorId)');
-              
+
               // Check if this instructor is in the course's instructors list
               bool isInstructorForCourse = false;
               if (courseInstructors != null && courseInstructors is List) {
@@ -402,8 +360,6 @@ class InstructorDetailController extends GetxController implements GetxService {
               
               // Filter out courses where this instructor is not listed
               if (!isInstructorForCourse) {
-                print('InstructorDetailController - Skipping course "$courseTitle" (instructor not in list)');
-                filteredCount++;
                 continue;
               }
               
@@ -415,14 +371,11 @@ class InstructorDetailController extends GetxController implements GetxService {
               
               final course = LLMSCourseModel.fromJson(courseData);
               instructorCourses.add(course);
-              print('InstructorDetailController - Added course: ${course.title}');
-            } catch (e) {
-              print('Error parsing course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
-          print('InstructorDetailController - Filtered out $filteredCount courses (instructor not in list)');
-          print('InstructorDetailController - Final count: ${instructorCourses.length} courses for instructor $instructorId');
           
           // Check if more courses available
           if ((response.body as List).length < coursesPerPage) {
@@ -431,7 +384,6 @@ class InstructorDetailController extends GetxController implements GetxService {
         }
       }
     } catch (e) {
-      print('Error loading more courses: $e');
     } finally {
       isLoadingCourses.value = false;
     }

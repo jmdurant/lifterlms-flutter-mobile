@@ -48,11 +48,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
       _blankController = TextEditingController(text: widget.currentAnswer?.toString() ?? '');
     }
     
-    print('QuizQuestionWidget.initState - Question ${widget.question['id']}: ${widget.question['title']}');
-    print('QuizQuestionWidget.initState - Question type: ${widget.question['type']}');
-    print('QuizQuestionWidget.initState - Current answer: ${widget.currentAnswer}');
-    print('QuizQuestionWidget.initState - Current answer type: ${widget.currentAnswer?.runtimeType}');
-    print('QuizQuestionWidget.initState - _answer initialized to: $_answer');
   }
   
   @override
@@ -148,7 +143,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
                 _answer = newSelection;
               });
               widget.onAnswerChanged(newSelection);
-              print('Multiple choice answer updated: $newSelection');
             },
           );
         } else {
@@ -167,7 +161,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
                 _answer = value;
               });
               widget.onAnswerChanged(value);
-              print('Single choice answer selected: $value');
             },
           );
         }
@@ -192,7 +185,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
                   _answer = id;
                 });
                 widget.onAnswerChanged(id);
-                print('True/False answer selected: $id');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _answer == id ? Colors.blue : Colors.grey.shade300,
@@ -233,7 +225,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
               _answer = id;
             });
             widget.onAnswerChanged(id);
-            print('Picture choice answer selected: $id');
           },
           child: Container(
             decoration: BoxDecoration(
@@ -292,7 +283,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
             _answer = value;
           });
           widget.onAnswerChanged(value);
-          print('Fill-in-blank answer: $value');
         },
       );
     } else {
@@ -322,7 +312,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
                 (_answer as List)[index] = value;
                 // For API submission, pass the list (will be converted in submit)
                 widget.onAnswerChanged(_answer);
-                print('Multiple blanks answer updated: $_answer');
               },
             ),
           );
@@ -417,7 +406,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
         currentValue = double.tryParse(_answer) ?? min;
       } else if (_answer is List) {
         // Wrong type - shouldn't happen but handle gracefully
-        print('WARNING: Scale widget received List answer: $_answer');
         currentValue = min;
       }
     }
@@ -450,7 +438,6 @@ class _QuizQuestionWidgetState extends State<QuizQuestionWidget> {
               _answer = value.toInt().toString();
             });
             widget.onAnswerChanged(_answer);
-            print('Scale answer selected: $_answer');
           },
         ),
         Row(

@@ -298,7 +298,6 @@ class RegisterController extends GetxController implements GetxService {
     } catch (e) {
       DialogHelper.hideLoading();
       showToast('An error occurred. Please try again.', isError: true);
-      print('Registration error: $e');
     } finally {
       isLoading.value = false;
     }
@@ -312,8 +311,8 @@ class RegisterController extends GetxController implements GetxService {
     try {
       // This would need a custom endpoint to check username availability
       // For now, we'll skip this check
-    } catch (e) {
-      print('Error checking username: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -325,8 +324,8 @@ class RegisterController extends GetxController implements GetxService {
     try {
       // This would need a custom endpoint to check email availability
       // For now, we'll skip this check
-    } catch (e) {
-      print('Error checking email: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   

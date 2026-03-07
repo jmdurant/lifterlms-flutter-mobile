@@ -20,7 +20,6 @@ class ApiService extends GetxService {
       http.Response response = await http.get(url, headers: {
         'Content-Type': 'application/json;'
       }).timeout(Duration(seconds: timeoutInSeconds));
-      // print(response.body);
       return parseResponse(response, uri);
     } catch (e) {
       return const Response(statusCode: 1, statusText: connectionIssue);
@@ -35,7 +34,6 @@ class ApiService extends GetxService {
         'Content-Type': 'application/json;',
         'x-platform': 'flutter',
       }).timeout(Duration(seconds: timeoutInSeconds));
-      // print(response.body);
       return parseResponse(response, uri);
     } catch (e) {
       return const Response(statusCode: 1, statusText: connectionIssue);
@@ -47,8 +45,9 @@ class ApiService extends GetxService {
     Random random = Random();
     int randomNumber = random.nextInt(4294967296);
     final String queryString = "?${Uri(queryParameters: params).query}";
-    final Uri url =
-        Uri.parse(appBaseUrl + uri + queryString + "?v=$randomNumber");
+    final String fullUrl = appBaseUrl + uri + queryString;
+    final String separator = fullUrl.contains('?') ? '&' : '?';
+    final Uri url = Uri.parse('$fullUrl${separator}v=$randomNumber');
     try {
       http.Response response = await http.get(url, headers: {
         'Content-Type': 'application/json;',
@@ -67,7 +66,7 @@ class ApiService extends GetxService {
     int randomNumber = random.nextInt(4294967296);
     final String queryString =
         "?learned=true&${Uri(queryParameters: params).query}";
-    String uriTemp = appBaseUrl + uri + queryString + "&?v=$randomNumber";
+    String uriTemp = appBaseUrl + uri + queryString + "&v=$randomNumber";
     final Uri url = Uri.parse(uriTemp);
     try {
       http.Response response = await http.get(url, headers: {

@@ -5,7 +5,7 @@ class IntroBinding extends Bindings {
   @override
   void dependencies() async {
     Get.lazyPut(
-      () => IntroController(parser: Get.find()),
+      () => IntroController(),
     );
   }
 }

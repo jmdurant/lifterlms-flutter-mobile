@@ -278,7 +278,6 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                               margin: EdgeInsetsDirectional.only(bottom: 20),
                               child: ItemCourse(
                                 item: value.instructorCourses[index],
-                                courseDetailParser: Get.find(),
                                 onToggleWishlist: () {
                                   // Wishlist not implemented in LifterLMS
                                 },

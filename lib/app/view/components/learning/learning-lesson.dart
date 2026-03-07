@@ -37,10 +37,8 @@ class _LearningLessonState extends State<LearningLesson> {
   void _initializeYoutubePlayer() {
     // Extract YouTube video ID from videoEmbed if present
     if (widget.data.videoEmbed != null && widget.data.videoEmbed!.isNotEmpty) {
-      print('YouTube: Checking videoEmbed: ${widget.data.videoEmbed}');
       final videoId = _extractYoutubeId(widget.data.videoEmbed!);
       if (videoId != null) {
-        print('YouTube: Found video ID: $videoId');
         _youtubeController = YoutubePlayerController(
           initialVideoId: videoId,
           flags: const YoutubePlayerFlags(
@@ -51,16 +49,13 @@ class _LearningLessonState extends State<LearningLesson> {
           ),
         );
       } else {
-        print('YouTube: No video ID found in embed content');
       }
     } else {
-      print('YouTube: No videoEmbed data available');
     }
   }
 
   String? _extractYoutubeId(String content) {
     // Try to extract YouTube video ID from various formats
-    print('YouTube: Extracting ID from content: $content');
     
     // First check if it's a plain YouTube URL (most common case from the API)
     // Format 1: https://www.youtube.com/watch?v=VIDEO_ID
@@ -70,7 +65,6 @@ class _LearningLessonState extends State<LearningLesson> {
     final watchRegex = RegExp(r'youtube\.com/watch\?v=([a-zA-Z0-9_-]+)');
     final watchMatch = watchRegex.firstMatch(content);
     if (watchMatch != null) {
-      print('YouTube: Found watch URL match: ${watchMatch.group(1)}');
       return watchMatch.group(1);
     }
     
@@ -78,7 +72,6 @@ class _LearningLessonState extends State<LearningLesson> {
     final shortRegex = RegExp(r'youtu\.be/([a-zA-Z0-9_-]+)');
     final shortMatch = shortRegex.firstMatch(content);
     if (shortMatch != null) {
-      print('YouTube: Found short URL match: ${shortMatch.group(1)}');
       return shortMatch.group(1);
     }
     
@@ -86,7 +79,6 @@ class _LearningLessonState extends State<LearningLesson> {
     final iframeRegex = RegExp(r'<iframe[^>]*src=["' + "'" + r']https?://(?:www\.)?(?:youtube\.com|youtu\.be)/embed/([a-zA-Z0-9_-]+)');
     final iframeMatch = iframeRegex.firstMatch(content);
     if (iframeMatch != null) {
-      print('YouTube: Found iframe match: ${iframeMatch.group(1)}');
       return iframeMatch.group(1);
     }
     
@@ -94,11 +86,9 @@ class _LearningLessonState extends State<LearningLesson> {
     final embedRegex = RegExp(r'youtube\.com/embed/([a-zA-Z0-9_-]+)');
     final embedMatch = embedRegex.firstMatch(content);
     if (embedMatch != null) {
-      print('YouTube: Found embed URL match: ${embedMatch.group(1)}');
       return embedMatch.group(1);
     }
     
-    print('YouTube: No video ID found in content');
     return null;
   }
 
@@ -242,7 +232,6 @@ class MyWidgetFactory extends WidgetFactory
       await launch(url, forceSafariVC: true, forceWebView: false);
       return true;
     } else {
-      print('Could not launch $url');
       return false;
     }
   }

@@ -34,8 +34,8 @@ class MediaCacheService extends GetxService {
             _memoryCache[id] = value;
           }
         });
-      } catch (e) {
-        print('Error loading media cache: $e');
+      } catch (_) {
+        // Silently handle error
       }
     }
   }
@@ -48,8 +48,8 @@ class MediaCacheService extends GetxService {
         cache[key.toString()] = value;
       });
       await _prefs.setString('media_url_cache', json.encode(cache));
-    } catch (e) {
-      print('Error saving media cache: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   

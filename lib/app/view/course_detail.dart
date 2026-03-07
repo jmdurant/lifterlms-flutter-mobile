@@ -119,7 +119,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       
       return document.outerHtml;
     } catch (e) {
-      print('Error cleaning course description: $e');
       return content;
     }
   }
@@ -921,7 +920,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   color: Color(0xFFFBC815),
                                                 ),
                                                 onRatingUpdate: (rating) {
-                                                  print(rating);
                                                 },
                                               ),
                                               Text(

@@ -77,27 +77,22 @@ class CourseDetailController extends GetxController implements GetxService {
   /// Load course from navigation arguments
   void loadCourseFromArguments() {
     final args = Get.arguments;
-    print('CourseDetailController._loadCourseFromArguments - arguments: $args, type: ${args.runtimeType}');
     
     int? newCourseId;
     
     if (args != null) {
       if (args is Map && args['id'] != null) {
         newCourseId = args['id'];
-        print('CourseDetailController - Got course ID from map: $newCourseId');
       } else if (args is int) {
         newCourseId = args;
-        print('CourseDetailController - Got course ID as int: $newCourseId');
       } else if (args is List && args.isNotEmpty) {
         // Handle legacy array format
         newCourseId = args[0];
-        print('CourseDetailController - Got course ID from array: $newCourseId');
       }
       
       // Only reload if it's a different course
       if (newCourseId != null && newCourseId != 0) {
         if (newCourseId != courseId) {
-          print('CourseDetailController - Loading new course: $newCourseId (was: $courseId)');
           courseId = newCourseId;
           // Clear previous course data
           course.value = null;
@@ -107,19 +102,15 @@ class CourseDetailController extends GetxController implements GetxService {
           relatedCourses.clear();
           loadCourseDetails();
         } else {
-          print('CourseDetailController - Same course ID, not reloading');
         }
       } else {
-        print('CourseDetailController - Invalid course ID: $newCourseId');
       }
     } else {
-      print('CourseDetailController - No arguments provided');
     }
   }
   
   /// Load complete course details
   Future<void> loadCourseDetails() async {
-    print('CourseDetailController.loadCourseDetails - courseId: $courseId');
     if (courseId == 0) {
       _handleError('Invalid course ID');
       return;
@@ -130,7 +121,6 @@ class CourseDetailController extends GetxController implements GetxService {
       errorMessage.value = '';
       hasError.value = false;
       
-      print('CourseDetailController - Loading course details for ID: $courseId');
       // Load course basic info
       await loadCourse();
       
@@ -244,7 +234,6 @@ class CourseDetailController extends GetxController implements GetxService {
       // Return cleaned HTML
       return document.body?.innerHtml ?? htmlContent;
     } catch (e) {
-      print('Error removing syllabus from HTML: $e');
       return htmlContent;
     }
   }
@@ -255,7 +244,6 @@ class CourseDetailController extends GetxController implements GetxService {
     if (htmlContent == null || htmlContent.isEmpty) return;
     
     try {
-      print('CourseDetailController - Parsing course structure from HTML');
       final document = html_parser.parse(htmlContent);
       
       // Clear existing sections for placeholder data
@@ -351,25 +339,21 @@ class CourseDetailController extends GetxController implements GetxService {
         }
       }
       
-      print('CourseDetailController - Extracted ${sections.length} sections from HTML');
       
       // Update UI immediately with placeholder data
       update();
       
-    } catch (e) {
-      print('Error parsing course HTML: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
   /// Load course basic information
   Future<void> loadCourse() async {
-    print('CourseDetailController.loadCourse - Getting course $courseId');
     final response = await lmsService.api.getCourse(courseId: courseId);
     
-    print('CourseDetailController.loadCourse - Response status: ${response.statusCode}');
     
     if (response.statusCode == 200) {
-      print('CourseDetailController.loadCourse - Parsing course data');
       
       // Check if we need to fetch the featured image
       var courseData = response.body;
@@ -382,10 +366,8 @@ class CourseDetailController extends GetxController implements GetxService {
           final cachedUrl = mediaCache.getCachedUrl(mediaId);
           if (cachedUrl != null) {
             courseData['featured_image_url'] = cachedUrl;
-            print('CourseDetailController.loadCourse - Using cached image for media $mediaId: $cachedUrl');
           } else if (permalink != null && permalink.isNotEmpty) {
             // No cache, fetch via oEmbed
-            print('CourseDetailController.loadCourse - Fetching image via oEmbed for: $permalink');
             final oEmbedResponse = await lmsService.api.getOEmbedData(courseUrl: permalink);
             
             if (oEmbedResponse.statusCode == 200 && oEmbedResponse.body != null) {
@@ -394,17 +376,15 @@ class CourseDetailController extends GetxController implements GetxService {
                 courseData['featured_image_url'] = thumbnailUrl;
                 // Cache the URL for future use
                 mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                print('CourseDetailController.loadCourse - Fetched image via oEmbed: $thumbnailUrl');
               }
             }
           }
-        } catch (e) {
-          print('Error fetching course featured image via oEmbed: $e');
+        } catch (_) {
+          // Silently handle error
         }
       }
       
       course.value = LLMSCourseModel.fromJson(courseData);
-      print('CourseDetailController.loadCourse - Course loaded: ${course.value?.title}');
       enrolledStudents.value = course.value?.enrollmentCount ?? 0;
       totalDuration.value = course.value?.length ?? '';
       
@@ -420,7 +400,6 @@ class CourseDetailController extends GetxController implements GetxService {
   /// Load course sections and lessons
   Future<void> loadCourseSections() async {
     try {
-      print('CourseDetailController.loadCourseSections - Loading sections for course $courseId');
       final sectionList = await lmsService.courses.getSections(courseId, forceRefresh: true);
       sections.clear();
       
@@ -429,7 +408,6 @@ class CourseDetailController extends GetxController implements GetxService {
       for (var section in sectionList) {
         lessonFutures.add(
           lmsService.courses.getSectionLessons(section.id).catchError((e) {
-            print('Error loading lessons for section ${section.id}: $e');
             return <LLMSLessonModel>[]; // Return empty list on error
           })
         );
@@ -455,9 +433,8 @@ class CourseDetailController extends GetxController implements GetxService {
       }
       
       _lastSectionsFetch = DateTime.now();
-      print('CourseDetailController - Loaded ${sections.length} sections with lessons');
-    } catch (e) {
-      print('Error loading sections: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
 
@@ -481,8 +458,8 @@ class CourseDetailController extends GetxController implements GetxService {
         sections[idx] = updated;
         sections.refresh();
       }
-    } catch (e) {
-      print('Error loading lessons for section $sectionId: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -490,57 +467,28 @@ class CourseDetailController extends GetxController implements GetxService {
   Future<void> loadCourseInstructors() async {
     try {
       if (course.value?.instructors != null && course.value!.instructors.isNotEmpty) {
-        print('loadCourseInstructors - Starting with ${course.value!.instructors.length} instructor(s)');
-        final startTime = DateTime.now();
-        
         // Clear existing instructors
         instructors.clear();
         
         // For each instructor ID, fetch the actual user data
         for (var instructor in course.value!.instructors) {
           final instructorId = instructor.id;
-          print('loadCourseInstructors - Looking for instructor ID: $instructorId');
           
           // Check if instructor is cached first
           final cachedInstructor = mediaCache.getCachedInstructor(instructorId);
           if (cachedInstructor != null) {
-            print('loadCourseInstructors - Found in cache: ${cachedInstructor.displayName}');
             instructors.add(cachedInstructor);
             continue; // Skip API call
           }
           
           // Not in cache, fetch from API
-          print('loadCourseInstructors - Not in cache, fetching from API');
           try {
-            final apiStartTime = DateTime.now();
             final response = await lmsService.api.getUsers(params: {
               'include': instructorId.toString(), // Get specific user by ID
             });
-            final apiEndTime = DateTime.now();
-            print('loadCourseInstructors - API call took ${apiEndTime.difference(apiStartTime).inMilliseconds}ms');
             
             if (response.statusCode == 200 && response.body is List && response.body.isNotEmpty) {
               final userData = response.body[0];
-              
-              // Let's see ALL the fields the API returns
-              print('loadCourseInstructors - ALL USER DATA FIELDS:');
-              userData.forEach((key, value) {
-                if (value != null && value.toString().isNotEmpty) {
-                  // Truncate long values for readability
-                  final displayValue = value.toString().length > 100 
-                      ? '${value.toString().substring(0, 100)}...' 
-                      : value.toString();
-                  print('  $key: $displayValue');
-                }
-              });
-              
-              // Check if there's LifterLMS data in meta or other fields
-              if (userData['meta'] != null && userData['meta'] is Map) {
-                print('loadCourseInstructors - META FIELDS:');
-                (userData['meta'] as Map).forEach((key, value) {
-                  print('  meta.$key: $value');
-                });
-              }
               
               // Create a proper instructor model from the user data
               final fullInstructor = LLMSInstructorModel.fromJson(userData);
@@ -548,31 +496,20 @@ class CourseDetailController extends GetxController implements GetxService {
               
               // Cache the newly fetched instructor
               mediaCache.cacheInstructor(fullInstructor);
-              print('loadCourseInstructors - Cached instructor: ${fullInstructor.displayName}');
               
-              print('loadCourseInstructors - SUCCESS: Loaded ${fullInstructor.displayName}');
-              print('loadCourseInstructors - Course count: ${fullInstructor.courseCount}');
-              print('loadCourseInstructors - Student count: ${fullInstructor.studentCount}');
             } else {
               // If we can't fetch the user, keep the placeholder
-              print('loadCourseInstructors - FALLBACK: API returned status ${response.statusCode}, body type: ${response.body.runtimeType}, empty: ${response.body.isEmpty}');
-              print('loadCourseInstructors - FALLBACK: Using placeholder data: ${instructor.displayName}');
               instructors.add(instructor);
             }
           } catch (e) {
-            print('Error fetching instructor $instructorId: $e');
             // Keep the placeholder instructor if fetch fails
             instructors.add(instructor);
           }
         }
         
-        final endTime = DateTime.now();
-        print('loadCourseInstructors - Total time: ${endTime.difference(startTime).inMilliseconds}ms');
-      } else {
-        print('loadCourseInstructors - No instructors to load');
       }
-    } catch (e) {
-      print('Error loading instructors: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -590,8 +527,8 @@ class CourseDetailController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
-      print('Error loading access plans: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -622,8 +559,8 @@ class CourseDetailController extends GetxController implements GetxService {
         isEnrolled.value = false;
         hasAccess.value = false;
       }
-    } catch (e) {
-      print('Error checking enrollment: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -638,8 +575,8 @@ class CourseDetailController extends GetxController implements GetxService {
         final progressData = response.body;
         userProgress.value = (progressData['progress'] ?? 0).toDouble();
       }
-    } catch (e) {
-      print('Error loading progress: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -668,10 +605,9 @@ class CourseDetailController extends GetxController implements GetxService {
         }
       } else if (response.statusCode == 501) {
         // Reviews not implemented yet
-        print('Reviews feature not available');
       }
-    } catch (e) {
-      print('Error loading reviews: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -692,8 +628,8 @@ class CourseDetailController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
-      print('Error loading related courses: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -714,9 +650,7 @@ class CourseDetailController extends GetxController implements GetxService {
   
   /// Enroll in course
   Future<void> enrollInCourse() async {
-    print('CourseDetailController.enrollInCourse - Starting enrollment for course $courseId');
     if (!lmsService.isLoggedIn) {
-      print('CourseDetailController.enrollInCourse - User not logged in, redirecting to login');
       Get.toNamed(AppRouter.login);
       return;
     }
@@ -725,7 +659,6 @@ class CourseDetailController extends GetxController implements GetxService {
       isEnrolling.value = true;
       DialogHelper.showLoading();
       
-      print('CourseDetailController.enrollInCourse - Calling API to enroll');
       final response = await lmsService.enrollInCourse(courseId);
       
       DialogHelper.hideLoading();
@@ -790,24 +723,15 @@ class CourseDetailController extends GetxController implements GetxService {
   
   /// Start learning
   void startLearning() {
-    print('CourseDetailController.startLearning - Called');
-    print('CourseDetailController.startLearning - courseId: $courseId');
-    print('CourseDetailController.startLearning - isEnrolled: ${isEnrolled.value}');
-    print('CourseDetailController.startLearning - course: ${course.value?.title}');
     
     if (courseId == 0 || course.value == null) {
-      print('CourseDetailController.startLearning - ERROR: Invalid course');
       showToast('Course not loaded', isError: true);
       return;
     }
     
     if (!isEnrolled.value) {
-      print('CourseDetailController.startLearning - Not enrolled, enrolling first');
       enrollInCourse();
     } else {
-      print('CourseDetailController.startLearning - Already enrolled, navigating to learning page');
-      print('CourseDetailController.startLearning - Route: ${AppRouter.getLearning()}');
-      print('CourseDetailController.startLearning - Arguments: {id: $courseId, showOverview: true}');
       
       try {
         Get.toNamed(
@@ -817,9 +741,7 @@ class CourseDetailController extends GetxController implements GetxService {
             'showOverview': true,  // Show overview instead of auto-advancing
           },
         );
-        print('CourseDetailController.startLearning - Navigation successful');
       } catch (e) {
-        print('CourseDetailController.startLearning - Navigation ERROR: $e');
         showToast('Failed to open learning page', isError: true);
       }
     }
@@ -827,7 +749,6 @@ class CourseDetailController extends GetxController implements GetxService {
   
   /// Start method (alias for startLearning, used by view)
   void start() {
-    print('CourseDetailController.start - Called, redirecting to startLearning');
     startLearning();
   }
   
@@ -842,11 +763,10 @@ class CourseDetailController extends GetxController implements GetxService {
   /// Share course
   Future<void> shareCourse() async {
     if (course.value == null) return;
-    
-    final url = course.value!.permalink;
-    final text = 'Check out this course: ${course.value!.title}';
-    
-    // Use share functionality
+
+    // TODO: Use share functionality
+    // final url = course.value!.permalink;
+    // final text = 'Check out this course: ${course.value!.title}';
     // Share.share('$text\n$url');
   }
   
@@ -922,7 +842,6 @@ class CourseDetailController extends GetxController implements GetxService {
   void _handleError(String message) {
     errorMessage.value = message;
     hasError.value = true;
-    print(message);
   }
   
   /// Clear error
@@ -1003,7 +922,6 @@ class CourseDetailController extends GetxController implements GetxService {
   void onNavigateLearning(dynamic data) {
     // If a specific lesson was clicked, navigate to that lesson
     if (data != null && data is LLMSLessonModel) {
-      print('CourseDetailController.onNavigateLearning - Navigating to lesson: ${data.title}');
       Get.toNamed(
         AppRouter.getLearningRoute(),
         arguments: {

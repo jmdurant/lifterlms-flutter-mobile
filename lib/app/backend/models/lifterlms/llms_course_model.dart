@@ -175,9 +175,6 @@ class LLMSCourseModel {
       hasCertificate: json['has_certificate'] ?? false,
     );
     } catch (e, stack) {
-      print('Error parsing LLMSCourseModel: $e');
-      print('JSON data: $json');
-      print('Stack trace: $stack');
       rethrow;
     }
   }

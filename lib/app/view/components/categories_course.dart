@@ -39,7 +39,6 @@ class CategoriesCourse extends StatelessWidget {
                                       DialogHelper.showLoading();
                                       Future.delayed(const Duration(milliseconds: 200),(){
                                         DialogHelper.hideLoading();
-                                        print('data: ${categoriesList[index].toString()}');
                                         value.onFilter([categoriesList[index].id!]);
                                       });
 

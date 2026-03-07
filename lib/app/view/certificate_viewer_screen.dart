@@ -44,7 +44,7 @@ class _CertificateViewerScreenState extends State<CertificateViewerScreen> {
   
   Future<void> _printCertificate() async {
     // Add JavaScript to trigger print dialog
-    await controller.runJavaScript('window.print();');
+    await controller.runJavaScript('window.');
     showToast('Opening print dialog...');
   }
   

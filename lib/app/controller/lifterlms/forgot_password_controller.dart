@@ -114,7 +114,6 @@ class ForgotPasswordController extends GetxController implements GetxService {
     } catch (e) {
       DialogHelper.hideLoading();
       showToast('An error occurred. Please try again.', isError: true);
-      print('Forgot password error: $e');
     } finally {
       isLoading.value = false;
     }

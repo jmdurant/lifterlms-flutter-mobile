@@ -55,20 +55,6 @@ class LLMSQuizModel {
   
   factory LLMSQuizModel.fromJson(Map<String, dynamic> json) {
     // Debug logging
-    print('LLMSQuizModel.fromJson - Parsing quiz data:');
-    print('  id: ${json['id']} (${json['id'].runtimeType})');
-    print('  title: ${json['title']} (${json['title'].runtimeType})');
-    print('  course_id: ${json['course_id']} (${json['course_id'].runtimeType})');
-    print('  lesson_id: ${json['lesson_id']} (${json['lesson_id'].runtimeType})');
-    print('  questions_per_page: ${json['questions_per_page']} (${json['questions_per_page'].runtimeType})');
-    print('  time_limit: ${json['time_limit']} (${json['time_limit'].runtimeType})');
-    print('  allowed_attempts: ${json['allowed_attempts']} (${json['allowed_attempts'].runtimeType})');
-    print('  attempts_allowed: ${json['attempts_allowed']} (${json['attempts_allowed'].runtimeType})');
-    print('  points: ${json['points']} (${json['points'].runtimeType})');
-    print('  points_per_question: ${json['points_per_question']} (${json['points_per_question'].runtimeType})');
-    print('  total_points: ${json['total_points']} (${json['total_points'].runtimeType})');
-    print('  question_count: ${json['question_count']} (${json['question_count'].runtimeType})');
-    print('  total_questions: ${json['total_questions']} (${json['total_questions'].runtimeType})');
     
     // Helper function to safely parse int from string or number
     int? parseIntSafe(dynamic value, int? defaultValue) {

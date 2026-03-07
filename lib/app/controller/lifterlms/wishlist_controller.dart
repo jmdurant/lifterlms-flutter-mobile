@@ -113,13 +113,11 @@ class WishlistController extends GetxController implements GetxService {
                 final cachedUrl = mediaCache.getCachedUrl(mediaId);
                 if (cachedUrl != null) {
                   courseData['featured_image_url'] = cachedUrl;
-                  print('WishlistController - Using cached image for media $mediaId');
                 } else {
                   // Try to fetch the image URL using permalink
                   final permalink = courseData['link'];
                   if (permalink != null && permalink.isNotEmpty) {
                     try {
-                      print('WishlistController - Fetching oEmbed for course: $permalink');
                       final oEmbedResponse = await lmsService.api.getOEmbedData(courseUrl: permalink);
                       if (oEmbedResponse.statusCode == 200) {
                         final thumbnailUrl = oEmbedResponse.body['thumbnail_url'];
@@ -127,11 +125,10 @@ class WishlistController extends GetxController implements GetxService {
                           courseData['featured_image_url'] = thumbnailUrl;
                           // Cache the URL for future use
                           mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                          print('WishlistController - Cached image for media $mediaId: $thumbnailUrl');
                         }
                       }
-                    } catch (e) {
-                      print('WishlistController - Error fetching oEmbed: $e');
+                    } catch (_) {
+                      // Silently handle error
                     }
                   }
                 }
@@ -140,8 +137,8 @@ class WishlistController extends GetxController implements GetxService {
               final course = LLMSCourseModel.fromJson(courseData);
               _wishlistCourses.add(course);
               wishlistIds.add(course.id);
-            } catch (e) {
-              print('Error parsing wishlist course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
@@ -182,10 +179,8 @@ class WishlistController extends GetxController implements GetxService {
   
   /// Add course to wishlist
   Future<void> addToWishlist(int courseId) async {
-    print('WishlistController - Adding course $courseId to wishlist');
     
     if (!lmsService.isLoggedIn) {
-      print('WishlistController - User not logged in');
       Get.toNamed(AppRouter.login);
       return;
     }
@@ -196,11 +191,8 @@ class WishlistController extends GetxController implements GetxService {
     
     try {
       // No loading dialog for better UX
-      print('WishlistController - Calling API to add course $courseId');
       final response = await lmsService.addToWishlist(courseId);
       
-      print('WishlistController - API Response: ${response.statusCode}');
-      print('WishlistController - API Response body: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Success - already added to local list
@@ -212,17 +204,14 @@ class WishlistController extends GetxController implements GetxService {
         update(); // Update ALL widgets
         
         if (response.statusCode == 501) {
-          print('WishlistController - Wishlist not available (501)');
           _showWishlistNotAvailable();
         } else {
-          print('WishlistController - Failed with status: ${response.statusCode}');
         }
       }
     } catch (e) {
       // Failed - revert the optimistic update
       wishlistIds.remove(courseId);
       update(); // Update ALL widgets
-      print('WishlistController - Exception: $e');
     }
   }
   
@@ -251,7 +240,6 @@ class WishlistController extends GetxController implements GetxService {
         if (response.statusCode == 501) {
           _showWishlistNotAvailable();
         } else {
-          print('Failed to remove from wishlist: ${response.statusCode}');
         }
       }
     } catch (e) {
@@ -259,7 +247,6 @@ class WishlistController extends GetxController implements GetxService {
       wishlistIds.add(courseId);
       await _fetchAndAddCourse(courseId);
       update(); // Update ALL widgets
-      print('Error removing from wishlist: $e');
     }
   }
   
@@ -292,13 +279,11 @@ class WishlistController extends GetxController implements GetxService {
           final cachedUrl = mediaCache.getCachedUrl(mediaId);
           if (cachedUrl != null) {
             courseData['featured_image_url'] = cachedUrl;
-            print('WishlistController - Using cached image for added course media $mediaId');
           } else {
             // Try to fetch the image URL using permalink
             final permalink = courseData['link'];
             if (permalink != null && permalink.isNotEmpty) {
               try {
-                print('WishlistController - Fetching oEmbed for added course: $permalink');
                 final oEmbedResponse = await lmsService.api.getOEmbedData(courseUrl: permalink);
                 if (oEmbedResponse.statusCode == 200) {
                   final thumbnailUrl = oEmbedResponse.body['thumbnail_url'];
@@ -306,11 +291,10 @@ class WishlistController extends GetxController implements GetxService {
                     courseData['featured_image_url'] = thumbnailUrl;
                     // Cache the URL for future use
                     mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                    print('WishlistController - Cached image for added course media $mediaId: $thumbnailUrl');
                   }
                 }
-              } catch (e) {
-                print('WishlistController - Error fetching oEmbed for added course: $e');
+              } catch (_) {
+                // Silently handle error
               }
             }
           }
@@ -323,8 +307,8 @@ class WishlistController extends GetxController implements GetxService {
           _wishlistCourses.add(course);
         }
       }
-    } catch (e) {
-      print('Error fetching course for wishlist: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -434,7 +418,6 @@ class WishlistController extends GetxController implements GetxService {
   void _handleError(String message) {
     errorMessage.value = message;
     hasError.value = true;
-    print(message);
     update(); // Trigger UI update
   }
   

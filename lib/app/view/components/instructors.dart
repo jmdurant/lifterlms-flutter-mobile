@@ -13,7 +13,6 @@ class Instructors extends StatelessWidget {
   Instructors({super.key, required this.instructorList});
 
   void onNavigate(LLMSInstructorModel item) {
-    print('Navigating to instructor: ${item.displayName} (ID: ${item.id})');
     Get.toNamed(AppRouter.getIntructorDetailRoute(), arguments: {'id': item.id});
   }
 

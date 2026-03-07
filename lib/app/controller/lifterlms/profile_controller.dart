@@ -111,7 +111,6 @@ class ProfileController extends GetxController implements GetxService {
       }
     } catch (e) {
       showToast('Error loading profile', isError: true);
-      print('Error loading profile: $e');
     } finally {
       isLoading.value = false;
     }
@@ -176,8 +175,8 @@ class ProfileController extends GetxController implements GetxService {
       // Calculate user level based on points or completed courses
       calculateUserLevel();
       
-    } catch (e) {
-      print('Error loading user stats: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -195,14 +194,14 @@ class ProfileController extends GetxController implements GetxService {
             try {
               final course = LLMSCourseModel.fromJson(courseData);
               userCourses.add(course);
-            } catch (e) {
-              print('Error parsing course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
         }
       }
-    } catch (e) {
-      print('Error loading user courses: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -230,8 +229,8 @@ class ProfileController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
-      print('Error loading achievements: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -251,8 +250,8 @@ class ProfileController extends GetxController implements GetxService {
           userCertificates.addAll(response.body['certificates']);
         }
       }
-    } catch (e) {
-      print('Error loading certificates: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -341,7 +340,8 @@ class ProfileController extends GetxController implements GetxService {
   
   /// Share achievement
   void shareAchievement(dynamic achievement) {
-    final text = 'I just earned "${achievement['title']}" on our learning platform!';
+    // TODO: Implement sharing
+    // final text = 'I just earned "${achievement['title']}" on our learning platform!';
     // Share.share(text);
     showToast('Share feature coming soon');
   }

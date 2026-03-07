@@ -1,17 +1,18 @@
 import 'dart:async';
 
-import 'package:flutter_app/app/backend/parse/social_login_parse.dart';
+import 'package:flutter_app/app/backend/api/api.dart';
+import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:flutter_app/app/helper/dialog_helper.dart';
+import 'package:flutter_app/app/util/constant.dart';
 import 'package:get/get.dart';
-import 'package:get/get_state_manager/src/simple/get_controllers.dart';
-import '../backend/parse/register_parse.dart';
 import '../env.dart';
 import '../helper/router.dart';
 
 class SocialLoginController extends GetxController {
-  RegisterParser registerParser = Get.find();
-  SocialLoginParse socialLoginParse = Get.find();
+  final SharedPreferencesManager sharedPreferencesManager = Get.find();
+  final ApiService apiService = Get.find();
   bool isEnableSocialLogin = false;
+
   @override
   void onInit() {
     //isSocialLoginEnable();
@@ -21,29 +22,8 @@ class SocialLoginController extends GetxController {
   signInGoogle() async {
     //Google Sign In
     try {
-      // await _googleSignIn.signIn().then((result) {
-      //   result?.authentication.then((googleKey) async {
-      //     //handle login google
-      //     final response = await socialLoginParse
-      //         .verifyGGLogin({"idToken": googleKey.idToken});
-      //
-      //     if (response.status.isOk) {
-      //       registerParser.saveToken(response.body['token']);
-      //       await registerParser.getUser();
-      //       DialogHelper.showLoading();
-      //       Timer(const Duration(seconds: 2), () {
-      //         DialogHelper.hideLoading();
-      //         Get.toNamed(AppRouter.splash);
-      //       });
-      //     }
-      //   }).catchError((err) {
-      //     print('inner error');
-      //   });
-      // }).catchError((err) {
-      //   print('error occured');
-      // });
-    } catch (error) {
-      print(error);
+    } catch (_) {
+      // Silently handle error
     }
   }
 
@@ -51,8 +31,9 @@ class SocialLoginController extends GetxController {
   }
 
   isSocialLoginEnable() async {
-    final response = await socialLoginParse
-        .enableSocialLogin();
+    Map<String, dynamic> body = Map<String, dynamic>();
+    final response = await apiService.getPrivate(
+        AppConstants.enableSocialLogin, '', body);
     isEnableSocialLogin = response.body;
     refresh();
     update();

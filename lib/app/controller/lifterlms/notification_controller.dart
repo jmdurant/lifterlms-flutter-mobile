@@ -149,13 +149,10 @@ class NotificationController extends GetxController implements GetxService {
     
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       pushEnabled.value = true;
-      print('User granted permission');
     } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
       pushEnabled.value = true;
-      print('User granted provisional permission');
     } else {
       pushEnabled.value = false;
-      print('User declined or has not accepted permission');
     }
   }
   
@@ -173,8 +170,8 @@ class NotificationController extends GetxController implements GetxService {
         fcmToken.value = newToken;
         registerFCMToken(newToken);
       });
-    } catch (e) {
-      print('Error getting FCM token: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -183,19 +180,16 @@ class NotificationController extends GetxController implements GetxService {
     if (!lmsService.isLoggedIn) return;
     
     try {
-      // This would need a custom endpoint to register FCM token
-      final data = {
-        'user_id': lmsService.currentUserId,
-        'fcm_token': token,
-        'device_type': GetPlatform.isAndroid ? 'android' : 'ios',
-      };
-      
-      // Simulate API call
+      // TODO: Implement FCM token registration endpoint
+      // final data = {
+      //   'user_id': lmsService.currentUserId,
+      //   'fcm_token': token,
+      //   'device_type': GetPlatform.isAndroid ? 'android' : 'ios',
+      // };
       await Future.delayed(Duration(seconds: 1));
       
-      print('FCM token registered: $token');
-    } catch (e) {
-      print('Error registering FCM token: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -327,8 +321,8 @@ class NotificationController extends GetxController implements GetxService {
       try {
         final data = jsonDecode(payload) as Map<String, dynamic>;
         handleNotificationTap(data);
-      } catch (e) {
-        print('Error parsing notification payload: $e');
+      } catch (_) {
+        // Silently handle error
       }
     }
   }
@@ -388,8 +382,8 @@ class NotificationController extends GetxController implements GetxService {
           if (notification['read'] == false) {
             unreadNotifications.add(notification);
           }
-        } catch (e) {
-          print('Error parsing stored notification: $e');
+        } catch (_) {
+          // Silently handle error
         }
       }
       
@@ -402,7 +396,6 @@ class NotificationController extends GetxController implements GetxService {
       }
       
     } catch (e) {
-      print('Error loading stored notifications: $e');
     } finally {
       isLoading.value = false;
     }
@@ -455,8 +448,8 @@ class NotificationController extends GetxController implements GetxService {
       totalNotifications.value = notifications.length;
       unreadCount.value = unreadNotifications.length;
       
-    } catch (e) {
-      print('Error loading server notifications: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -465,8 +458,8 @@ class NotificationController extends GetxController implements GetxService {
     if (lmsService.isLoggedIn && lmsService.currentUserId != null) {
       try {
         await lmsService.api.unregisterDeviceToken(token: token);
-      } catch (e) {
-        print('Error unregistering device token: $e');
+      } catch (_) {
+        // Silently handle error
       }
     }
   }
@@ -486,7 +479,6 @@ class NotificationController extends GetxController implements GetxService {
       hasMoreNotifications.value = false;
       
     } catch (e) {
-      print('Error loading more notifications: $e');
     } finally {
       isLoading.value = false;
     }
@@ -632,9 +624,8 @@ class NotificationController extends GetxController implements GetxService {
     try {
       // This would need a custom endpoint
       await Future.delayed(Duration(seconds: 1));
-      print('FCM token unregistered');
-    } catch (e) {
-      print('Error unregistering FCM token: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   

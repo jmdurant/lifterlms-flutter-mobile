@@ -1,11 +1,15 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/backend/api/api.dart';
+import 'package:flutter_app/app/backend/models/user_info_model.dart';
 import 'package:flutter_app/app/controller/session_controller.dart';
-import 'package:flutter_app/app/backend/parse/settings_parse.dart';
 import 'package:flutter_app/app/controller/lifterlms/profile_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
+import 'package:flutter_app/app/helper/shared_pref.dart';
+import 'package:flutter_app/app/util/constant.dart';
 import 'package:flutter_app/app/view/tabs.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
@@ -14,13 +18,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 
-import '../backend/models/user_info_model.dart';
 import '../helper/dialog_helper.dart';
 import '../helper/router.dart';
 
 class SettingsController extends GetxController {
   final SessionController sessionStore;
-  final SettingsParser parser;
+  final SharedPreferencesManager sharedPreferencesManager;
+  final ApiService apiService;
   String st = "{}";
 
   TextEditingController currentPasswordController = TextEditingController();
@@ -36,7 +40,11 @@ class SettingsController extends GetxController {
   XFile? selectedImage;
   int currentPage = 0;
 
-  SettingsController({required this.parser, required this.sessionStore});
+  SettingsController({
+    required this.sessionStore,
+    required this.sharedPreferencesManager,
+    required this.apiService,
+  });
 
   @override
   void onInit() async {
@@ -45,7 +53,7 @@ class SettingsController extends GetxController {
   }
 
   handleGetUserData() {
-    var userData = getUser();
+    var userData = getUserInfo();
     nicknameController.text = userData.nickname ?? "";
     bioController.text = userData.description ?? "";
     firstNameController.text = userData.last_name ?? "";
@@ -61,8 +69,17 @@ class SettingsController extends GetxController {
     update();
   }
 
-  UserInfoModel getUser() {
-    return parser.getUserInfo();
+  String _getToken() {
+    return sharedPreferencesManager.getString('token') ?? "";
+  }
+
+  UserInfoModel getUserInfo() {
+    String temp = sharedPreferencesManager.getString('user_info') ?? "";
+    UserInfoModel json = UserInfoModel();
+    if (temp != "") {
+      json = UserInfoModel.fromJson(jsonDecode(temp) as Map<String, dynamic>);
+    }
+    return json;
   }
 
   Future<void> submitPassword() async {
@@ -109,7 +126,8 @@ class SettingsController extends GetxController {
       "new_password": newPasswordController.text,
     };
     DialogHelper.showLoading();
-    Response response = await parser.changePassword(param);
+    Response response = await apiService.postPrivate(
+        AppConstants.changePassword, param, _getToken());
     DialogHelper.hideLoading();
 
     await Future.delayed(Duration(seconds: 1), () {
@@ -153,7 +171,7 @@ class SettingsController extends GetxController {
   Future<void> deleteAccount() async {
     var context = Get.context as BuildContext;
     final value = Get.find<ProfileController>();
-    var userInfo = getUser();
+    var userInfo = getUserInfo();
     if (deletePasswordController.text.trim() == "") {
       Alert(
               context: context,
@@ -168,7 +186,8 @@ class SettingsController extends GetxController {
       "password": deletePasswordController.text,
     };
     context.loaderOverlay.show();
-    Response response = await parser.deleteAccount(param);
+    Response response = await apiService.postPrivate(
+        AppConstants.deletePassword, param, _getToken());
     context.loaderOverlay.hide();
     await Future.delayed(Duration(seconds: 1), () {
       if (response.statusCode == 200) {
@@ -240,13 +259,28 @@ class SettingsController extends GetxController {
         if (croppedFile != null) selectedImage = XFile(croppedFile.path);
       }
       update();
-    } catch (e) {}
+    } catch (_) {
+      // Silently handle error
+    }
+  }
+
+  Future<void> _updateUserDataFromServer() async {
+    String? token = sharedPreferencesManager.getString('token');
+    String? userId = sharedPreferencesManager.getString('user_id');
+    Response response = await apiService.getPrivate(
+        AppConstants.getUser + "/" + userId!, token!, null);
+    if (response.statusCode == 200) {
+      UserInfoModel user = UserInfoModel.fromJson(response.body);
+      sharedPreferencesManager.putString('user_info', jsonEncode(user.toJson()));
+      sessionStore.setUserInfo(user);
+    }
   }
 
   void saveGeneral() async {
     var context = Get.context as BuildContext;
     try {
       DialogHelper.showLoading();
+      UserInfoModel user = getUserInfo();
       var map = Map<String, dynamic>();
       map['first_name'] = firstNameController.text;
       map['last_name'] = lastNameController.text;
@@ -255,7 +289,8 @@ class SettingsController extends GetxController {
       if (selectedImage != null && !Helper.checkHttpOrHttps(selectedImage!.path)) {
         map['lp_avatar_file'] = File(selectedImage!.path);
       }
-      Response response = await parser.submitGeneral(map);
+      Response response = await apiService.postPrivateMultipart(
+          AppConstants.updateUser + user.id.toString(), map, _getToken());
       await Future.delayed(Duration(seconds: 1), () {
         if (response.status.isOk) {
           DialogHelper.hideLoading();
@@ -275,7 +310,7 @@ class SettingsController extends GetxController {
             ).show();
           } else {
 
-            parser.updateUserDataSharedPreferencesManager();
+            _updateUserDataFromServer();
             refresh();
             update();
             Alert(
@@ -311,7 +346,6 @@ class SettingsController extends GetxController {
 
       });
     } catch (e) {
-      print(e);
     } finally {
       DialogHelper.hideLoading();
     }

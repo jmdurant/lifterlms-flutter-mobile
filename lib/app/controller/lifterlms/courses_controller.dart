@@ -122,8 +122,6 @@ class CoursesController extends GetxController implements GetxService {
       
       final response = await lmsService.api.getCourses(params: params);
       
-      print('Courses API response status: ${response.statusCode}');
-      print('Courses API response body type: ${response.body.runtimeType}');
       
       if (response.statusCode == 200) {
         if (isRefresh) {
@@ -149,7 +147,6 @@ class CoursesController extends GetxController implements GetxService {
           final oEmbedFutures = <Future<void>>[];
           
           if (mediaIds.isNotEmpty) {
-            print('Fetching ${mediaIds.length} media items via oEmbed');
             
             for (var courseData in response.body) {
               final mediaId = courseData['featured_media'];
@@ -160,7 +157,6 @@ class CoursesController extends GetxController implements GetxService {
                 final cachedUrl = mediaCache.getCachedUrl(mediaId);
                 if (cachedUrl != null) {
                   mediaUrls[mediaId] = cachedUrl;
-                  print('Using cached image for media $mediaId');
                 } else if (permalink != null && permalink.isNotEmpty) {
                   // Fetch via oEmbed
                   oEmbedFutures.add(
@@ -172,14 +168,12 @@ class CoursesController extends GetxController implements GetxService {
                           // Cache the URL
                           try {
                             mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                          } catch (e) {
-                            print('Could not cache URL: $e');
+                          } catch (_) {
+                            // Silently handle error
                           }
-                          print('Got image via oEmbed: $thumbnailUrl');
                         }
                       }
                     }).catchError((e) {
-                      print('Error fetching oEmbed for $permalink: $e');
                     })
                   );
                 }
@@ -188,10 +182,8 @@ class CoursesController extends GetxController implements GetxService {
             
             if (oEmbedFutures.isNotEmpty) {
               await Future.wait(oEmbedFutures);
-              print('All oEmbed fetches complete');
             }
           } else {
-            print('Using embedded media data (no separate fetches needed)');
           }
           
           // Now parse courses
@@ -207,8 +199,8 @@ class CoursesController extends GetxController implements GetxService {
               
               final course = LLMSCourseModel.fromJson(courseData);
               _courses.add(course);
-            } catch (e) {
-              print('Error parsing course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
@@ -228,11 +220,9 @@ class CoursesController extends GetxController implements GetxService {
           update(); // Notify UI to rebuild
         }
       } else {
-        print('Failed to load courses. Status: ${response.statusCode}, Body: ${response.body}');
         _handleError('Failed to load courses: Status ${response.statusCode}');
       }
     } catch (e, stack) {
-      print('Error loading courses: $e\nStack: $stack');
       _handleError('Error loading courses: $e');
     } finally {
       isLoading.value = false;
@@ -272,7 +262,6 @@ class CoursesController extends GetxController implements GetxService {
         }
       }
     } catch (e) {
-      print('Error loading categories: $e');
     } finally {
       isLoadingCategories.value = false;
     }
@@ -416,8 +405,8 @@ class CoursesController extends GetxController implements GetxService {
         final status = response.body['status'];
         return status == 'enrolled';
       }
-    } catch (e) {
-      print('Error checking enrollment: $e');
+    } catch (_) {
+      // Silently handle error
     }
     
     return false;
@@ -427,7 +416,6 @@ class CoursesController extends GetxController implements GetxService {
   void _handleError(String message) {
     errorMessage.value = message;
     hasError.value = true;
-    print(message);
   }
   
   /// Clear error

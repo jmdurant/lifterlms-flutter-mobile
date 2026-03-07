@@ -49,8 +49,8 @@ class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
           return;
         }
       }
-    } catch (e) {
-      print('Error fetching certificate HTML: $e');
+    } catch (_) {
+      // Silently handle error
     }
     
     // Fallback to basic HTML template

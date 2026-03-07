@@ -36,7 +36,6 @@ class LearningResult extends StatelessWidget {
     return GetBuilder<LearningController>(builder: (value) {
       String  result = data.results?.results?["result"].round().toString()??"";
       String  passingGrade = data.results?.results?["passing_grade"].toString()??"";
-      print('data: ${data.results?.results}');
 
       return Column(
         children: [

@@ -112,7 +112,6 @@ class FinishLearningController extends GetxController implements GetxService {
       
     } catch (e) {
       showToast('Error loading completion data', isError: true);
-      print('Error loading completion data: $e');
     } finally {
       isLoading.value = false;
     }
@@ -174,8 +173,8 @@ class FinishLearningController extends GetxController implements GetxService {
         completedAssignments.value = progress['completed_assignments'] ?? 0;
       }
       
-    } catch (e) {
-      print('Error loading completion stats: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -210,8 +209,8 @@ class FinishLearningController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
-      print('Error loading quiz performance: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -248,8 +247,8 @@ class FinishLearningController extends GetxController implements GetxService {
         // Certificate not generated yet
         hasCertificate.value = false;
       }
-    } catch (e) {
-      print('Error loading certificate: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -325,8 +324,8 @@ class FinishLearningController extends GetxController implements GetxService {
           });
         }
       }
-    } catch (e) {
-      print('Error loading achievements: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -358,15 +357,15 @@ class FinishLearningController extends GetxController implements GetxService {
                   relatedCourses.add(course);
                 }
                 count++;
-              } catch (e) {
-                print('Error parsing course: $e');
+              } catch (_) {
+                // Silently handle error
               }
             }
           }
         }
       }
-    } catch (e) {
-      print('Error loading recommendations: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   

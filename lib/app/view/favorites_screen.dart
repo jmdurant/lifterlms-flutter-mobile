@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/controller/tabs_controller.dart';
-import 'package:flutter_app/app/backend/parse/course_detail_parse.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:get/get.dart';
@@ -183,7 +182,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> with SingleTickerProv
                     // Refresh wishlist after toggle
                     controller.loadWishlist(isRefresh: true);
                   },
-                  courseDetailParser: Get.find(),
                 ),
               );
             },

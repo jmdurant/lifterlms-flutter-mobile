@@ -110,10 +110,8 @@ class LLMSLessonModel {
     
     // Debug logging for video fields
     if (json['video_embed'] != null) {
-      print('Lesson ${json['id']} - video_embed: ${json['video_embed']}');
     }
     if (json['video_src'] != null) {
-      print('Lesson ${json['id']} - video_src: ${json['video_src']}');
     }
     
     return LLMSLessonModel(

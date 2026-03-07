@@ -7,7 +7,6 @@ import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import '../../backend/parse/course_detail_parse.dart';
 import '../course_detail.dart';
 
 typedef OnToggleWishlistCallback = void Function();
@@ -86,7 +85,6 @@ class _WishlistHeartState extends State<WishlistHeart> {
 class ItemCourse extends StatelessWidget {
   final dynamic item; // Can be CourseModel or LLMSCourseModel
   bool hideCategory = false;
-  final CourseDetailParser courseDetailParser;
 
   final OnToggleWishlistCallback onToggleWishlist;
 
@@ -94,7 +92,6 @@ class ItemCourse extends StatelessWidget {
       {super.key,
       required this.item,
       required this.onToggleWishlist,
-      required this.courseDetailParser,
       hideCategory
       });
 

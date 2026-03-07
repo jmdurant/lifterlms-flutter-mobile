@@ -5,7 +5,7 @@ class SplashBinding extends Bindings {
   @override
   void dependencies() async {
     Get.lazyPut(
-      () => SplashController(parser: Get.find()),
+      () => SplashController(sharedPreferencesManager: Get.find(), apiService: Get.find()),
     );
   }
 }

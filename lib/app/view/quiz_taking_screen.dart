@@ -46,7 +46,6 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
       if (response.statusCode == 200) {
         try {
           final data = response.body;
-          print('Got response data: ${data.runtimeType}');
           
           setState(() {
             // Convert attempt_id to int if it's a string
@@ -60,15 +59,12 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
             isLoading = false;
           });
           
-          print('Quiz loaded - attemptId: $attemptId, questions: ${questions.length}');
           
           // Initialize timer if needed
           if (data['time_limit'] != null && data['time_limit'] > 0) {
             _startTimer(data['time_limit'] * 60);
           }
         } catch (e, stackTrace) {
-          print('ERROR parsing quiz response: $e');
-          print('Stack trace: $stackTrace');
           setState(() {
             isLoading = false;
           });
@@ -89,30 +85,21 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
   }
   
   void _onAnswerChanged(int questionId, dynamic answer) {
-    print('Answer changed for question $questionId: $answer');
-    print('Current answers map: $answers');
     setState(() {
       answers[questionId] = answer;
     });
-    print('Updated answers map: $answers');
   }
   
   void _nextQuestion() {
     if (currentQuestionIndex < questions.length - 1) {
-      final nextQuestion = questions[currentQuestionIndex + 1];
-      print('Moving to next question: ${nextQuestion['id']} - ${nextQuestion['title']}');
-      print('Current answer for next question: ${answers[nextQuestion['id']]}');
       setState(() {
         currentQuestionIndex++;
       });
     }
   }
-  
+
   void _previousQuestion() {
     if (currentQuestionIndex > 0) {
-      final prevQuestion = questions[currentQuestionIndex - 1];
-      print('Moving to previous question: ${prevQuestion['id']} - ${prevQuestion['title']}');
-      print('Current answer for previous question: ${answers[prevQuestion['id']]}');
       setState(() {
         currentQuestionIndex--;
       });
@@ -120,16 +107,13 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
   }
   
   Future<void> _submitQuiz() async {
-    print('Submit quiz called - attemptId: $attemptId');
     
     // Check if we have an attempt ID
     if (attemptId == null) {
-      print('ERROR: attemptId is null, cannot submit');
       Get.snackbar('Error', 'Quiz attempt not initialized properly');
       return;
     }
     
-    print('Showing confirmation dialog...');
     // Show confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
@@ -150,11 +134,9 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
     );
     
     if (confirm != true) {
-      print('User cancelled submission');
       return;
     }
     
-    print('Submitting quiz with ${answers.length} answers out of ${questions.length} questions...');
     
     // Submit each answer one by one (including unanswered as empty)
     for (int i = 0; i < questions.length; i++) {
@@ -163,8 +145,6 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
       final answer = answers[questionId];
       
       // Submit even if answer is null (unanswered)
-      print('Submitting answer for question $questionId: ${answer ?? "(unanswered)"}');
-      print('Question type: ${question['type']}');
       try {
         // Format answer based on question type - MUST match API expectations
         dynamic submissionAnswer = answer ?? '';
@@ -176,25 +156,20 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
           if (answer != null && answer is! List) {
             // Convert single answer to array
             submissionAnswer = [answer.toString()];
-            print('Converted ${question['type']} answer to array: $submissionAnswer');
           } else if (answer is List) {
             // Already an array, ensure all elements are strings
             submissionAnswer = (answer as List).map((e) => e.toString()).toList();
-            print('Kept ${question['type']} answer as array: $submissionAnswer');
           } else {
             // No answer - send empty array
             submissionAnswer = [];
-            print('No answer for ${question['type']}, sending empty array');
           }
         }
         // Reorder questions need comma-separated string
         else if (question['type'] == 'reorder') {
           if (answer is List) {
             submissionAnswer = (answer as List).join(',');
-            print('Converted reorder answer to comma-separated string: $submissionAnswer');
           } else if (answer != null) {
             submissionAnswer = answer.toString();
-            print('Reorder answer already string: $submissionAnswer');
           } else {
             // No answer means user didn't reorder - send the original order
             final choices = question['choices'] as List?;
@@ -202,10 +177,8 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
               submissionAnswer = choices.map((choice) => 
                 choice is Map ? choice['id'] : choice
               ).join(',');
-              print('Reorder not changed, sending original order: $submissionAnswer');
             } else {
               submissionAnswer = '';
-              print('No reorder choices available');
             }
           }
         }
@@ -213,10 +186,8 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
         else if (question['type'] == 'scale') {
           if (answer != null) {
             submissionAnswer = [answer.toString()];
-            print('Converted scale answer to array: $submissionAnswer');
           } else {
             submissionAnswer = [];
-            print('No scale answer, sending empty array');
           }
         }
         // Blank/fill-in-the-blank questions
@@ -225,27 +196,21 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
             // Check if multiple blanks (answer would be comma-separated)
             if (answer is List) {
               submissionAnswer = (answer as List).join(',');
-              print('Converted multiple blanks to comma-separated: $submissionAnswer');
             } else {
               // Single blank - send as array
               submissionAnswer = [answer.toString()];
-              print('Converted blank answer to array: $submissionAnswer');
             }
           } else {
             submissionAnswer = [''];
-            print('No blank answer, sending empty array');
           }
         }
         // Default for other types (short_answer, long_answer, etc.)
         else {
           if (answer != null) {
             submissionAnswer = answer.toString();
-            print('Using string format for ${question['type']}: $submissionAnswer');
           }
         }
         
-        print('Final submission answer type: ${submissionAnswer.runtimeType}');
-        print('Final submission answer value: $submissionAnswer');
         
         // Submit answer to API with attempt ID
         final result = await controller.lmsService.api.submitQuizAnswer(
@@ -254,31 +219,25 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
           answer: submissionAnswer,
           attemptId: attemptId,
         );
-        print('Answer submission result: ${result.statusCode}');
         if (result.statusCode != 200) {
-          print('Answer submission error: ${result.body}');
         }
-      } catch (e) {
-        print('ERROR submitting answer: $e');
+      } catch (_) {
+        // Silently handle error
       }
     }
     
-    print('Finishing quiz...');
     try {
       // Complete the quiz
       final finishResult = await controller.lmsService.api.finishQuiz(
         quizId: controller.currentQuiz.value!.id,
         attemptId: attemptId!,
       );
-      print('Finish quiz result: ${finishResult.statusCode}');
       if (finishResult.statusCode != 200) {
-        print('Finish quiz error: ${finishResult.body}');
         Get.snackbar('Error', 'Quiz submission failed');
         Get.back();
       } else {
         // Parse the results
         final result = finishResult.body;
-        print('Quiz results: $result');
         
         final bool passed = result['passed'] ?? false;
         // Use calculated_grade which is based on points, not the raw LifterLMS grade
@@ -353,7 +312,6 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
         );
       }
     } catch (e) {
-      print('ERROR finishing quiz: $e');
       Get.snackbar('Error', 'Failed to submit quiz: $e');
     }
   }

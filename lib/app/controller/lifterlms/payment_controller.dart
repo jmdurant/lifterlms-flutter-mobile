@@ -140,7 +140,6 @@ class PaymentController extends GetxController implements GetxService {
       
     } catch (e) {
       showToast('Error loading payment data', isError: true);
-      print('Error loading payment data: $e');
     } finally {
       isLoading.value = false;
     }
@@ -166,8 +165,8 @@ class PaymentController extends GetxController implements GetxService {
         zipController.text = userData['billing_postcode'] ?? '';
         countryController.text = userData['billing_country'] ?? '';
       }
-    } catch (e) {
-      print('Error loading billing info: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -192,8 +191,8 @@ class PaymentController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
-      print('Error loading access plans: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -206,8 +205,8 @@ class PaymentController extends GetxController implements GetxService {
       // Check for installment options
       checkInstallmentOptions();
       
-    } catch (e) {
-      print('Error loading payment methods: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -366,7 +365,6 @@ class PaymentController extends GetxController implements GetxService {
     } catch (e) {
       DialogHelper.hideLoading();
       showToast('Payment failed. Please try again.', isError: true);
-      print('Payment error: $e');
     } finally {
       isProcessingPayment.value = false;
     }
@@ -429,10 +427,9 @@ class PaymentController extends GetxController implements GetxService {
       final response = await lmsService.enrollInCourse(course.value!.id);
       
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('User enrolled successfully');
       }
-    } catch (e) {
-      print('Error enrolling user: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   

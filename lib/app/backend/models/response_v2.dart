@@ -23,11 +23,10 @@ class ResponseV2 {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['status'] = status;
-    data['message'] = message;
-    data['data'] = data;
-
-    return data;
+    final Map<String, dynamic> result = <String, dynamic>{};
+    result['status'] = status;
+    result['message'] = message;
+    result['data'] = data;
+    return result;
   }
 }

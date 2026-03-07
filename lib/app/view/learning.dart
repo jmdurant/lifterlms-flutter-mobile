@@ -40,7 +40,9 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     try {
       final controller = Get.find<LearningController>();
       controller.initializeFromArguments();
-    } catch (_) {}
+    } catch (_) {
+      // Silently handle error
+    }
   }
   
   @override
@@ -60,7 +62,9 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      try { _youtubeController?.pause(); } catch (_) {}
+      try { _youtubeController?.pause(); } catch (_) {
+        // Silently handle error
+      }
     }
   }
   
@@ -129,7 +133,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     // Try YouTube first
     final youtubeId = _extractYoutubeId(videoEmbed);
     if (youtubeId != null) {
-      print('Learning - Initializing YouTube player with ID: $youtubeId');
       if (mounted) {
         setState(() {
           _vimeoVideoId = null; // Clear Vimeo
@@ -151,7 +154,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     // Try Vimeo
     final vimeoId = _extractVimeoId(videoEmbed);
     if (vimeoId != null) {
-      print('Learning - Initializing Vimeo player with ID: $vimeoId');
       if (mounted) {
         setState(() {
           _youtubeController?.dispose();
@@ -163,7 +165,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     }
     
     // No supported video found
-    print('Learning - No supported video found in embed');
     if (mounted) {
       setState(() {
         _youtubeController?.dispose();
@@ -461,7 +462,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     
     // Initialize video player when lesson changes
     if (_currentLessonId != lesson.id) {
-      print('Learning - Lesson changed from $_currentLessonId to ${lesson.id}');
       _currentLessonId = lesson.id;
       
       // Immediately clear old video state
@@ -473,7 +473,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
       if (lesson.videoEmbed != null && lesson.videoEmbed!.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            print('Learning - Initializing video for lesson ${lesson.id}');
             _initializeVideoPlayer(lesson.videoEmbed);
           }
         });
@@ -750,7 +749,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
       
       return document.outerHtml;
     } catch (e) {
-      print('Error cleaning course description: $e');
       return content;
     }
   }
@@ -1101,58 +1099,46 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   
   // Helper methods for content detection and rendering
   bool _hasAudioInContent(String content) {
-    final hasAudio = content.contains('<audio') && content.contains('.mp3');
-    if (hasAudio) print('DEBUG: Audio detected in content');
-    return hasAudio;
+    return content.contains('<audio') && content.contains('.mp3');
   }
   
   bool _hasPdfInContent(String content) {
-    final hasPdf = content.contains('type="application/pdf"') || 
+    return content.contains('type="application/pdf"') ||
            (content.contains('.pdf') && content.contains('<object'));
-    if (hasPdf) print('DEBUG: PDF detected in content');
-    return hasPdf;
   }
   
   bool _hasH5pContent(String content) {
-    final hasH5p = content.contains('h5p.org/h5p/embed');
-    if (hasH5p) print('DEBUG: H5P detected in content');
-    return hasH5p;
+    return content.contains('h5p.org/h5p/embed');
   }
   
   bool _hasPowerPointContent(String content) {
-    final hasPpt = content.contains('[embeddoc') && 
-                   (content.contains('.pptx') || content.contains('.ppt'));
-    if (hasPpt) print('DEBUG: PowerPoint detected in content');
-    return hasPpt;
+    return content.contains('[embeddoc') &&
+           (content.contains('.pptx') || content.contains('.ppt'));
   }
   
   bool _hasFormContent(String content) {
     // Detect common form patterns
-    final hasForm = (content.contains('complete the form below') || 
-                    content.contains('fill out the form') ||
-                    content.contains('submit the form') ||
-                    content.contains('[contact-form') ||
-                    content.contains('[wpforms') ||
-                    content.contains('[ninja_form') ||
-                    content.contains('[gravityform')) &&
-                    !content.contains('<form') && // No actual form HTML
-                    !content.contains('<input'); // No input fields
-    if (hasForm) print('DEBUG: Form detected but not rendered in content');
-    return hasForm;
+    return (content.contains('complete the form below') ||
+            content.contains('fill out the form') ||
+            content.contains('submit the form') ||
+            content.contains('[contact-form') ||
+            content.contains('[wpforms') ||
+            content.contains('[ninja_form') ||
+            content.contains('[gravityform')) &&
+            !content.contains('<form') && // No actual form HTML
+            !content.contains('<input'); // No input fields
   }
   
   bool _hasInteractiveContent(String content) {
     // Detect interactive WordPress blocks that need JavaScript
-    final hasInteractive = content.contains('wp-block-kadence-tabs') ||
-                          content.contains('wp-block-kadence-accordion') ||
-                          content.contains('wp-block-toggle') ||
-                          content.contains('wp-block-tabs') ||
-                          content.contains('wp-block-accordion') ||
-                          content.contains('data-toggle') ||
-                          content.contains('onclick=') ||
-                          (content.contains('kt-tabs') && content.contains('kt-tab-title'));
-    if (hasInteractive) print('DEBUG: Interactive content detected (tabs/accordion/etc)');
-    return hasInteractive;
+    return content.contains('wp-block-kadence-tabs') ||
+           content.contains('wp-block-kadence-accordion') ||
+           content.contains('wp-block-toggle') ||
+           content.contains('wp-block-tabs') ||
+           content.contains('wp-block-accordion') ||
+           content.contains('data-toggle') ||
+           content.contains('onclick=') ||
+           (content.contains('kt-tabs') && content.contains('kt-tab-title'));
   }
   
   Widget _buildAudioPlayer(String content) {
@@ -1161,7 +1147,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     final match = audioPattern.firstMatch(content);
     if (match != null) {
       final audioUrl = match.group(1);
-      print('DEBUG: Found audio URL: $audioUrl');
       
       // Create HTML with audio player
       final audioHtml = '''
@@ -1208,7 +1193,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
         ),
       );
     }
-    print('DEBUG: No audio URL found in content');
     return const SizedBox.shrink();
   }
   
@@ -1218,7 +1202,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     final match = pdfPattern.firstMatch(content);
     if (match != null) {
       final pdfUrl = match.group(1);
-      print('DEBUG: Found PDF URL: $pdfUrl');
       // Use InAppWebView to display PDF
       return SizedBox(
         height: 600,
@@ -1234,7 +1217,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
         ),
       );
     }
-    print('DEBUG: No PDF URL found in content');
     return const SizedBox.shrink();
   }
   
@@ -1244,7 +1226,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     final match = h5pPattern.firstMatch(content);
     if (match != null) {
       final h5pUrl = match.group(1);
-      print('DEBUG: Found H5P URL: $h5pUrl');
       // Use InAppWebView for better iframe support
       return SizedBox(
         height: 650,
@@ -1260,12 +1241,10 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
         ),
       );
     }
-    print('DEBUG: No H5P URL found in content');
     return const SizedBox.shrink();
   }
   
   Widget _buildInteractiveViewer(String content) {
-    print('DEBUG: Building interactive content viewer');
     
     // Create a full HTML page with the content and necessary styles
     final htmlPage = '''
@@ -1408,7 +1387,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               // Open lesson in browser
               final controller = Get.find<LearningController>();
               final lessonId = controller.currentLesson.value?.id;
-              final courseId = controller.courseId;
               final lessonUrl = 'https://polite-tree.myliftersite.com/course/lesson/$lessonId';
               
               if (await canLaunch(lessonUrl)) {
@@ -1432,7 +1410,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     final match = pptPattern.firstMatch(content);
     if (match != null) {
       final pptUrl = match.group(1);
-      print('DEBUG: Found PowerPoint URL: $pptUrl');
       
       // Option 1: Try to use Office Online viewer (works for publicly accessible files)
       final officeViewerUrl = 'https://view.officeapps.live.com/op/view.aspx?src=${Uri.encodeComponent(pptUrl!)}';
@@ -1472,7 +1449,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 ),
               ),
               onLoadError: (controller, url, code, message) {
-                print('Failed to load PowerPoint viewer: $message');
               },
             ),
           ),
@@ -1489,7 +1465,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
         ],
       );
     }
-    print('DEBUG: No PowerPoint URL found in content');
     return const SizedBox.shrink();
   }
 }
@@ -1568,7 +1543,6 @@ class _SectionTileState extends State<_SectionTile> {
           
           // Load lessons on demand if needed
           if (expanded && widget.section.id != null && widget.section.lessons.isEmpty) {
-            print('Expanding section ${widget.section.id}: ${widget.section.title} - loading lessons...');
             await widget.controller.loadSectionOnDemand(widget.section.id!);
             // Force rebuild after loading
             if (mounted) {
@@ -1654,7 +1628,6 @@ class MyWidgetFactory extends WidgetFactory {
       await launch(url, forceSafariVC: true, forceWebView: false);
       return true;
     } else {
-      print('Could not launch $url');
       return false;
     }
   }

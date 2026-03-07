@@ -47,7 +47,6 @@ class LMSPlatformInit {
     // Load the appropriate controllers
     LMSDynamicBinding().dependencies();
     
-    print('LMS Platform initialized: ${LMSConfig.platformName}');
   }
   
   /// Quick setup for LearnPress

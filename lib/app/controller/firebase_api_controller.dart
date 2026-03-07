@@ -16,7 +16,6 @@ import '../helper/router.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
   
   // You can show a notification here if needed
   // But don't try to access GetX controllers as they won't be available
@@ -40,7 +39,6 @@ class FirebaseApiController extends GetxController {
       await _firebaseMessaging.requestPermission();
       fCMToken = await _firebaseMessaging.getToken() ?? '';
     } catch (e) {
-      print('Firebase messaging error: $e');
       // Continue without FCM if it fails
     }
     
@@ -49,8 +47,6 @@ class FirebaseApiController extends GetxController {
     // Register FCM token if available
     if (fCMToken.isNotEmpty) {
       prefs.setString(SharedPreferencesManager.keyFcmToken, fCMToken);
-      
-      HomeController homeController = Get.find<HomeController>();
       
       String? oldFcmToken = prefs.getString(SharedPreferencesManager.keyFcmToken);
       if (fCMToken != oldFcmToken) {

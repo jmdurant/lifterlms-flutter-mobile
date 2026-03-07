@@ -226,7 +226,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                 // Wishlist functionality removed - not in controller
                                 homeController.refreshScreen();
                               },
-                              courseDetailParser: Get.find(),
                             ),
                           );
                         },

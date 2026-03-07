@@ -78,9 +78,8 @@ class LearningController extends GetxController implements GetxService {
     try {
       final prefs = await SharedPreferences.getInstance();
       autoAdvanceEnabled.value = prefs.getBool('auto_advance_lessons') ?? true;
-      print('LearningController - Auto-advance enabled: ${autoAdvanceEnabled.value}');
-    } catch (e) {
-      print('Error loading auto-advance preference: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -93,8 +92,8 @@ class LearningController extends GetxController implements GetxService {
       showToast(autoAdvanceEnabled.value 
         ? 'Auto-advance enabled' 
         : 'Auto-advance disabled');
-    } catch (e) {
-      print('Error saving auto-advance preference: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -105,7 +104,6 @@ class LearningController extends GetxController implements GetxService {
     int? newCourseId;
     bool shouldShowOverview = false;
     
-    print('LearningController.initializeFromArguments - arguments: $args');
     
     if (args != null) {
       if (args is Map && args['id'] != null) {
@@ -124,7 +122,6 @@ class LearningController extends GetxController implements GetxService {
       
       // Only reload if it's a different course or we don't have a course yet
       if (newCourseId != null && (newCourseId != courseId || currentCourse.value == null)) {
-        print('LearningController - Loading course $newCourseId (was: $courseId)');
         courseId = newCourseId;
         
         // Clear previous state
@@ -143,7 +140,6 @@ class LearningController extends GetxController implements GetxService {
         loadCourseData().then((_) {
           // If a specific lesson was requested, load it
           if (initialLessonId != null) {
-            print('LearningController - Opening specific lesson: $initialLessonId');
             loadLesson(initialLessonId);
           } else if (!shouldShowOverview) {
             // Only auto-load first lesson if NOT explicitly showing overview
@@ -152,12 +148,10 @@ class LearningController extends GetxController implements GetxService {
               _loadFirstLessonIfNeeded();
             });
           } else {
-            print('LearningController - Showing course overview (no auto-advance)');
           }
         });
       } else if (courseId == newCourseId && initialLessonId != null) {
         // Same course but different lesson requested
-        print('LearningController - Loading lesson $initialLessonId in existing course');
         loadLesson(initialLessonId);
       }
     }
@@ -168,7 +162,6 @@ class LearningController extends GetxController implements GetxService {
     // Only load if we don't have a lesson yet
     if (currentLesson.value != null) return;
     
-    print('LearningController - No lesson loaded, loading first lesson');
     
     // Ensure sections are loaded
     if (sections.isEmpty) {
@@ -197,7 +190,6 @@ class LearningController extends GetxController implements GetxService {
     if (_lastFetchTime != null && 
         DateTime.now().difference(_lastFetchTime!) < _cacheExpiry &&
         sections.isNotEmpty) {
-      print('LearningController - Using cached course structure');
       // Just refresh progress in background
       loadCourseProgress();
       return;
@@ -247,12 +239,11 @@ class LearningController extends GetxController implements GetxService {
       final courseDetailController = Get.find<CourseDetailController>();
       if (courseDetailController.courseId == courseId && 
           courseDetailController.course.value != null) {
-        print('LearningController - Using cached course from CourseDetailController');
         currentCourse.value = courseDetailController.course.value;
         return;
       }
-    } catch (e) {
-      print('CourseDetailController not found, loading from API');
+    } catch (_) {
+      // Silently handle error
     }
     
     // Fall back to API if no cached data
@@ -321,14 +312,12 @@ class LearningController extends GetxController implements GetxService {
   
   /// Load only course sections (without lessons) for fast initial display
   Future<void> loadCourseSectionsOnly() async {
-    print('LearningController - Loading sections structure for course $courseId');
     
     // First check if CourseDetailController has cached data
     try {
       final courseDetailController = Get.find<CourseDetailController>();
       if (courseDetailController.courseId == courseId && 
           courseDetailController.sections.isNotEmpty) {
-        print('LearningController - Using cached sections from CourseDetailController');
         
         sections.clear();
         _sectionLoadedStatus.clear();
@@ -362,7 +351,6 @@ class LearningController extends GetxController implements GetxService {
           sections.add(section);
         }
         
-        print('LearningController - Loaded ${sections.length} sections from cache');
         _lastFetchTime = DateTime.now();
         
         // Calculate total lessons from cached data
@@ -373,8 +361,8 @@ class LearningController extends GetxController implements GetxService {
         
         return; // Exit early, we have cached data
       }
-    } catch (e) {
-      print('CourseDetailController not found or no cached data, falling back to API');
+    } catch (_) {
+      // Silently handle error
     }
     
     // Fall back to API if no cached data
@@ -391,11 +379,10 @@ class LearningController extends GetxController implements GetxService {
           _sectionLoadedStatus[section.id ?? 0] = false;
         }
         
-        print('LearningController - Loaded ${sections.length} sections (structure only)');
         _lastFetchTime = DateTime.now();
       }
-    } catch (e) {
-      print('Error loading sections: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -406,7 +393,6 @@ class LearningController extends GetxController implements GetxService {
     // Check if we already have all lessons from cache
     bool allLessonsLoaded = sections.every((s) => _sectionLoadedStatus[s.id ?? 0] ?? false);
     if (allLessonsLoaded && totalLessons.value > 0) {
-      print('All lessons already loaded from cache');
       return;
     }
     
@@ -415,16 +401,11 @@ class LearningController extends GetxController implements GetxService {
       isLoadingStructure.value = true;
       
       try {
-        // Only load sections that don't have lessons yet
-        bool firstSectionLoaded = false;
-        
         // Load first section if needed
         if (sections.isNotEmpty && sections[0].id != null) {
           if (!(_sectionLoadedStatus[sections[0].id] ?? false)) {
             await _loadSectionLessons(sections[0]);
           }
-          firstSectionLoaded = true;
-          
           // Calculate lessons for first section
           totalLessons.value = sections[0].lessons.length;
           
@@ -444,7 +425,6 @@ class LearningController extends GetxController implements GetxService {
           }
         }
       } catch (e) {
-        print('Error loading section lessons: $e');
       } finally {
         isLoadingStructure.value = false;
       }
@@ -477,11 +457,10 @@ class LearningController extends GetxController implements GetxService {
           lessons: lessons,
         );
         _sectionLoadedStatus[section.id!] = true;
-        print('Loaded ${lessons.length} lessons for section ${section.id} (repo)');
         sections.refresh();
       }
-    } catch (e) {
-      print('Error loading lessons for section ${section.id}: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -514,35 +493,19 @@ class LearningController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
-      print('Error loading progress: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
   /// Load specific lesson with caching
   Future<void> loadLesson(int lessonId) async {
-    print('LearningController - Loading lesson $lessonId');
     
     // Check cache first
     if (_lessonCache.containsKey(lessonId)) {
-      print('LearningController - Using cached lesson data');
       final cachedLesson = _lessonCache[lessonId]!;
       
       // Debug: Show cached lesson details
-      print('==================== CACHED LESSON DATA ====================');
-      print('Lesson ID: ${cachedLesson.id}');
-      print('Title: ${cachedLesson.title}');
-      print('Has Quiz: ${cachedLesson.hasQuiz}');
-      print('Quiz ID: ${cachedLesson.quizId}');
-      print('Has Video: ${cachedLesson.hasVideo}');
-      print('Video Embed: ${cachedLesson.videoEmbed}');
-      print('Video Src: ${cachedLesson.videoSrc}');
-      print('Has Audio: ${cachedLesson.hasAudio}');
-      print('Audio Embed: ${cachedLesson.audioEmbed}');
-      print('Audio Src: ${cachedLesson.audioSrc}');
-      print('\n--- CONTENT FIELD ---');
-      print(cachedLesson.content ?? 'No content');
-      print('==========================================================');
       
       currentLesson.value = cachedLesson;
       cleanedLessonContent.value = _cleanLessonContent(currentLesson.value?.content);
@@ -550,7 +513,6 @@ class LearningController extends GetxController implements GetxService {
       
       // Load quiz/assignment if needed (even for cached lessons)
       if (cachedLesson.hasQuiz && cachedLesson.quizId != null && cachedLesson.quizId != 0) {
-        print('LearningController - Loading quiz ${cachedLesson.quizId} for cached lesson');
         loadQuiz(cachedLesson.quizId!); // Don't await
       }
       
@@ -570,31 +532,18 @@ class LearningController extends GetxController implements GetxService {
       
       if (response.statusCode == 200) {
         // Debug: Log the raw lesson data
-        print('==================== RAW LESSON DATA ====================');
-        print(jsonEncode(response.body));
-        print('==========================================================');
         
         final lesson = LLMSLessonModel.fromJson(response.body);
         currentLesson.value = lesson;
         cleanedLessonContent.value = _cleanLessonContent(lesson.content);
         _lessonCache[lessonId] = lesson; // Cache it
         
-        print('LearningController - Lesson loaded: ${lesson.title}');
-        print('LearningController - Lesson has quiz: ${lesson.hasQuiz}');
-        print('LearningController - Quiz ID: ${lesson.quizId}');
-        print('LearningController - Requires passing: ${lesson.requiresPassing}');
-        print('LearningController - Has video: ${lesson.hasVideo}');
-        print('LearningController - Video embed: ${lesson.videoEmbed}');
-        print('LearningController - Video src: ${lesson.videoSrc}');
-        print('LearningController - Has audio: ${lesson.hasAudio}');
-        print('LearningController - Audio embed: ${lesson.audioEmbed}');
         
         // Update navigation states
         updateNavigationStates();
         
         // Load quiz/assignment in background if needed
         if (lesson.hasQuiz && lesson.quizId != null && lesson.quizId != 0) {
-          print('LearningController - Loading quiz ${lesson.quizId}');
           loadQuiz(lesson.quizId!); // Don't await
         }
         
@@ -606,7 +555,6 @@ class LearningController extends GetxController implements GetxService {
         _prefetchAdjacentLessons();
       }
     } catch (e) {
-      print('Error loading lesson: $e');
       showToast('Error loading lesson', isError: true);
     } finally {
       isLoadingLesson.value = false;
@@ -642,7 +590,6 @@ class LearningController extends GetxController implements GetxService {
       final response = await lmsService.api.getLesson(lessonId: lessonId);
       if (response.statusCode == 200) {
         _lessonCache[lessonId] = LLMSLessonModel.fromJson(response.body);
-        print('Prefetched lesson $lessonId');
       }
     } catch (e) {
       // Silent fail for prefetch
@@ -651,37 +598,26 @@ class LearningController extends GetxController implements GetxService {
   
   /// Load quiz (if available)
   Future<void> loadQuiz(int quizId) async {
-    print('LearningController.loadQuiz - Attempting to load quiz $quizId');
     try {
       final response = await lmsService.api.getQuiz(quizId: quizId);
       
-      print('LearningController.loadQuiz - Response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        print('LearningController.loadQuiz - Raw quiz response:');
-        print(jsonEncode(response.body));
         
         // The response has quiz data nested under 'quiz' key
         final responseData = response.body;
         final quizData = responseData['quiz'] ?? responseData;
         
         currentQuiz.value = LLMSQuizModel.fromJson(quizData);
-        print('LearningController.loadQuiz - Quiz loaded successfully: ${currentQuiz.value?.title}');
-        print('LearningController.loadQuiz - Quiz ID: ${currentQuiz.value?.id}');
-        print('LearningController.loadQuiz - Total questions: ${currentQuiz.value?.totalQuestions ?? 0}');
       } else if (response.statusCode == 501) {
         // Quiz API not yet available
-        print('LearningController.loadQuiz - Quiz API not yet implemented in LifterLMS REST');
-        print('LearningController.loadQuiz - Response: ${response.body}');
         
         // For now, clear the quiz so UI doesn't try to show it
         currentQuiz.value = null;
       } else {
-        print('LearningController.loadQuiz - Unexpected response: ${response.statusCode}');
         currentQuiz.value = null;
       }
     } catch (e) {
-      print('LearningController.loadQuiz - Error: $e');
       currentQuiz.value = null;
     }
   }
@@ -695,37 +631,30 @@ class LearningController extends GetxController implements GetxService {
         currentAssignment.value = LLMSAssignmentModel.fromJson(response.body);
       } else if (response.statusCode == 501) {
         // Assignment API not yet available
-        print('Assignment API not yet implemented');
       }
-    } catch (e) {
-      print('Error loading assignment: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
   /// Complete current lesson
   Future<void> completeLesson() async {
     if (currentLesson.value == null) {
-      print('ERROR: No current lesson to complete');
       return;
     }
     
     if (!lmsService.isLoggedIn) {
-      print('ERROR: User not logged in, cannot complete lesson');
       showToast('Please log in to mark lessons complete', isError: true);
       return;
     }
     
     final lessonId = currentLesson.value!.id;
-    print('LearningController.completeLesson - Marking lesson $lessonId as complete');
     
     try {
       isCompletingLesson.value = true;
       
-      print('LearningController.completeLesson - Calling API...');
       final response = await lmsService.completeLesson(lessonId);
       
-      print('LearningController.completeLesson - Response: ${response.statusCode} - ${response.statusText}');
-      print('LearningController.completeLesson - Response body: ${response.body}');
       
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
         // Update completion status
@@ -737,7 +666,6 @@ class LearningController extends GetxController implements GetxService {
           courseProgress.value = (completedLessons.value / totalLessons.value) * 100;
         }
         
-        print('LearningController.completeLesson - Success! Progress: ${courseProgress.value}%');
         // Don't show toast - button will change to show completed status
         
         // Give user time to see the "Completed" button state (2 seconds)
@@ -745,20 +673,16 @@ class LearningController extends GetxController implements GetxService {
         
         // Auto-navigate to next lesson if enabled and available
         if (autoAdvanceEnabled.value && canNavigateNext.value) {
-          print('LearningController.completeLesson - Auto-advancing to next lesson');
           await navigateToNextLesson();
         } else if (courseProgress.value >= 100) {
           // Course completed
           showCourseCompletionDialog();
         } else if (!autoAdvanceEnabled.value && canNavigateNext.value) {
-          print('LearningController.completeLesson - Auto-advance disabled, staying on current lesson');
         }
       } else {
-        print('LearningController.completeLesson - Failed with status: ${response.statusCode}');
         showToast('Failed to mark lesson complete', isError: true);
       }
     } catch (e) {
-      print('LearningController.completeLesson - ERROR: $e');
       showToast('Error completing lesson', isError: true);
     } finally {
       isCompletingLesson.value = false;
@@ -774,7 +698,6 @@ class LearningController extends GetxController implements GetxService {
     if (previousLesson != null) {
       // Check if this is a placeholder for loading previous section
       if (previousLesson.id == -2 && previousLesson.sectionId != null) {
-        print('LearningController - Loading previous section lessons');
         // Load the previous section's lessons first
         await loadSectionOnDemand(previousLesson.sectionId!);
         
@@ -791,7 +714,6 @@ class LearningController extends GetxController implements GetxService {
   
   /// Navigate back to course overview  
   void backToOverview() {
-    print('LearningController - Going back to course overview');
     // Clear current lesson to show overview
     currentLesson.value = null;
     currentQuiz.value = null;
@@ -816,7 +738,6 @@ class LearningController extends GetxController implements GetxService {
     if (nextLesson != null) {
       // Check if this is a placeholder for loading next section
       if (nextLesson.id == -1 && nextLesson.sectionId != null) {
-        print('LearningController - Loading next section lessons');
         // Load the next section's lessons first
         await loadSectionOnDemand(nextLesson.sectionId!);
         
@@ -833,7 +754,6 @@ class LearningController extends GetxController implements GetxService {
   
   /// Start or resume learning from overview
   Future<void> startOrResumeLearning() async {
-    print('LearningController - Starting/resuming learning from overview');
     
     // Ensure sections are loaded
     if (sections.isEmpty) {
@@ -848,7 +768,6 @@ class LearningController extends GetxController implements GetxService {
       for (var lesson in section.lessons) {
         if (!(lessonCompletionStatus[lesson.id] ?? false)) {
           // Found an incomplete lesson, load it
-          print('LearningController - Resuming at incomplete lesson: ${lesson.id}');
           await loadLesson(lesson.id);
           return;
         }
@@ -857,7 +776,6 @@ class LearningController extends GetxController implements GetxService {
     
     // If all lessons are complete or no progress, start from beginning
     if (sections.isNotEmpty && sections.first.lessons.isNotEmpty) {
-      print('LearningController - Starting from first lesson');
       await loadLesson(sections.first.lessons.first.id);
     }
   }
@@ -1059,7 +977,6 @@ class LearningController extends GetxController implements GetxService {
   Future<void> startQuiz() async {
     if (currentQuiz.value == null || !lmsService.isLoggedIn) return;
     
-    final quiz = currentQuiz.value!;
     final lesson = currentLesson.value;
     
     if (lesson == null) {
@@ -1074,27 +991,15 @@ class LearningController extends GetxController implements GetxService {
   /// Load quiz questions
   Future<void> loadQuizQuestions(int quizId) async {
     try {
-      print('LearningController - Loading questions for quiz $quizId');
       
       final response = await lmsService.api.getQuizQuestions(quizId: quizId);
       
       if (response.statusCode == 200) {
-        final questionsData = response.body;
-        print('LearningController - Loaded ${questionsData['total']} questions');
-        
         // TODO: Store questions and display them
-        // For now, just log them
-        if (questionsData['questions'] != null) {
-          for (var question in questionsData['questions']) {
-            print('Question ${question['id']}: ${question['content']}');
-          }
-        }
       } else {
-        print('LearningController - Failed to load questions: ${response.body}');
         showToast('Failed to load quiz questions', isError: true);
       }
     } catch (e) {
-      print('LearningController - Error loading questions: $e');
       showToast('Error loading quiz questions', isError: true);
     }
   }
@@ -1116,7 +1021,6 @@ class LearningController extends GetxController implements GetxService {
   void _handleError(String message) {
     errorMessage.value = message;
     hasError.value = true;
-    print(message);
   }
   
   /// Clear error
@@ -1195,7 +1099,6 @@ class LearningController extends GetxController implements GetxService {
       // Return cleaned HTML
       return document.body?.innerHtml ?? htmlContent;
     } catch (e) {
-      print('Error cleaning lesson content: $e');
       return htmlContent;
     }
   }
@@ -1251,7 +1154,6 @@ class LearningController extends GetxController implements GetxService {
   /// Start a quiz (TODO: Implement quiz functionality)
   Future<void> onStartQuiz(int quizId) async {
     // TODO: Implement quiz start functionality
-    print('Starting quiz with ID: $quizId');
     Get.snackbar(
       'Coming Soon',
       'Quiz functionality will be implemented soon',
@@ -1262,7 +1164,6 @@ class LearningController extends GetxController implements GetxService {
   /// Start an assignment (TODO: Implement assignment functionality)
   Future<void> onStartAssignment(int assignmentId) async {
     // TODO: Implement assignment start functionality
-    print('Starting assignment with ID: $assignmentId');
     Get.snackbar(
       'Coming Soon',
       'Assignment functionality will be implemented soon',

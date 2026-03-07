@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/my_profile_controller.dart';
 import 'package:flutter_app/app/controller/settings_controller.dart';
-import 'package:flutter_app/app/backend/parse/settings_parse.dart';
 import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:flutter_app/app/helper/router.dart';
@@ -75,17 +74,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   Widget build(BuildContext context) {
     return GetBuilder<MyProfileController>(builder: (value) {
       // Initialize SettingsController when needed
-      if (!Get.isRegistered<SettingsParser>()) {
-        Get.lazyPut(() => SettingsParser(
-          apiService: Get.find<ApiService>(),
-          sharedPreferencesManager: Get.find<SharedPreferencesManager>(),
-          sessionStore: sessionStore,
-        ));
-      }
       if (!Get.isRegistered<SettingsController>()) {
         Get.lazyPut(() => SettingsController(
-          sessionStore: sessionStore, 
-          parser: Get.find<SettingsParser>()
+          sessionStore: sessionStore,
+          sharedPreferencesManager: Get.find<SharedPreferencesManager>(),
+          apiService: Get.find<ApiService>(),
         ));
       }
       return Column(children: [

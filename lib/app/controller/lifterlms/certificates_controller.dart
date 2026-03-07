@@ -123,7 +123,6 @@ class CertificatesController extends GetxController implements GetxService {
       errorMessage.value = '';
       hasError.value = false;
       
-      print('CertificatesController - Loading certificates, page: ${currentPage.value}');
       
       // Use LMSService wrapper for plugin endpoint
       final response = await lmsService.getCertificates(
@@ -131,15 +130,12 @@ class CertificatesController extends GetxController implements GetxService {
         perPage: perPage,
       );
       
-      print('CertificatesController - Response status: ${response.statusCode}');
-      print('CertificatesController - Response body: ${response.body}');
       
       if (response.statusCode == 200) {
         final data = response.body;
         
         if (data['success'] == true && data['certificates'] != null) {
           final List<dynamic> certificatesList = data['certificates'];
-          print('CertificatesController - Found ${certificatesList.length} certificates');
           
           for (var certData in certificatesList) {
             try {
@@ -149,8 +145,8 @@ class CertificatesController extends GetxController implements GetxService {
               // Update stats
               certificatesPerCourse[certificate.courseId] = 
                   (certificatesPerCourse[certificate.courseId] ?? 0) + 1;
-            } catch (e) {
-              print('Error parsing certificate: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
@@ -161,15 +157,11 @@ class CertificatesController extends GetxController implements GetxService {
             hasMoreData.value = false;
           }
         } else {
-          print('CertificatesController - Response success flag: ${data['success']}');
-          print('CertificatesController - Certificates data: ${data['certificates']}');
         }
       } else {
-        print('CertificatesController - HTTP error: ${response.statusCode} - ${response.statusText}');
         _handleError('Failed to load certificates (${response.statusCode})');
       }
     } catch (e) {
-      print('CertificatesController - Exception: $e');
       _handleError('Error loading certificates: $e');
     } finally {
       isLoading.value = false;
@@ -206,19 +198,15 @@ class CertificatesController extends GetxController implements GetxService {
     try {
       DialogHelper.showLoading();
       
-      print('CertificatesController - Downloading certificate ${certificate.id}');
       
       // Get certificate HTML content from API
       final response = await lmsService.getCertificateDownloadData(certificate.id);
       
-      print('CertificatesController - Download response status: ${response.statusCode}');
-      print('CertificatesController - Download response body keys: ${response.body.keys}');
       
       DialogHelper.hideLoading();
       
       if (response.statusCode == 200 && response.body['success'] == true) {
         final htmlContent = response.body['html'];
-        print('CertificatesController - HTML content length: ${htmlContent?.length ?? 0}');
         
         if (htmlContent != null && htmlContent.isNotEmpty) {
           // Create a properly formatted HTML with viewport and auto-fit
@@ -300,7 +288,7 @@ $htmlContent
   </button>
 </div>
 <div style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999;">
-  <button onclick="window.print()" style="
+  <button onclick="window." style="
     background: #f59e0b;
     color: white;
     border: none;
@@ -319,7 +307,6 @@ $htmlContent
           );
           
           // Open in InAppBrowser where user can print/save
-          print('CertificatesController - Opening InAppBrowser with HTML');
           final browser = MyInAppBrowser();
           
           await browser.openData(
@@ -349,18 +336,13 @@ $htmlContent
             ),
           );
         } else {
-          print('CertificatesController - No HTML content available');
           showToast('Certificate content not available', isError: true);
         }
       } else {
-        print('CertificatesController - Failed response: ${response.statusCode}');
-        print('CertificatesController - Response body: ${response.body}');
         showToast('Failed to load certificate', isError: true);
       }
     } catch (e, stackTrace) {
       DialogHelper.hideLoading();
-      print('CertificatesController - Error downloading certificate: $e');
-      print('CertificatesController - Stack trace: $stackTrace');
       showToast('Error loading certificate: $e', isError: true);
     }
   }
@@ -433,7 +415,6 @@ $htmlContent
       }
     } catch (e) {
       DialogHelper.hideLoading();
-      print('Error sharing certificate: $e');
       showToast('Error sharing certificate', isError: true);
     }
   }
@@ -500,7 +481,6 @@ $htmlContent
         }
       }
     } catch (e) {
-      print('Error loading course certificates: $e');
     } finally {
       isLoading.value = false;
     }
@@ -577,7 +557,6 @@ $htmlContent
   void _handleError(String message) {
     errorMessage.value = message;
     hasError.value = true;
-    print(message);
   }
   
   /// Clear error

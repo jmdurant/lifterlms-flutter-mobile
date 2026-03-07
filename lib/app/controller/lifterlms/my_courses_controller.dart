@@ -69,7 +69,6 @@ class MyCoursesController extends GetxController {
       if (_allCourses.isNotEmpty && 
           _lastFetchTime != null && 
           DateTime.now().difference(_lastFetchTime!) < _cacheExpiry) {
-        print('MyCoursesController - Tab visible, using cached data');
         return;
       }
       // Otherwise load with cache check
@@ -84,7 +83,6 @@ class MyCoursesController extends GetxController {
         _lastFetchTime != null && 
         _allCourses.isNotEmpty &&
         DateTime.now().difference(_lastFetchTime!) < _cacheExpiry) {
-      print('MyCoursesController - Using cached courses data');
       // Data is still fresh, just re-categorize in case of state changes
       _categorizeCourses();
       return;
@@ -93,7 +91,6 @@ class MyCoursesController extends GetxController {
     // If we have cached data and it's not a force refresh, show cached data immediately
     // and refresh in background
     if (_allCourses.isNotEmpty && !forceRefresh) {
-      print('MyCoursesController - Showing cached data, refreshing in background');
       // Don't show loading spinner, just refresh in background
       _loadInBackground();
     } else {
@@ -106,7 +103,6 @@ class MyCoursesController extends GetxController {
   
   /// Load data in background without showing loading indicator
   Future<void> _loadInBackground() async {
-    print('MyCoursesController - Refreshing data in background');
     try {
       // Don't set isLoading to avoid showing spinner
       final response = await lmsService.getMyEnrollments(params: {
@@ -121,7 +117,6 @@ class MyCoursesController extends GetxController {
         _lastFetchTime = DateTime.now();
       }
     } catch (e) {
-      print('Background refresh failed: $e');
       // Don't show error for background refresh
     }
   }
@@ -203,7 +198,6 @@ class MyCoursesController extends GetxController {
       if (response.statusCode == 200) {
         if (response.body is List) {
           final enrollments = response.body as List;
-          print('MyCoursesController - Got ${enrollments.length} enrollments');
           
           // Group enrollments for batch processing
           List<Map<String, dynamic>> validEnrollments = [];
@@ -265,10 +259,8 @@ class MyCoursesController extends GetxController {
       
       // Handle course response
       if (courseResponse.statusCode == 404) {
-        print('MyCoursesController - Course $courseId does not exist (deleted or invalid enrollment)');
         return;
       } else if (courseResponse.statusCode != 200) {
-        print('MyCoursesController - Failed to load course $courseId: ${courseResponse.statusCode}');
         return;
       }
       
@@ -289,7 +281,6 @@ class MyCoursesController extends GetxController {
         final progressData = progressResponse.body;
         final progress = (progressData['progress'] ?? 0).toDouble();
         courseProgress[courseId] = progress;
-        print('MyCoursesController - Course $courseId progress: $progress%');
       }
       
       // Fetch featured image if needed
@@ -301,7 +292,6 @@ class MyCoursesController extends GetxController {
         final cachedUrl = mediaCache.getCachedUrl(mediaId);
         if (cachedUrl != null) {
           courseData['featured_image_url'] = cachedUrl;
-          print('MyCoursesController - Using cached image for media $mediaId');
         } else if (permalink != null && permalink.isNotEmpty) {
           // Fetch via oEmbed in background (don't wait)
           _fetchOEmbedImage(courseId, mediaId, permalink);
@@ -314,8 +304,8 @@ class MyCoursesController extends GetxController {
       if (!_allCourses.any((c) => c.id == course.id)) {
         _allCourses.add(course);
       }
-    } catch (e) {
-      print('Error fetching course $courseId: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -336,12 +326,11 @@ class MyCoursesController extends GetxController {
             // Trigger UI update by reassigning
             final course = _allCourses[courseIndex];
             _allCourses[courseIndex] = course;
-            print('MyCoursesController - Updated image for course $courseId');
           }
         }
       }
-    } catch (e) {
-      print('Error fetching oEmbed for course $courseId: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -373,11 +362,9 @@ class MyCoursesController extends GetxController {
         if (enrollment['_embedded']['course'] != null &&
             enrollment['_embedded']['course'].isNotEmpty) {
           courseData = enrollment['_embedded']['course'][0];
-          print('MyCoursesController - Using embedded course data for course $courseId');
         } else if (enrollment['_embedded']['membership'] != null &&
                    enrollment['_embedded']['membership'].isNotEmpty) {
           // This is a membership, not a course - skip it
-          print('MyCoursesController - Skipping membership enrollment: $courseId');
           return;
         }
       } 
@@ -387,10 +374,8 @@ class MyCoursesController extends GetxController {
         final courseResponse = await lmsService.api.getCourse(courseId: courseId);
         
         if (courseResponse.statusCode == 404) {
-          print('MyCoursesController - Course $courseId does not exist (deleted or invalid enrollment)');
           return;
         } else if (courseResponse.statusCode != 200) {
-          print('MyCoursesController - Failed to load course $courseId: ${courseResponse.statusCode}');
           return;
         }
         courseData = courseResponse.body;
@@ -407,7 +392,6 @@ class MyCoursesController extends GetxController {
           final cachedUrl = mediaCache.getCachedUrl(mediaId);
           if (cachedUrl != null) {
             courseData['featured_image_url'] = cachedUrl;
-            print('MyCoursesController - Using cached image for media $mediaId');
           } else if (permalink != null && permalink.isNotEmpty) {
             // Fetch via oEmbed
             try {
@@ -419,11 +403,10 @@ class MyCoursesController extends GetxController {
                   courseData['featured_image_url'] = thumbnailUrl;
                   // Cache the URL
                   mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                  print('MyCoursesController - Got image via oEmbed: $thumbnailUrl');
                 }
               }
-            } catch (e) {
-              print('Error fetching oEmbed for course $courseId: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
         }
@@ -442,8 +425,8 @@ class MyCoursesController extends GetxController {
           _allCourses.add(course);
         }
       }
-    } catch (e) {
-      print('Error processing enrollment: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -456,10 +439,8 @@ class MyCoursesController extends GetxController {
         final progressData = response.body;
         final progress = (progressData['progress'] ?? 0).toDouble();
         courseProgress[courseId] = progress;
-        print('MyCoursesController - Updated progress for course $courseId: $progress%');
       }
     } catch (e) {
-      print('Error getting course progress: $e');
       courseProgress[courseId] = 0.0;
     }
   }
@@ -599,7 +580,6 @@ class MyCoursesController extends GetxController {
       
       if (response.statusCode == 200 && response.body is List) {
         final enrollments = response.body as List;
-        print('MyCoursesController - Loading page ${currentPage.value}, got ${enrollments.length} more enrollments');
         
         if (enrollments.isEmpty) {
           hasMoreData.value = false;
@@ -638,7 +618,6 @@ class MyCoursesController extends GetxController {
         }
       }
     } catch (e) {
-      print('Error loading more courses: $e');
       currentPage.value--; // Revert page on error
     } finally {
       isLoadingMore.value = false;
@@ -647,7 +626,6 @@ class MyCoursesController extends GetxController {
   
   /// Refresh data (pull to refresh)
   Future<void> refreshData() async {
-    print('MyCoursesController - Pull to refresh triggered');
     // Don't clear existing data, just fetch new data
     await _refreshInBackground();
     _lastFetchTime = DateTime.now();
@@ -719,7 +697,6 @@ class MyCoursesController extends GetxController {
         }
       }
     } catch (e) {
-      print('Refresh failed: $e');
       // Don't show error on refresh - keep existing data
     }
   }
@@ -764,8 +741,8 @@ class MyCoursesController extends GetxController {
       
       final course = LLMSCourseModel.fromJson(courseData);
       newCourses.add(course);
-    } catch (e) {
-      print('Error fetching course $courseId: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -974,7 +951,6 @@ class MyCoursesController extends GetxController {
   void _handleError(String message) {
     errorMessage.value = message;
     hasError.value = true;
-    print(message);
   }
   
   /// Clear error

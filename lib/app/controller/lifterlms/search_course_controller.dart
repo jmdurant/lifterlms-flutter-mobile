@@ -97,8 +97,8 @@ class SearchCourseController extends GetxController implements GetxService {
           categories.addAll(response.body);
         }
       }
-    } catch (e) {
-      print('Error loading categories: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -207,8 +207,8 @@ class SearchCourseController extends GetxController implements GetxService {
             try {
               final course = LLMSCourseModel.fromJson(courseData);
               searchResults.add(course);
-            } catch (e) {
-              print('Error parsing course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
@@ -219,7 +219,6 @@ class SearchCourseController extends GetxController implements GetxService {
         }
       }
     } catch (e) {
-      print('Search error: $e');
     } finally {
       isSearching.value = false;
     }

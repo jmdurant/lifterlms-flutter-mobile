@@ -165,7 +165,6 @@ class ReviewController extends GetxController implements GetxService {
         _showReviewsNotAvailable();
       }
     } catch (e) {
-      print('Error loading reviews: $e');
     } finally {
       isLoading.value = false;
     }
@@ -179,11 +178,7 @@ class ReviewController extends GetxController implements GetxService {
       isLoading.value = true;
       currentPage.value++;
       
-      final params = <String, dynamic>{
-        'page': currentPage.value.toString(),
-        'per_page': reviewsPerPage.toString(),
-      };
-      
+      // TODO: Pass pagination params to API
       final response = await lmsService.api.getCourseReviews(
         courseId: courseId.value,
       );
@@ -198,7 +193,6 @@ class ReviewController extends GetxController implements GetxService {
         }
       }
     } catch (e) {
-      print('Error loading more reviews: $e');
     } finally {
       isLoading.value = false;
     }
@@ -237,7 +231,6 @@ class ReviewController extends GetxController implements GetxService {
       }
     } catch (e) {
       canReview.value = false;
-      print('Error checking review eligibility: $e');
     }
   }
   
@@ -256,8 +249,8 @@ class ReviewController extends GetxController implements GetxService {
         hasReviewed.value = true;
         userReviews.add(userReview);
       }
-    } catch (e) {
-      print('Error loading user review: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -313,15 +306,14 @@ class ReviewController extends GetxController implements GetxService {
       isSubmitting.value = true;
       DialogHelper.showLoading();
       
-      final reviewData = {
-        'course_id': courseId.value,
-        'rating': selectedRating.value.toInt(),
-        'title': reviewTitleController.text.trim(),
-        'content': reviewContentController.text.trim(),
-        'user_id': lmsService.currentUserId,
-      };
-      
-      // This would need a custom endpoint
+      // TODO: Implement review submission endpoint
+      // final reviewData = {
+      //   'course_id': courseId.value,
+      //   'rating': selectedRating.value.toInt(),
+      //   'title': reviewTitleController.text.trim(),
+      //   'content': reviewContentController.text.trim(),
+      //   'user_id': lmsService.currentUserId,
+      // };
       await Future.delayed(Duration(seconds: 2));
       
       DialogHelper.hideLoading();

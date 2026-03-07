@@ -116,7 +116,6 @@ class HomeController extends GetxController implements GetxService {
             updatedCourseData['featured_image_url'] = cachedUrl;
             courseList[i] = LLMSCourseModel.fromJson(updatedCourseData);
             update(); // Update UI for this specific course
-            print('Using cached image for media $mediaId');
             continue;
           }
         } catch (e) {
@@ -134,10 +133,9 @@ class HomeController extends GetxController implements GetxService {
                   // Cache the URL
                   try {
                     mediaCache.cacheUrl(mediaId, thumbnailUrl.toString());
-                  } catch (e) {
-                    print('Could not cache URL: $e');
+                  } catch (_) {
+                    // Silently handle error
                   }
-                  print('Got image for course via oEmbed: $thumbnailUrl');
                   
                   // Update the specific course with the image URL
                   final courseIndex = courseIndexMap[mediaId];
@@ -150,7 +148,6 @@ class HomeController extends GetxController implements GetxService {
                 }
               }
             }).catchError((e) {
-              print('Error fetching oEmbed: $e');
             })
         );
       }
@@ -168,7 +165,6 @@ class HomeController extends GetxController implements GetxService {
   
   /// Get popular/top courses
   Future<void> getTopCourses() async {
-    print('getTopCourses() called - current list size: ${_topCourses.length}');
     try {
       isLoadingTopCourses.value = true;
       
@@ -183,21 +179,18 @@ class HomeController extends GetxController implements GetxService {
       if (response.statusCode == 200) {
         _topCourses.clear();
         if (response.body is List) {
-          print('Loading ${response.body.length} top courses');
           
           // Parse courses immediately WITHOUT waiting for images
           for (var courseData in response.body) {
             try {
               final course = LLMSCourseModel.fromJson(courseData);
               _topCourses.add(course);
-              print('Successfully loaded course: ${course.title}');
-            } catch (e) {
-              print('Error parsing course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
           // Update UI immediately with courses (no images yet)
-          print('Total top courses loaded: ${_topCourses.length}');
           update();
           
           // Load images in background (non-blocking)
@@ -232,13 +225,12 @@ class HomeController extends GetxController implements GetxService {
             try {
               final course = LLMSCourseModel.fromJson(courseData);
               _newCourses.add(course);
-            } catch (e) {
-              print('Error parsing course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
           
           // Update UI immediately with courses (no images yet)
-          print('Total new courses loaded: ${_newCourses.length}');
           update();
           
           // Load images in background (non-blocking)
@@ -267,17 +259,14 @@ class HomeController extends GetxController implements GetxService {
         'order': 'asc',
       });
       
-      print('Instructors API response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         _instructors.clear();
         if (response.body is List) {
-          print('Loading ${response.body.length} instructors');
           // WordPress Users API usually includes avatar_urls directly
           // but let's also handle cases where we might need to fetch media
           for (var instructorData in response.body) {
             try {
-              print('Instructor data: avatar_urls=${instructorData['avatar_urls']}, featured_media=${instructorData['featured_media']}');
               
               // Check if there's a featured_media that needs fetching
               if (instructorData['featured_media'] != null && 
@@ -295,14 +284,13 @@ class HomeController extends GetxController implements GetxService {
                       instructorData['avatar_url'] = sourceUrl;
                     }
                   }
-                } catch (e) {
-                  print('Error fetching instructor media: $e');
+                } catch (_) {
+                  // Silently handle error
                 }
               }
               
               // Create initial instructor model
               var instructor = LLMSInstructorModel.fromJson(instructorData);
-              print('Created instructor: ${instructor.displayName} with ID: ${instructor.id}');
               
               // Fetch course count for this instructor
               try {
@@ -342,24 +330,20 @@ class HomeController extends GetxController implements GetxService {
                     averageRating: instructor.averageRating,
                     reviewCount: instructor.reviewCount,
                   );
-                  print('Instructor ${instructor.displayName} has $totalCourses courses');
                 }
-              } catch (e) {
-                print('Error fetching course count for instructor ${instructor.id}: $e');
+              } catch (_) {
+                // Silently handle error
               }
               
               _instructors.add(instructor);
-              print('Loaded instructor: ${instructor.displayName}, courses: ${instructor.courseCount}');
-            } catch (e) {
-              print('Error parsing instructor: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
-          print('Total instructors loaded: ${_instructors.length}');
           
           // Cache all loaded instructors using the existing MediaCacheService
           if (_instructors.isNotEmpty) {
             mediaCache.cacheInstructors(_instructors);
-            print('Cached ${_instructors.length} instructors in MediaCacheService');
           }
         }
       } else {
@@ -390,8 +374,8 @@ class HomeController extends GetxController implements GetxService {
             try {
               final category = LLMSCategoryModel.fromJson(categoryData);
               _categories.add(category);
-            } catch (e) {
-              print('Error parsing category: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
         }
@@ -419,17 +403,16 @@ class HomeController extends GetxController implements GetxService {
             try {
               final course = LLMSCourseModel.fromJson(courseData);
               _wishlistCourses.add(course);
-            } catch (e) {
-              print('Error parsing wishlist course: $e');
+            } catch (_) {
+              // Silently handle error
             }
           }
         }
       } else if (response.statusCode == 501) {
         // Wishlist not implemented yet - this is expected
-        print('Wishlist feature not yet available');
       }
-    } catch (e) {
-      print('Error loading wishlist: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -530,8 +513,8 @@ class HomeController extends GetxController implements GetxService {
           'lessons_completed': 0,
         };
       }
-    } catch (e) {
-      print('Error loading overview: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -540,9 +523,8 @@ class HomeController extends GetxController implements GetxService {
     try {
       // TODO: Implement user validation check
       // This would verify if the user account is still valid
-      print('Checking user status: $userId');
-    } catch (e) {
-      print('Error checking user: $e');
+    } catch (_) {
+      // Silently handle error
     }
   }
   
@@ -555,7 +537,6 @@ class HomeController extends GetxController implements GetxService {
   void _handleError(String message) {
     errorMessage.value = message;
     hasError.value = true;
-    print(message);
   }
   
   /// Clear error

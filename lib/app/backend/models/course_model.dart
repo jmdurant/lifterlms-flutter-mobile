@@ -61,7 +61,6 @@ class CourseModel {
 
   CourseModel.fromJson(Map<String, dynamic> json) {
     id = json['id'] is int ? json['id'] : int.parse(json['id'].toString());
-    // print(json['course_data']);
     name = json['name'];
     slug = json['slug'];
     permalink = json['permalink'];

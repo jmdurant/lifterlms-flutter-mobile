@@ -1,14 +1,17 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/backend/models/notification_model.dart';
-import 'package:flutter_app/app/backend/parse/notification_parse.dart';
+import 'package:flutter_app/app/helper/shared_pref.dart';
+import 'package:flutter_app/app/util/constant.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:get/get.dart';
 
 import '../helper/dialog_helper.dart';
 
 class NotificationController extends GetxController implements GetxService {
-  final NotificationParser parser;
+  final SharedPreferencesManager sharedPreferencesManager;
+  final ApiService apiService;
   bool apiCalled = false;
 
   bool haveData = false;
@@ -23,7 +26,14 @@ class NotificationController extends GetxController implements GetxService {
   final int _pageSize = 10;
   final int _totalPages = 10;
 
-  NotificationController({required this.parser}) {}
+  NotificationController({
+    required this.sharedPreferencesManager,
+    required this.apiService,
+  });
+
+  String _getToken() {
+    return sharedPreferencesManager.getString('token') ?? "";
+  }
 
   @override
   Future<void> onInit() async {
@@ -78,7 +88,9 @@ class NotificationController extends GetxController implements GetxService {
       isLoading = true;
 
       try {
-        final response = await parser.getNotification();
+        String token = _getToken();
+        final response = await apiService.getPrivate(
+            AppConstants.getNotification, token, null);
         if (response.statusCode == 200) {
           List<NotificationModel> lstTemp = [];
 
@@ -97,13 +109,12 @@ class NotificationController extends GetxController implements GetxService {
           update();
           refresh();
         } else {
-          if(parser.getToken() != ""){
+          if(_getToken() != ""){
             DialogHelper.showErrorDialog(title: 'Failed notifications', description: "Please update addons Announcement add-on for LearnPress version 4.0.5");
             throw Exception('Failed to load notifications');
           }
         }
       } catch (e) {
-        print(e);
       } finally {
         isLoading = false; // hide loading indicator
         update();
@@ -114,28 +125,32 @@ class NotificationController extends GetxController implements GetxService {
 
   Future<void> registerFCMToken(String fcmToken) async {
     try {
-      final response = await parser.registerFCMToken(
-          fcmToken, Platform.isIOS ? 'ios' : 'android');
+      String token = _getToken();
+      Map<String, String> body = {
+        'device_token': fcmToken,
+        'device_type': Platform.isIOS ? 'ios' : 'android',
+      };
+      final response = await apiService.postPrivate(
+          AppConstants.registerFCMToken, body, token);
       if (response.statusCode == 200) {
-        print('Success register FCMToken ${fcmToken}');
       } else {
         throw Exception('Failed to register FCMToken');
       }
     } catch (e) {
-      print(e);
     } finally {}
   }
 
   Future<void> deleteFCMToken(fcmToken) async {
     try {
-      final response = await parser.deleteFCMToken(fcmToken);
+      String token = _getToken();
+      Map<String, String> body = {'device_token': fcmToken};
+      final response = await apiService.postPrivate(
+          AppConstants.deleteFCMToken, body, token);
       if (response.statusCode == 200) {
-        print('Success delete FCMToken ${fcmToken}');
       } else {
         throw Exception('Failed to delete FCMToken');
       }
     } catch (e) {
-      print(e);
     } finally {}
   }
 }

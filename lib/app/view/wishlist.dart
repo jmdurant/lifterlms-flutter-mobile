@@ -212,7 +212,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                   final course = value.wishlistCourses[index];
                                   return ItemCourse(
                                       item: course,
-                                      courseDetailParser: Get.find(),
                                       onToggleWishlist: () async => {
                                             await value.removeFromWishlist(
                                                 course.id),

@@ -37,7 +37,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _routing() {
-    // Get.find<SplashController>().parser.saveWelcome(true);
     Future.delayed(Duration.zero, () {
       Get.offNamed(AppRouter.getTabsBarRoute());
     });

@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/parse/my_profile_parse.dart';
 import 'package:flutter_app/app/helper/router.dart';
+import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
@@ -16,7 +15,7 @@ import '../../../env.dart';
 typedef OnNavigateCallback = void Function(int page);
 
 class Profile extends StatefulWidget {
-  final MyProfileParser myProfileParser;
+  final SharedPreferencesManager sharedPreferencesManager;
   final ProfileController profileController;
   final OnNavigateCallback goToPage;
   final OnNavigateCallback goBack;
@@ -25,7 +24,7 @@ class Profile extends StatefulWidget {
   State<Profile> createState() => _Profile();
 
   Profile(
-      {required this.myProfileParser,
+      {required this.sharedPreferencesManager,
       super.key,
       required this.goToPage,
       required this.goBack,
@@ -35,12 +34,6 @@ class Profile extends StatefulWidget {
 class _Profile extends State<Profile> {
   @override
   void initState() {
-    // User data is loaded automatically in ProfileController.onInit()
-    // String? user = widget.myProfileParser.getUserInfo();
-    // if (user != null) {
-    //   widget.profileController.refreshDataUser(jsonDecode(user));
-    // }
-
     super.initState();
   }
 
@@ -101,7 +94,7 @@ class _Profile extends State<Profile> {
                   ),
                 ),
               ),
-              widget.myProfileParser.getToken() == ''
+              (widget.sharedPreferencesManager.getString('token') ?? "") == ''
                   ? Container(
                       width: screenWidth,
                       height: screenHeight * 0.7,
@@ -352,7 +345,7 @@ class _Profile extends State<Profile> {
                       ]),
                     ),
               SizedBox(
-                height: widget.myProfileParser.getToken() != '' ? 200 : 50,
+                height: (widget.sharedPreferencesManager.getString('token') ?? "") != '' ? 200 : 50,
               ),
               Text(
                 LocaleKeys.profile_version,

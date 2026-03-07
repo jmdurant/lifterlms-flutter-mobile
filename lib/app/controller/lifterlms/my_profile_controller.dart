@@ -145,7 +145,6 @@ class MyProfileController extends GetxController implements GetxService {
       }
     } catch (e) {
       showToast('Error loading profile', isError: true);
-      print('Error loading profile: $e');
     } finally {
       isLoading.value = false;
     }
