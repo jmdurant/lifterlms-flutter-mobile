@@ -70,7 +70,7 @@ app.*.map.json
 **/web/flutter.js
 
 # Zone.Identifier files (Windows)
-*.Zone.Identifier
+*Zone.Identifier
 
 # Old/backup folders
 learnpress-mobile-flutter-orig/
