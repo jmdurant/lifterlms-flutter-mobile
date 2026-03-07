@@ -393,7 +393,7 @@
 				DEVELOPMENT_TEAM = 2THA884RCD;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Eduma Flutter\n\nEduma Flutter\n\n\nEduma Flutter\n\n\nEduma Flutter\n\n\nEduma Flutter\nEduma Flutter\n\nEduma Flutter\n\nEduma Flutter";
+				INFOPLIST_KEY_CFBundleDisplayName = LifterLMS;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -530,7 +530,7 @@
 				DEVELOPMENT_TEAM = 2THA884RCD;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Eduma Flutter\n\nEduma Flutter\n\n\nEduma Flutter\n\n\nEduma Flutter\n\n\nEduma Flutter\nEduma Flutter\n\nEduma Flutter\n\nEduma Flutter";
+				INFOPLIST_KEY_CFBundleDisplayName = LifterLMS;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -561,7 +561,7 @@
 				DEVELOPMENT_TEAM = 2THA884RCD;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Eduma Flutter\n\nEduma Flutter\n\n\nEduma Flutter\n\n\nEduma Flutter\n\n\nEduma Flutter\nEduma Flutter\n\nEduma Flutter\n\nEduma Flutter";
+				INFOPLIST_KEY_CFBundleDisplayName = LifterLMS;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
