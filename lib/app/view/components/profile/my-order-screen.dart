@@ -227,7 +227,7 @@ class MyOrderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final sessionStore = Get.find<SessionController>();
     List<Map<String, dynamic>> getData() {
-      final data = sessionStore.userInfo?.tabs["orders"]["content"];
+      final data = sessionStore.userInfo.value?.tabs["orders"]["content"];
       final List<Map<String, dynamic>> result = [];
 
       if (data != null && data.isNotEmpty) {
