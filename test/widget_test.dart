@@ -1,30 +1,62 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Basic smoke test that verifies key classes can be instantiated
+// without requiring Firebase or other platform services.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flutter_app/main.dart';
+import 'package:flutter_app/app/backend/models/response_v2.dart';
+import 'package:flutter_app/app/backend/models/user_model.dart';
+import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
+import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
+import 'package:flutter_app/app/backend/models/lifterlms/llms_category_model.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
+
+import 'helpers/mock_data.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  group('Smoke test - class instantiation', () {
+    test('ResponseV2 can be constructed with named parameters', () {
+      final response = ResponseV2(
+        status: 'success',
+        message: 'ok',
+        data: [],
+      );
+      expect(response.status, 'success');
+      expect(response.message, 'ok');
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('UserModel can be constructed with named parameters', () {
+      final user = UserModel(
+        user_id: 1,
+        user_login: 'test',
+        user_email: 'test@example.com',
+        user_display_name: 'Test User',
+      );
+      expect(user.user_id, 1);
+      expect(user.user_login, 'test');
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('LLMSCourseModel.fromJson parses sample data', () {
+      final course = LLMSCourseModel.fromJson(MockData.sampleCourseJson());
+      expect(course.id, 101);
+      expect(course.title, 'Introduction to Flutter');
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('LLMSLessonModel.fromJson parses sample data', () {
+      final lesson = LLMSLessonModel.fromJson(MockData.sampleLessonJson());
+      expect(lesson.id, 501);
+      expect(lesson.title, 'Getting Started with Dart');
+    });
+
+    test('LLMSCategoryModel.fromJson parses sample data', () {
+      final category =
+          LLMSCategoryModel.fromJson(MockData.sampleCategoryJson());
+      expect(category.id, 5);
+      expect(category.name, 'Programming');
+    });
+
+    test('CourseStoreController can be instantiated', () {
+      final controller = CourseStoreController();
+      expect(controller.detail.value, isNull);
+    });
   });
 }
