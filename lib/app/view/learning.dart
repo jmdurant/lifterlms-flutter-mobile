@@ -1,10 +1,8 @@
 import 'dart:ui';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
-import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'package:indexed/indexed.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
@@ -771,7 +769,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                   maxHeight: (250 / 375) * screenWidth,
                 ),
                 child: Image.network(
-                  (course?.featuredImage?.isNotEmpty ?? false) &&
+                  (course?.featuredImage.isNotEmpty ?? false) &&
                           !course!.featuredImage.contains('placeholder')
                       ? course.featuredImage
                       : "assets/images/placeholder-500x300.png",
@@ -855,7 +853,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                         color: const Color(0xFFFBC815), height: 16, width: 16),
                       const SizedBox(width: 4),
                       Text(
-                        course?.enrollmentCount?.toString() ?? '0',
+                        course?.enrollmentCount.toString() ?? '0',
                         style: const TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 12,
@@ -884,7 +882,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 const SizedBox(height: 12),
                 if (course != null)
                   HtmlWidget(
-                    _cleanCourseDescription(course.content ?? ''),
+                    _cleanCourseDescription(course.content),
                     textStyle: const TextStyle(
                       fontSize: 14,
                       height: 1.5,
@@ -1542,8 +1540,8 @@ class _SectionTileState extends State<_SectionTile> {
           });
           
           // Load lessons on demand if needed
-          if (expanded && widget.section.id != null && widget.section.lessons.isEmpty) {
-            await widget.controller.loadSectionOnDemand(widget.section.id!);
+          if (expanded && widget.section.lessons.isEmpty) {
+            await widget.controller.loadSectionOnDemand(widget.section.id);
             // Force rebuild after loading
             if (mounted) {
               setState(() {});
@@ -1618,7 +1616,6 @@ class _SectionTileState extends State<_SectionTile> {
 }
 
 class MyWidgetFactory extends WidgetFactory {
-  @override
   bool get webViewMediaPlaybackAlwaysAllow => true;
   
   @override

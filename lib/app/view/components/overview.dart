@@ -227,8 +227,7 @@ class Overview extends StatelessWidget {
                                           double.parse(overview["course_data"]
                                                       ["result"]["items"]
                                                   ["assignment"]['total']
-                                              .toString()) ??
-                                      0.0),
+                                              .toString())),
                                   child: Container(
                                     height: 4,
                                     color: const Color(0xFF958CFF),

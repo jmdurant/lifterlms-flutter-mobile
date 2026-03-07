@@ -4,8 +4,6 @@ import 'package:flutter_app/app/backend/services/lms_service.dart';
 import 'package:flutter_app/app/backend/services/media_cache_service.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:get/get.dart';
-import 'package:easy_localization/easy_localization.dart';
-import '../../l10n/locale_keys.g.dart';
 
 class CoursesController extends GetxController implements GetxService {
   final LMSService lmsService = LMSService.to;
@@ -222,7 +220,7 @@ class CoursesController extends GetxController implements GetxService {
       } else {
         _handleError('Failed to load courses: Status ${response.statusCode}');
       }
-    } catch (e, stack) {
+    } catch (e) {
       _handleError('Error loading courses: $e');
     } finally {
       isLoading.value = false;

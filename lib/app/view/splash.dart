@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/splash_controller.dart';
 import 'package:flutter_app/app/env.dart';
 import 'package:flutter_app/app/helper/router.dart';
-import 'package:flutter_app/app/util/theme.dart';
 // import 'package:flutter_app/app/util/toast.dart';
 
 class SplashScreen extends StatefulWidget {

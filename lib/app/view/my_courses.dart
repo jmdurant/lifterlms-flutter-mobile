@@ -9,7 +9,6 @@ import 'package:flutter_app/app/view/components/item-my-course.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'package:indexed/indexed.dart';
-import 'dart:io' show Platform;
 
 class MyCoursesScreen extends StatefulWidget {
   const MyCoursesScreen({Key? key}) : super(key: key);

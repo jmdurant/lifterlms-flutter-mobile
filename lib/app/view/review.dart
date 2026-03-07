@@ -7,7 +7,6 @@ import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
 import 'package:indexed/indexed.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ReviewScreen extends StatefulWidget {
   const ReviewScreen({Key? key}) : super(key: key);
@@ -23,12 +22,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
       (window.physicalSize.shortestSide / window.devicePixelRatio);
   var screenHeight =
       (window.physicalSize.longestSide / window.devicePixelRatio);
-
-  void _launchUrl(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    }
-  }
 
   Widget renderItem({item}) {
     return Container(

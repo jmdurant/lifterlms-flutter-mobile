@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/register_controller.dart';
-import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/config/branding_config.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';

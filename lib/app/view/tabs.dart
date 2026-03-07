@@ -7,7 +7,6 @@ import 'package:flutter_app/app/controller/lifterlms/my_courses_controller.dart'
 import 'package:flutter_app/app/controller/lifterlms/notification_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/payment_controller.dart';
 import 'package:flutter_app/app/controller/tabs_controller.dart';
-import 'package:flutter_app/app/util/theme.dart';
 import 'package:flutter_app/app/view/courses.dart';
 import 'package:flutter_app/app/view/home.dart';
 import 'package:flutter_app/app/view/my_courses.dart';

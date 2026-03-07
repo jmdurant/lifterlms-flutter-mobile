@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,13 +7,11 @@ import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart
 import 'package:flutter_app/app/backend/models/lifterlms/llms_quiz_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_assignment_model.dart';
 import 'package:flutter_app/app/backend/services/lms_service.dart';
-import 'package:flutter_app/app/backend/api/lifterlms_api.dart';
 import 'package:flutter_app/app/helper/dialog_helper.dart';
 import 'package:flutter_app/app/util/toast.dart';
 import 'package:get/get.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:html/parser.dart' as html_parser;
-import 'package:html/dom.dart' as dom;
 import 'package:flutter_app/app/controller/lifterlms/course_detail_controller.dart';
 import 'package:flutter_app/app/view/quiz_taking_screen.dart';
 
@@ -170,7 +167,7 @@ class LearningController extends GetxController implements GetxService {
     
     // Load first section's lessons if needed
     if (sections.isNotEmpty && sections[0].lessons.isEmpty) {
-      await loadSectionOnDemand(sections[0].id ?? 0);
+      await loadSectionOnDemand(sections[0].id);
     }
     
     // Load the first lesson
@@ -338,14 +335,14 @@ class LearningController extends GetxController implements GetxService {
           // Copy lessons if they're already loaded
           if (cachedSection.lessons.isNotEmpty) {
             section.lessons.addAll(cachedSection.lessons);
-            _sectionLoadedStatus[section.id ?? 0] = true;
+            _sectionLoadedStatus[section.id] = true;
             
             // Cache lessons for quick access
             for (var lesson in cachedSection.lessons) {
               _lessonCache[lesson.id] = lesson;
             }
           } else {
-            _sectionLoadedStatus[section.id ?? 0] = false;
+            _sectionLoadedStatus[section.id] = false;
           }
           
           sections.add(section);
@@ -376,7 +373,7 @@ class LearningController extends GetxController implements GetxService {
         for (var sectionData in response.body) {
           final section = LLMSSectionModel.fromJson(sectionData);
           sections.add(section);
-          _sectionLoadedStatus[section.id ?? 0] = false;
+          _sectionLoadedStatus[section.id] = false;
         }
         
         _lastFetchTime = DateTime.now();
@@ -391,7 +388,7 @@ class LearningController extends GetxController implements GetxService {
     if (sections.isEmpty) return;
     
     // Check if we already have all lessons from cache
-    bool allLessonsLoaded = sections.every((s) => _sectionLoadedStatus[s.id ?? 0] ?? false);
+    bool allLessonsLoaded = sections.every((s) => _sectionLoadedStatus[s.id] ?? false);
     if (allLessonsLoaded && totalLessons.value > 0) {
       return;
     }
@@ -402,7 +399,7 @@ class LearningController extends GetxController implements GetxService {
       
       try {
         // Load first section if needed
-        if (sections.isNotEmpty && sections[0].id != null) {
+        if (sections.isNotEmpty) {
           if (!(_sectionLoadedStatus[sections[0].id] ?? false)) {
             await _loadSectionLessons(sections[0]);
           }
@@ -416,7 +413,7 @@ class LearningController extends GetxController implements GetxService {
         // Load remaining sections in background (without blocking)
         for (int i = 1; i < sections.length; i++) {
           final section = sections[i];
-          if (section.id != null && !(_sectionLoadedStatus[section.id] ?? false)) {
+          if (!(_sectionLoadedStatus[section.id] ?? false)) {
             // Don't await - let them load in background
             _loadSectionLessons(section).then((_) {
               // Update total lessons count as sections load
@@ -433,12 +430,12 @@ class LearningController extends GetxController implements GetxService {
   
   /// Load lessons for a specific section
   Future<void> _loadSectionLessons(LLMSSectionModel section) async {
-    if (section.id == null || (_sectionLoadedStatus[section.id] ?? false)) {
+    if ((_sectionLoadedStatus[section.id] ?? false)) {
       return;
     }
     
     try {
-      final lessons = await lmsService.courses.getSectionLessons(section.id!);
+      final lessons = await lmsService.courses.getSectionLessons(section.id);
       // Cache
       for (final l in lessons) {
         _lessonCache[l.id] = l;
@@ -456,7 +453,7 @@ class LearningController extends GetxController implements GetxService {
           postType: s.postType,
           lessons: lessons,
         );
-        _sectionLoadedStatus[section.id!] = true;
+        _sectionLoadedStatus[section.id] = true;
         sections.refresh();
       }
     } catch (_) {
@@ -697,9 +694,9 @@ class LearningController extends GetxController implements GetxService {
     final previousLesson = findPreviousLesson();
     if (previousLesson != null) {
       // Check if this is a placeholder for loading previous section
-      if (previousLesson.id == -2 && previousLesson.sectionId != null) {
+      if (previousLesson.id == -2) {
         // Load the previous section's lessons first
-        await loadSectionOnDemand(previousLesson.sectionId!);
+        await loadSectionOnDemand(previousLesson.sectionId);
         
         // Now find the actual previous lesson again
         final actualPreviousLesson = findPreviousLesson();
@@ -737,9 +734,9 @@ class LearningController extends GetxController implements GetxService {
     final nextLesson = findNextLesson();
     if (nextLesson != null) {
       // Check if this is a placeholder for loading next section
-      if (nextLesson.id == -1 && nextLesson.sectionId != null) {
+      if (nextLesson.id == -1) {
         // Load the next section's lessons first
-        await loadSectionOnDemand(nextLesson.sectionId!);
+        await loadSectionOnDemand(nextLesson.sectionId);
         
         // Now find the actual next lesson again
         final actualNextLesson = findNextLesson();
@@ -763,7 +760,7 @@ class LearningController extends GetxController implements GetxService {
     // Find first incomplete lesson or start from beginning
     for (var section in sections) {
       if (section.lessons.isEmpty) {
-        await loadSectionOnDemand(section.id ?? 0);
+        await loadSectionOnDemand(section.id);
       }
       for (var lesson in section.lessons) {
         if (!(lessonCompletionStatus[lesson.id] ?? false)) {
@@ -799,7 +796,7 @@ class LearningController extends GetxController implements GetxService {
               return previousSection.lessons.last;
             }
             // If previous section exists but has no lessons loaded
-            if (previousSection.id != null) {
+            {
               // Return a placeholder to indicate navigation is possible
               return LLMSLessonModel(
                 id: -2, // Special ID to indicate "load previous section"
@@ -864,7 +861,7 @@ class LearningController extends GetxController implements GetxService {
             }
             // If next section has no lessons loaded but exists, we still have a next lesson
             // Return a placeholder to indicate navigation is possible
-            if (nextSection.id != null) {
+            {
               // We'll load the lessons when navigating
               return LLMSLessonModel(
                 id: -1, // Special ID to indicate "load next section"

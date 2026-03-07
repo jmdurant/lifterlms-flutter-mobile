@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -10,7 +9,6 @@ import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({Key? key}) : super(key: key);
@@ -216,10 +214,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                             await value.removeFromWishlist(
                                                 course.id),
                                             // Refresh other screens if needed
-                                            if (homeController.onInit != null)
-                                              homeController.onInit(),
-                                            if (courseController.onInit != null)
-                                              courseController.onInit(),
+                                            homeController.onInit(),
+                                            courseController.onInit(),
                                           },
                                     hideCategory: true,
                                           );

@@ -8,9 +8,7 @@ import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/profile/my-order-screen.dart';
-import 'package:flutter_app/app/view/components/profile/profile-screen.dart';
 import 'package:get/get.dart';
-import 'package:flutter_app/app/util/theme.dart';
 
 import 'components/profile/settings-screen.dart';
 import 'my_certificates.dart';
@@ -56,18 +54,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       curve: Curves.easeInOut,
     );
     _currentPage = 0;
-  }
-
-  Widget _buildDot(int index) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 5),
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: _currentPage == index ? Colors.blue : Colors.grey,
-      ),
-    );
   }
 
   @override

@@ -15,7 +15,6 @@ import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 
 import 'package:indexed/indexed.dart';
 import 'package:flutter_app/app/config/branding_config.dart';
-import 'dart:io' show Platform;
 
 class HomeScreen extends StatefulWidget {
   HomeScreen({Key? key}) : super(key: key);
@@ -57,7 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isAndroid = Platform.isAndroid;
     return GetBuilder<HomeController>(
       builder: (value) {
         // User validation moved to controller initialization for better performance

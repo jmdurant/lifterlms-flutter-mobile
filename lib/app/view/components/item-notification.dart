@@ -14,7 +14,7 @@ class ItemNotification extends StatelessWidget {
   ItemNotification({super.key, required this.item, this.onDelete});
 
   void onNavigate() {}
-  var screenWidth =
+  final screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);
 
   @override

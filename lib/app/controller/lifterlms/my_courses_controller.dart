@@ -53,8 +53,6 @@ class MyCoursesController extends GetxController {
   // Cache management
   DateTime? _lastFetchTime;
   final Duration _cacheExpiry = const Duration(minutes: 5);
-  bool _isInitialLoad = true;
-  
   @override
   void onInit() {
     super.onInit();
@@ -97,7 +95,6 @@ class MyCoursesController extends GetxController {
       // Only show loading spinner for initial load or forced refresh when no cache exists
       await loadMyCourses(isRefresh: forceRefresh);
       _lastFetchTime = DateTime.now();
-      _isInitialLoad = false;
     }
   }
   
@@ -331,117 +328,6 @@ class MyCoursesController extends GetxController {
       }
     } catch (_) {
       // Silently handle error
-    }
-  }
-  
-  /// Process enrollment data (legacy method for compatibility)
-  Future<void> _processEnrollment(Map<String, dynamic> enrollment) async {
-    try {
-      final courseId = enrollment['post_id'] ?? enrollment['course_id'];
-      if (courseId == null) return;
-      
-      // Store enrollment data including status
-      enrollmentData[courseId] = enrollment;
-      
-      // Extract enrollment status for categorization
-      final enrollmentStatus = enrollment['status'] ?? 'enrolled';
-      
-      // Store enrollment status for categorization (don't fake progress)
-      if (enrollmentStatus == 'completed') {
-        courseProgress[courseId] = 100.0;
-      } else {
-        // Don't set fake progress - will fetch real progress if needed
-        courseProgress[courseId] = 0.0;
-      }
-      
-      var courseData;
-      
-      // Check if course data is embedded in the enrollment response
-      if (enrollment['_embedded'] != null) {
-        // Check for course first, then membership
-        if (enrollment['_embedded']['course'] != null &&
-            enrollment['_embedded']['course'].isNotEmpty) {
-          courseData = enrollment['_embedded']['course'][0];
-        } else if (enrollment['_embedded']['membership'] != null &&
-                   enrollment['_embedded']['membership'].isNotEmpty) {
-          // This is a membership, not a course - skip it
-          return;
-        }
-      } 
-      
-      if (courseData == null) {
-        // Fallback to fetching course details separately
-        final courseResponse = await lmsService.api.getCourse(courseId: courseId);
-        
-        if (courseResponse.statusCode == 404) {
-          return;
-        } else if (courseResponse.statusCode != 200) {
-          return;
-        }
-        courseData = courseResponse.body;
-      }
-      
-      if (courseData != null) {
-        
-        // Fetch featured image using oEmbed if needed
-        if (courseData['featured_media'] != null && courseData['featured_media'] != 0) {
-          final mediaId = courseData['featured_media'];
-          final permalink = courseData['permalink'];
-          
-          // Check cache first
-          final cachedUrl = mediaCache.getCachedUrl(mediaId);
-          if (cachedUrl != null) {
-            courseData['featured_image_url'] = cachedUrl;
-          } else if (permalink != null && permalink.isNotEmpty) {
-            // Fetch via oEmbed
-            try {
-              final oEmbedResponse = await lmsService.api.getOEmbedData(courseUrl: permalink);
-              
-              if (oEmbedResponse.statusCode == 200 && oEmbedResponse.body != null) {
-                final thumbnailUrl = oEmbedResponse.body['thumbnail_url'];
-                if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) {
-                  courseData['featured_image_url'] = thumbnailUrl;
-                  // Cache the URL
-                  mediaCache.cacheUrl(mediaId, thumbnailUrl);
-                }
-              }
-            } catch (_) {
-              // Silently handle error
-            }
-          }
-        }
-        
-        final course = LLMSCourseModel.fromJson(courseData);
-        
-        // Progress is already set from enrollment status above
-        // Only fetch detailed progress if needed for specific status
-        if (enrollmentStatus == 'enrolled' || enrollmentStatus == 'incomplete') {
-          // Optional: fetch actual progress percentage for in-progress courses
-          // await _getCourseProgress(course.id);
-        }
-        
-        // Add to all courses list
-        if (!_allCourses.any((c) => c.id == course.id)) {
-          _allCourses.add(course);
-        }
-      }
-    } catch (_) {
-      // Silently handle error
-    }
-  }
-  
-  /// Get progress for a specific course (now integrated into fetch)
-  Future<void> _getCourseProgress(int courseId) async {
-    try {
-      final response = await lmsService.getCourseProgress(courseId);
-      
-      if (response.statusCode == 200 && response.body != null) {
-        final progressData = response.body;
-        final progress = (progressData['progress'] ?? 0).toDouble();
-        courseProgress[courseId] = progress;
-      }
-    } catch (e) {
-      courseProgress[courseId] = 0.0;
     }
   }
   
@@ -749,7 +635,6 @@ class MyCoursesController extends GetxController {
   /// Clear cache and reload
   void clearCache() {
     _lastFetchTime = null;
-    _isInitialLoad = true;
     loadMyCoursesWithCache(forceRefresh: true);
   }
   

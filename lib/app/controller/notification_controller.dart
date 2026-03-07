@@ -24,7 +24,6 @@ class NotificationController extends GetxController implements GetxService {
   bool isLoadingMore = true;
   int _page = 1;
   final int _pageSize = 10;
-  final int _totalPages = 10;
 
   NotificationController({
     required this.sharedPreferencesManager,

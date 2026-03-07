@@ -4,7 +4,6 @@ import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_quiz_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
-import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';

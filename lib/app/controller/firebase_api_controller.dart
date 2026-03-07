@@ -27,7 +27,6 @@ class FirebaseApiController extends GetxController {
 
   final _firebaseMessaging = FirebaseMessaging.instance;
 
-  @override
   void initState() {
     NotificationLocalController.initialize(flutterLocalNotificationsPlugin);
   }

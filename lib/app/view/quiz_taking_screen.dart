@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/app/view/components/quiz/quiz_question_widget.dart';
 
@@ -64,7 +62,7 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
           if (data['time_limit'] != null && data['time_limit'] > 0) {
             _startTimer(data['time_limit'] * 60);
           }
-        } catch (e, stackTrace) {
+        } catch (e) {
           setState(() {
             isLoading = false;
           });
@@ -158,7 +156,7 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
             submissionAnswer = [answer.toString()];
           } else if (answer is List) {
             // Already an array, ensure all elements are strings
-            submissionAnswer = (answer as List).map((e) => e.toString()).toList();
+            submissionAnswer = answer.map((e) => e.toString()).toList();
           } else {
             // No answer - send empty array
             submissionAnswer = [];
@@ -167,7 +165,7 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
         // Reorder questions need comma-separated string
         else if (question['type'] == 'reorder') {
           if (answer is List) {
-            submissionAnswer = (answer as List).join(',');
+            submissionAnswer = answer.join(',');
           } else if (answer != null) {
             submissionAnswer = answer.toString();
           } else {
@@ -195,7 +193,7 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
           if (answer != null) {
             // Check if multiple blanks (answer would be comma-separated)
             if (answer is List) {
-              submissionAnswer = (answer as List).join(',');
+              submissionAnswer = answer.join(',');
             } else {
               // Single blank - send as array
               submissionAnswer = [answer.toString()];

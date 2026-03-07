@@ -119,8 +119,7 @@ class LearningResult extends StatelessWidget {
                             color: Colors.black,
                             fontWeight: FontWeight.w500,
                             fontSize: 16)),
-                    Text((data.results?.results['question_count']).toString() ??
-                        '',style: TextStyle(fontFamily: 'semibold')),
+                    Text((data.results?.results['question_count']).toString(),style: TextStyle(fontFamily: 'semibold')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -134,8 +133,7 @@ class LearningResult extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                             fontSize: 16)),
                     Text((data.results?.results['question_correct'])
-                            .toString() ??
-                        '',style: TextStyle(fontFamily: 'semibold')),
+                            .toString(),style: TextStyle(fontFamily: 'semibold')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -148,7 +146,7 @@ class LearningResult extends StatelessWidget {
                             color: Colors.black,
                             fontWeight: FontWeight.w500,
                             fontSize: 16)),
-                    Text((data.results?.results['question_wrong']).toString() ?? '',style: TextStyle(fontFamily: 'semibold'),),
+                    Text((data.results?.results['question_wrong']).toString(),style: TextStyle(fontFamily: 'semibold'),),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -161,8 +159,7 @@ class LearningResult extends StatelessWidget {
                             color: Colors.black,
                             fontWeight: FontWeight.w500,
                             fontSize: 16)),
-                    Text((data.results?.results['question_empty']).toString() ??
-                        '',style: TextStyle(fontFamily: 'semibold')),
+                    Text((data.results?.results['question_empty']).toString(),style: TextStyle(fontFamily: 'semibold')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -175,7 +172,7 @@ class LearningResult extends StatelessWidget {
                             color: Colors.black,
                             fontWeight: FontWeight.w500,
                             fontSize: 16)),
-                    Text((data.results?.results['user_mark']).toString() ?? '',style: TextStyle(fontFamily: 'semibold')),
+                    Text((data.results?.results['user_mark']).toString(),style: TextStyle(fontFamily: 'semibold')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -189,7 +186,7 @@ class LearningResult extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                             fontSize: 16)),
                     Text(
-                        (data.results?.results['time_spend']).toString() ?? '',style: TextStyle(fontFamily: 'semibold')),
+                        (data.results?.results['time_spend']).toString(),style: TextStyle(fontFamily: 'semibold')),
                   ],
                 ),
                 const SizedBox(height: 16),

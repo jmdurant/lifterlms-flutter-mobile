@@ -3,7 +3,6 @@ import 'package:flutter_app/app/controller/lifterlms/certificates_controller.dar
 import 'package:flutter_app/app/backend/services/lms_service.dart';
 import 'package:get/get.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 class CertificateDetailScreen extends StatefulWidget {
   const CertificateDetailScreen({Key? key}) : super(key: key);
@@ -14,7 +13,6 @@ class CertificateDetailScreen extends StatefulWidget {
 
 class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
   final CertificatesController controller = Get.find<CertificatesController>();
-  InAppWebViewController? _webViewController;
   bool isLoading = true;
   CertificateModel? certificate;
   String? certificateHtml;
@@ -274,7 +272,6 @@ class _CertificateDetailScreenState extends State<CertificateDetailScreen> {
                       ),
                     ),
                     onWebViewCreated: (controller) {
-                      _webViewController = controller;
                     },
                     onLoadStop: (controller, url) async {
                       // Inject JavaScript to auto-fit the certificate

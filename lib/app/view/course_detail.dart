@@ -5,14 +5,11 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:feather_icons/feather_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
-import 'package:flutter_app/app/backend/models/instructor-model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_instructor_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/course_detail_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
-import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/app/controller/lifterlms/payment_controller.dart';
-import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/accordion-lesson-lifterlms.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
@@ -20,11 +17,8 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:html/parser.dart' as HtmlParser;
 import 'package:get/get.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:indexed/indexed.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../helper/dialog_helper.dart';
 
 
 class CourseDetailScreen extends StatefulWidget {
@@ -46,12 +40,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   final PaymentController paymentController = Get.find<PaymentController>();
   final HomeController homeController = Get.find<HomeController>();
   final CourseDetailController courseDetailController = Get.find<CourseDetailController>();
-
-  void _launchUrl(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    }
-  }
 
   String _cleanCourseDescription(String content) {
     // Remove lesson links and navigation elements from course description
@@ -481,7 +469,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                       maxHeight: (250 / 375) * screenWidth,
                                     ),
                                     child: Image.network(
-                                      (value.course.value?.featuredImage?.isNotEmpty ?? false) &&
+                                      (value.course.value?.featuredImage.isNotEmpty ?? false) &&
                                               !value.course.value!.featuredImage.contains('placeholder')
                                           ? value.course.value!.featuredImage
                                           : "assets/images/placeholder-500x300.png",
@@ -586,7 +574,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                               if (value.course.value?.salePrice != null && 
                                                   (value.course.value?.salePrice ?? 0) > 0)
                                                 Text(
-                                                    '\$${value.course.value?.salePrice?.toStringAsFixed(2) ?? "0.00"}',
+                                                    '\$${value.course.value?.salePrice.toStringAsFixed(2) ?? "0.00"}',
                                                     style: TextStyle(
                                                       fontFamily: 'Poppins',
                                                       fontSize: 14,
@@ -610,7 +598,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                               if (value.course.value?.price != null && 
                                                   (value.course.value?.price ?? 0) > 0)
                                                 Text(
-                                                  '\$${value.course.value?.price?.toStringAsFixed(2) ?? "0.00"}',
+                                                  '\$${value.course.value?.price.toStringAsFixed(2) ?? "0.00"}',
                                                   style: TextStyle(
                                                     fontFamily: 'Poppins',
                                                     fontSize: 14,
@@ -641,7 +629,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                  '\$${value.course.value?.price?.toStringAsFixed(2) ?? '0.00'}',
+                                                  '\$${value.course.value?.price.toStringAsFixed(2) ?? '0.00'}',
                                                   // style: styles.price,
                                                 ),
                                             ],
@@ -682,7 +670,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                               const EdgeInsets.fromLTRB(16,10,16,0),
                                           alignment: Alignment.center,
                                           child: HtmlWidget(
-                                            _cleanCourseDescription(value.course.value?.content?.toString() ?? ''),
+                                            _cleanCourseDescription(value.course.value?.content.toString() ?? ''),
                                             textStyle: TextStyle(
                                               fontFamily: 'Poppins',
                                               fontSize: 14,
@@ -754,8 +742,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                 ),
                                 GestureDetector(
                                   onTap: () => onNaviInstructor(
-                                (value.course.value?.instructors?.isNotEmpty ?? false)
-                                  ? value.course.value?.instructors?.first
+                                (value.course.value?.instructors.isNotEmpty ?? false)
+                                  ? value.course.value?.instructors.first
                                   : null
                               ),
                                   child: Column(
@@ -791,7 +779,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                         ),
                                         Text(
                                           (value.instructors.isNotEmpty) 
-                                            ? value.instructors.first.displayName ?? value.instructors.first.name ?? 'Unknown' 
+                                            ? value.instructors.first.displayName
                                             : 'Loading...',
                                           style: const TextStyle(
                                               fontFamily: 'medium',

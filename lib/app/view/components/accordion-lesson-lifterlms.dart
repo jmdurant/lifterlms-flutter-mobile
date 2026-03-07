@@ -2,8 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
-import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
-import 'package:flutter_app/app/view/components/item-lesson.dart';
 import 'package:get/get.dart';
 
 import '../../controller/lifterlms/course_detail_controller.dart';
@@ -27,13 +25,10 @@ class AccordionLessonLifterLMS extends StatefulWidget {
 }
 
 class _AccordionLifterLMSState extends State<AccordionLessonLifterLMS> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
   
   @override
   Widget build(BuildContext context) {
-    CourseDetailController value = Get.find();
-    
     if (widget.data == null || widget.data!.isEmpty) {
       return const Center(
         child: Text('No sections available'),

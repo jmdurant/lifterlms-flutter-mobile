@@ -5,7 +5,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
-import 'package:flutter_app/app/view/components/categories_course.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
@@ -28,7 +27,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double top = MediaQuery.of(context).viewPadding.top;
     return GetBuilder<CoursesController>(builder: (controller) {
       return Scaffold(
         key: _scaffoldKey,

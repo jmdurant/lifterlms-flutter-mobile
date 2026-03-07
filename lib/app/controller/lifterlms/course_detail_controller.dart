@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/api/lifterlms_api.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
@@ -12,8 +10,6 @@ import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/util/toast.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:html/parser.dart' as html_parser;
-import 'package:html/dom.dart' as dom;
 
 class CourseDetailController extends GetxController implements GetxService {
   final LMSService lmsService = LMSService.to;
@@ -55,10 +51,6 @@ class CourseDetailController extends GetxController implements GetxService {
   
   // Course ID
   int courseId = 0;
-  
-  // Cache management to prevent redundant loading
-  DateTime? _lastSectionsFetch;
-  final Duration _sectionsCacheExpiry = const Duration(minutes: 10);
   
   @override
   void onInit() {
@@ -239,115 +231,6 @@ class CourseDetailController extends GetxController implements GetxService {
   }
   */
   
-  /// Parse course HTML content to extract structure immediately
-  void _parseCourseSyllabusFromHTML(String? htmlContent) {
-    if (htmlContent == null || htmlContent.isEmpty) return;
-    
-    try {
-      final document = html_parser.parse(htmlContent);
-      
-      // Clear existing sections for placeholder data
-      sections.clear();
-      
-      // Find all section titles
-      final sectionElements = document.querySelectorAll('h3.llms-section-title');
-      
-      for (var sectionElement in sectionElements) {
-        final sectionTitle = sectionElement.text.trim();
-        if (sectionTitle.isEmpty) continue;
-        
-        // Find lessons for this section
-        final lessons = <LLMSLessonModel>[];
-        var nextElement = sectionElement.nextElementSibling;
-        
-        while (nextElement != null && !nextElement.localName!.contains('h3')) {
-          // Look for lesson previews
-          final lessonLinks = nextElement.querySelectorAll('a.llms-lesson-link');
-          
-          for (var lessonLink in lessonLinks) {
-            final href = lessonLink.attributes['href'] ?? '';
-            final lessonTitleElement = lessonLink.querySelector('.llms-lesson-title');
-            final lessonTitle = lessonTitleElement?.text.trim() ?? '';
-            
-            if (lessonTitle.isNotEmpty) {
-              // Extract lesson ID from URL if possible
-              // URLs are like: /lesson/course-welcome-19/ where 19 is part of the slug
-              // We'll use 0 as placeholder since we can't reliably extract ID from slug
-              final lessonId = 0; // Will be updated when real data loads
-              
-              // Check for quiz/assignment indicators
-              final parentSection = lessonLink.parent?.parent;
-              final hasQuiz = parentSection?.querySelector('.llms-lesson-has-quiz') != null;
-              final hasAssignment = parentSection?.querySelector('.llms-lesson-has-assignment') != null;
-              
-              // Create placeholder lesson
-              final placeholderLesson = LLMSLessonModel(
-                id: lessonId,
-                title: lessonTitle,
-                content: '',
-                excerpt: '',
-                permalink: href,
-                slug: '',
-                status: 'publish',
-                courseId: courseId,
-                sectionId: 0, // Will be updated when real data loads
-                order: lessons.length + 1,
-                parentId: null,
-                postType: 'lesson',
-                drippingEnabled: false,
-                dripDays: 0,
-                dripDate: null,
-                dripMethod: null,
-                publicPreview: false,
-                points: 0,
-                hasQuiz: hasQuiz,
-                quizId: null,
-                requiresPassing: false,
-                requiresAssignment: hasAssignment,
-                assignmentId: null,
-                videoEmbed: null,
-                audioEmbed: null,
-                videoSrc: null,
-                audioSrc: null,
-                freeLesson: false,
-                isComplete: false,
-                completedDate: null,
-                progressPercentage: null,
-              );
-              
-              lessons.add(placeholderLesson);
-            }
-          }
-          
-          nextElement = nextElement.nextElementSibling;
-        }
-        
-        // Create placeholder section with lessons
-        if (lessons.isNotEmpty) {
-          final placeholderSection = LLMSSectionModel(
-            id: 0, // Will be updated when real data loads
-            title: sectionTitle,
-            courseId: courseId,
-            order: sections.length + 1,
-            parentId: courseId,
-            permalink: '',
-            postType: 'section',
-            lessons: lessons,
-          );
-          
-          sections.add(placeholderSection);
-        }
-      }
-      
-      
-      // Update UI immediately with placeholder data
-      update();
-      
-    } catch (_) {
-      // Silently handle error
-    }
-  }
-  
   /// Load course basic information
   Future<void> loadCourse() async {
     final response = await lmsService.api.getCourse(courseId: courseId);
@@ -432,7 +315,6 @@ class CourseDetailController extends GetxController implements GetxService {
         sections.add(sectionWithLessons);
       }
       
-      _lastSectionsFetch = DateTime.now();
     } catch (_) {
       // Silently handle error
     }
@@ -870,14 +752,14 @@ class CourseDetailController extends GetxController implements GetxService {
   
   /// Get course detail (main method)
   Future<void> getCourseDetail() async {
-    if (courseId == null) return;
-    
+    if (courseId == 0) return;
+
     try {
       isLoading.value = true;
       errorMessage.value = '';
-      
+
       // Get course details
-      final response = await lmsService.api.getCourse(courseId: courseId!);
+      final response = await lmsService.api.getCourse(courseId: courseId);
       
       if (response.statusCode == 200) {
         course.value = LLMSCourseModel.fromJson(response.body);

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_instructor_model.dart';
@@ -9,8 +8,6 @@ import 'package:flutter_app/app/backend/services/media_cache_service.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:get/get.dart';
-import 'package:loader_overlay/loader_overlay.dart';
-import '../../l10n/locale_keys.g.dart';
 
 class HomeController extends GetxController implements GetxService {
   final LMSService lmsService = LMSService.to;

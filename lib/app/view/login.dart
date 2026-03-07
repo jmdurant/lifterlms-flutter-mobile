@@ -37,7 +37,6 @@ class _LoginPageState extends State<LoginScreen> {
     });
   }
 
-  @override
   Size size = WidgetsBinding.instance.window.physicalSize;
   var screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);

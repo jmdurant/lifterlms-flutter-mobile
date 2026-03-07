@@ -36,14 +36,11 @@ class _PasswordState extends State<Password> {
     settingController = Get.find<SettingsController>();
   }
   
-  @override
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     
     return Scaffold(
         key: _scaffoldKey,

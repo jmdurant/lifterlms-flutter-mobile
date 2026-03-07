@@ -183,8 +183,7 @@ class _Profile extends State<Profile> {
                                           ),
                                           if (value.bio.value.isNotEmpty)
                                             Text(
-                                                value.bio.value ??
-                                                    '',
+                                                value.bio.value,
                                                 style: TextStyle(
                                                     fontSize: 14,
                                                     color:

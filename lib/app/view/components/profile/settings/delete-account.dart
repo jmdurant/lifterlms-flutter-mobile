@@ -17,7 +17,6 @@ class _DeleteAccountState extends State<DeleteAccount> {
   bool _isVisible = false;
   final SettingsController settingController = Get.find<SettingsController>();
 
-  @override
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   var screenWidth =

@@ -23,11 +23,6 @@ class ReviewQuiz extends StatefulWidget {
 }
 
 class _ReviewQuizState extends State<ReviewQuiz> {
-  static ReviewQuiz createWithData(
-      LearningLessonModel data, OnNavigateCallback onClose) {
-    return ReviewQuiz(data: data, onClose: onClose);
-  }
-
   final courseStore = Get.find<CourseStoreController>();
   var screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);

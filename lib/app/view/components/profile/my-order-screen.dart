@@ -28,9 +28,9 @@ class MyOrderScreen extends StatelessWidget {
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  var screenWidth =
+  final screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
+  final screenHeight =
       (window.physicalSize.longestSide / window.devicePixelRatio);
 
   Widget renderHeader(BuildContext context) {

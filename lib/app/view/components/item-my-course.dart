@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
-import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 
 class ItemMyCourse extends StatelessWidget {
@@ -22,7 +21,7 @@ class ItemMyCourse extends StatelessWidget {
     this.onDetail,
   });
 
-  var screenWidth =
+  final screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);
 
   @override

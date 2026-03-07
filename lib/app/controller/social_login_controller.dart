@@ -1,12 +1,8 @@
-import 'dart:async';
 
 import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
-import 'package:flutter_app/app/helper/dialog_helper.dart';
 import 'package:flutter_app/app/util/constant.dart';
 import 'package:get/get.dart';
-import '../env.dart';
-import '../helper/router.dart';
 
 class SocialLoginController extends GetxController {
   final SharedPreferencesManager sharedPreferencesManager = Get.find();

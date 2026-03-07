@@ -4,7 +4,6 @@ import 'package:flutter_app/app/controller/tabs_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:get/get.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({Key? key}) : super(key: key);

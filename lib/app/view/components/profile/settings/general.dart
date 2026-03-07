@@ -32,8 +32,6 @@ class _GeneralAccountState extends State<GeneralAccount> {
 
     var screenWidth =
         (window.physicalSize.shortestSide / window.devicePixelRatio);
-    var screenHeight =
-        (window.physicalSize.longestSide / window.devicePixelRatio);
 
     return GetBuilder<SettingsController>(builder: (value) {
       return Scaffold(

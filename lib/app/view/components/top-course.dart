@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
-import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
@@ -14,8 +13,7 @@ class TopCourse extends StatelessWidget {
   TopCourse({super.key, required this.topCoursesList});
 
   void onNavigate() {}
-  final HomeController _controller = Get.find();
-  
+
   String _formatPrice(double price) {
     if (price == 0) return tr(LocaleKeys.free);
     return "\$${price.toStringAsFixed(2)}";

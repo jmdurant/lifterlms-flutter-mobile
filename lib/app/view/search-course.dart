@@ -14,8 +14,6 @@ class SearchCourseScreen extends StatefulWidget {
 }
 
 class _SearchCourseScreenState extends State<SearchCourseScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   var screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);
   var screenHeight =

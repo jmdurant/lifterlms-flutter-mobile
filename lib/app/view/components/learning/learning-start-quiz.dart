@@ -1,17 +1,12 @@
 import 'dart:ui';
 
-import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/controller/quiz_state_controller.dart';
 import 'package:flutter_app/app/backend/models/learning-lesson-model.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
-import 'package:flutter_app/app/view/components/countdown.dart';
-import 'package:flutter_app/app/view/components/uptime.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
 
-import '../../../../l10n/locale_keys.g.dart';
 
 class _LearningStartQuiz extends State<LearningStartQuiz> {
   final courseStore = Get.find<CourseStoreController>();

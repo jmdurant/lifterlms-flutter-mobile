@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:flutter_app/app/util/theme.dart';
 
 void showToast(String message, {bool isError = true}) {
   HapticFeedback.lightImpact();

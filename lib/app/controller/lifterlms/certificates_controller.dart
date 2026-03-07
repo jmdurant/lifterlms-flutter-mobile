@@ -5,7 +5,6 @@ import 'package:flutter_app/app/helper/dialog_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/util/toast.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:convert';
@@ -341,7 +340,7 @@ $htmlContent
       } else {
         showToast('Failed to load certificate', isError: true);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       DialogHelper.hideLoading();
       showToast('Error loading certificate: $e', isError: true);
     }

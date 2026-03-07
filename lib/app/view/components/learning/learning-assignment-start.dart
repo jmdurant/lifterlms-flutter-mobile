@@ -7,7 +7,6 @@ import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../backend/models/lesson-model.dart';
 
@@ -24,32 +23,8 @@ class LearningAssignmentStart extends StatelessWidget {
 
   final courseStore = Get.find<CourseStoreController>();
 
-  void _launchUrl(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    void showReviewQuizModal() {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-              insetPadding: EdgeInsets.zero,
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: Text(
-                  tr(LocaleKeys.learningScreen_assignment_timeRemaining),
-                  style: TextStyle(fontFamily: "medium", fontSize: 12),
-                ),
-              ));
-        },
-      );
-    }
-
     return GetBuilder<LearningController>(builder: (value) {
       return Column(
         children: [

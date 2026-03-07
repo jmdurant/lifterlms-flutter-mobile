@@ -9,7 +9,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/intro_controller.dart';
-import 'package:flutter_app/app/util/theme.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({Key? key}) : super(key: key);

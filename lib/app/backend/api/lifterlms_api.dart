@@ -48,15 +48,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     return headers;
   }
 
-  // Alternative: Use header-based auth
-  Map<String, String> _getAuthHeaders() {
-    return {
-      'X-LLMS-Consumer-Key': consumerKey,
-      'X-LLMS-Consumer-Secret': consumerSecret,
-      'Content-Type': 'application/json',
-    };
-  }
-  
   // GET Course Categories (WordPress taxonomy)
   @override
   Future<Response> getCategories({Map<String, dynamic>? params}) async {

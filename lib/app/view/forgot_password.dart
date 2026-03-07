@@ -1,7 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/forgot_password_controller.dart';
-import 'package:flutter_app/app/controller/lifterlms/login_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
@@ -22,7 +21,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordScreen> {
     });
   }
 
-  @override
   Size size = WidgetsBinding.instance.window.physicalSize;
   var screenWidth =
   (window.physicalSize.shortestSide / window.devicePixelRatio);

@@ -1,25 +1,12 @@
 import 'dart:ui';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
-import 'package:flutter_app/l10n/locale_keys.g.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
-import 'package:rflutter_alert/rflutter_alert.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../countdown.dart';
-import 'learning-assignment-result.dart';
 
 class _LearningAssignment extends State<LearningAssignment> {
-  void _launchUrl(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    }
-  }
-
   final courseStore = Get.find<CourseStoreController>();
   var screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);

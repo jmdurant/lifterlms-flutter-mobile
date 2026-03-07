@@ -119,9 +119,9 @@ class _ItemLessonState extends State<ItemLessonAccordion> {
                             width: screenWidth * 0.7,
                             padding: const EdgeInsets.fromLTRB(14, 4, 10, 4),
                             child: Opacity(
-                                opacity: (courseStore.detail?.status ==
+                                opacity: (courseStore.detail.value?.status ==
                                                 'finished' ||
-                                            courseStore.detail?.status == '') &&
+                                            courseStore.detail.value?.status == '') &&
                                         widget.item.items![i].preview == null
                                     ? 0.5
                                     : 1.0,

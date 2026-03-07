@@ -1,5 +1,4 @@
 import 'package:flutter_app/app/backend/api/lifterlms_api.dart';
-import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/config/lms_config.dart';
 import 'package:flutter_app/app/util/secure_storage.dart';
 import 'package:get/get.dart';

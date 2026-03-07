@@ -152,7 +152,7 @@ class _LearningLessonState extends State<LearningLesson> {
               fontWeight: FontWeight.w300,
             ),
           )),
-        if (widget.data.content != null && pdfUrl == null)
+        if (pdfUrl == null)
           Container(
             padding: EdgeInsets.symmetric(horizontal: 15),
             child: HtmlWidget(
@@ -166,7 +166,7 @@ class _LearningLessonState extends State<LearningLesson> {
               ),
             ),
           ),
-        if (widget.data.content != null && pdfUrl != null)
+        if (pdfUrl != null)
           Container(
             height: MediaQuery.of(context).size.height * 0.8,
             child: SfPdfViewer.network(pdfUrl,key: _pdfViewerKey,),

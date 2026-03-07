@@ -174,7 +174,7 @@ class LLMSCourseModel {
       passingPercentage: (json['passing_percentage'] ?? 70).toDouble(),
       hasCertificate: json['has_certificate'] ?? false,
     );
-    } catch (e, stack) {
+    } catch (e) {
       rethrow;
     }
   }

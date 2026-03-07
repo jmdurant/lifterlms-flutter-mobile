@@ -1,11 +1,9 @@
 import 'dart:math';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_category_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/tabs_controller.dart';
-import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 
 // ignore: must_be_immutable
