@@ -6,13 +6,13 @@ import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:flutter_app/app/util/constant.dart';
 import 'package:get/get.dart';
 
-import '../mobx-store/session_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
 import 'login_parse.dart';
 
 class SettingsParser {
   final SharedPreferencesManager sharedPreferencesManager;
   final ApiService apiService;
-  final SessionStore sessionStore;
+  final SessionController sessionStore;
 
   SettingsParser({required this.apiService, required this.sharedPreferencesManager, required this.sessionStore});
 

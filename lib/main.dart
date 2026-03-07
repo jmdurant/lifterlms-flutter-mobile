@@ -3,9 +3,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
+import 'package:flutter_app/app/controller/quiz_state_controller.dart';
 import 'package:flutter_app/app/controller/language_controller.dart';
 import 'package:flutter_app/app/controller/theme_controller.dart';
 import 'package:flutter_app/app/util/theme.dart';
@@ -34,9 +34,7 @@ import 'package:flutter_app/app/controller/firebase_api_controller.dart';
 import 'package:flutter_app/app/util/constant.dart';
 import 'package:flutter_app/app/util/init.dart';
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
 import 'package:loader_overlay/loader_overlay.dart';
-import 'package:provider/provider.dart';
 
 
 void main() async {
@@ -45,9 +43,9 @@ void main() async {
   await EasyLocalization.ensureInitialized();
 
   await MainBinding().dependencies();
-  setupLocator();
-  Get.put<WishlistStore>(WishlistStore());
-  Get.put<SessionStore>(SessionStore());
+  Get.put(SessionController(), permanent: true);
+  Get.put(CourseStoreController(), permanent: true);
+  Get.put(QuizStateController(), permanent: true);
   
   // Initialize Theme Controller
   Get.put(ThemeController());
@@ -82,14 +80,7 @@ void main() async {
     await FirebaseApiController().initNotifications();
   }
   runApp(EasyLocalization(
-    child: MultiProvider(
-      providers: [
-        Provider<SessionStore>(
-          create: (_) => SessionStore(),
-        ),
-      ],
-      child: MyApp(),
-    ),
+    child: MyApp(),
     supportedLocales: [
       Locale('en', 'US'),
       Locale('es', 'ES'),
@@ -103,7 +94,7 @@ void main() async {
   ));
 }
 
-class MyApp extends WatchingWidget {
+class MyApp extends StatelessWidget {
 
   MyApp({super.key});
   // This widget is the root of your application.

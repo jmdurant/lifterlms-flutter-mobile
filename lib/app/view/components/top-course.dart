@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
+import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
@@ -8,8 +8,6 @@ import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-// import 'package:watch_it/watch_it.dart';
-
 class TopCourse extends StatelessWidget {
   final List<LLMSCourseModel> topCoursesList;
 
@@ -26,7 +24,7 @@ class TopCourse extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final CoursesController courseController = Get.find<CoursesController>();
-    final WishlistStore wishlistStore = Get.find<WishlistStore>();
+    final WishlistController wishlistStore = Get.find<WishlistController>();
     
     // Determine if we should use grid or horizontal scroll based on screen width
     final screenWidth = MediaQuery.of(context).size.width;
@@ -56,7 +54,7 @@ class TopCourse extends StatelessWidget {
     );
   }
   
-  Widget _buildGridView(BuildContext context, CoursesController courseController, WishlistStore wishlistStore) {
+  Widget _buildGridView(BuildContext context, CoursesController courseController, WishlistController wishlistStore) {
     final screenWidth = MediaQuery.of(context).size.width;
     final itemWidth = (screenWidth - 48) / 2; // 2 columns with padding
     
@@ -80,7 +78,7 @@ class TopCourse extends StatelessWidget {
     );
   }
   
-  Widget _buildHorizontalScrollView(CoursesController courseController, WishlistStore wishlistStore) {
+  Widget _buildHorizontalScrollView(CoursesController courseController, WishlistController wishlistStore) {
     return Container(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -103,7 +101,7 @@ class TopCourse extends StatelessWidget {
     );
   }
   
-  Widget _buildCourseImageStack(int index, CoursesController courseController, WishlistStore wishlistStore, double width) {
+  Widget _buildCourseImageStack(int index, CoursesController courseController, WishlistController wishlistStore, double width) {
     return Stack(
       children: [
         Container(
@@ -284,7 +282,7 @@ class TopCourse extends StatelessWidget {
     );
   }
   
-  Widget _buildCourseCard(int index, CoursesController courseController, WishlistStore wishlistStore, double width) {
+  Widget _buildCourseCard(int index, CoursesController courseController, WishlistController wishlistStore, double width) {
     final bool isGridView = width < 220; // Check if this is for grid view
     
     return GestureDetector(

@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/login_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/config/branding_config.dart';
@@ -8,13 +8,11 @@ import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'dart:ui';
 
-import 'package:watch_it/watch_it.dart';
-import 'package:provider/provider.dart';
 import 'package:auth_buttons/auth_buttons.dart';
 
 import '../controller/social_login_controller.dart';
 
-class LoginScreen extends WatchingStatefulWidget {
+class LoginScreen extends StatefulWidget {
   LoginScreen({Key? key}) : super(key: key);
 
   @override
@@ -53,7 +51,7 @@ class _LoginPageState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sessionStore = Provider.of<SessionStore>(context);
+    final sessionStore = Get.find<SessionController>();
 
     // Get the LifterLMS LoginController
     final LoginController loginController = Get.find<LoginController>();

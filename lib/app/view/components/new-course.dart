@@ -1,20 +1,18 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
+import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
-
-class NewCourse extends WatchingWidget {
+class NewCourse extends StatelessWidget {
   final List<LLMSCourseModel> newCoursesList;
 
   NewCourse({super.key, required this.newCoursesList});
 
-  final WishlistStore wishlistStore = Get.find<WishlistStore>();
+  final WishlistController wishlistStore = Get.find<WishlistController>();
 
   void onNavigate() {}
   

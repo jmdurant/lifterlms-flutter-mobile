@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:get/get.dart';
 // import 'package:flutter_app/app/backend/api/handler.dart';
 // import 'package:flutter_app/app/backend/models/language_model.dart';
 // import 'package:flutter_app/app/backend/models/settings_model.dart';
 // import 'package:flutter_app/app/backend/models/support_model.dart';
 import 'package:flutter_app/app/backend/parse/splash_parse.dart';
-import 'package:provider/provider.dart';
 // import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SplashController extends GetxController implements GetxService {
@@ -24,13 +21,7 @@ class SplashController extends GetxController implements GetxService {
   SplashController({required this.parser});
 
   Future<bool> initSharedData() {
-    // final WishlistStore wishlistStore = Get.find<WishlistStore>();
-    // final sessionStore = locator<SessionStore>();
-    var context = Get.context as BuildContext;
-
-    final sessionStore = Provider.of<SessionStore>(context);
-    // final wishlistStore = Provider.of<WishlistStore>(context);
-    // wishlistStore.initStore(parser.sharedPreferencesManager, parser.apiService);
+    final sessionStore = Get.find<SessionController>();
     sessionStore.initStore(parser.sharedPreferencesManager, parser.apiService);
     return parser.initAppSettings();
   }

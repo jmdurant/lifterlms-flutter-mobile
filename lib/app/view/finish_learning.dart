@@ -2,8 +2,7 @@ import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/app/view/components/learning/learning-assignment.dart';
 import 'package:flutter_app/app/view/components/learning/learning-lesson.dart';
@@ -11,10 +10,9 @@ import 'package:flutter_app/app/view/components/learning/learning-quiz.dart';
 import 'package:flutter_app/app/view/components/learning/learning-start-quiz.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
 import 'package:indexed/indexed.dart';
 
-class FinishLearningScreen extends WatchingStatefulWidget {
+class FinishLearningScreen extends StatefulWidget {
   FinishLearningScreen({Key? key}) : super(key: key);
 
   @override
@@ -23,7 +21,7 @@ class FinishLearningScreen extends WatchingStatefulWidget {
 
 class _FinishLearningState extends State<FinishLearningScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final courseStore = locator<CourseStore>();
+  final courseStore = Get.find<CourseStoreController>();
   var screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);
   var screenHeight =

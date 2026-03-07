@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
 import 'package:flutter_app/app/controller/lifterlms/forgot_password_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/login_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
@@ -8,10 +7,7 @@ import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'dart:ui';
 
-import 'package:watch_it/watch_it.dart';
-import 'package:provider/provider.dart';
-
-class ForgotPasswordScreen extends WatchingStatefulWidget {
+class ForgotPasswordScreen extends StatefulWidget {
   ForgotPasswordScreen({Key? key}) : super(key: key);
 
   @override

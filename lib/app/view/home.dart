@@ -12,12 +12,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
-import 'package:watch_it/watch_it.dart';
+
 import 'package:indexed/indexed.dart';
 import 'package:flutter_app/app/config/branding_config.dart';
 import 'dart:io' show Platform;
 
-class HomeScreen extends WatchingStatefulWidget {
+class HomeScreen extends StatefulWidget {
   HomeScreen({Key? key}) : super(key: key);
 
   @override

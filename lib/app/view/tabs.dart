@@ -14,12 +14,12 @@ import 'package:flutter_app/app/view/my_courses.dart';
 import 'package:flutter_app/app/view/my_profile.dart';
 import 'package:flutter_app/app/view/favorites_screen.dart';
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
+
 import 'dart:io' show Platform;
 
 import '../../l10n/locale_keys.g.dart';
 
-class TabScreen extends WatchingStatefulWidget {
+class TabScreen extends StatefulWidget {
   TabScreen({super.key});
 
   @override

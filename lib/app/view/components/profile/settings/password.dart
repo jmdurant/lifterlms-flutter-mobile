@@ -6,7 +6,7 @@ import 'package:flutter_app/app/controller/settings_controller.dart';
 import 'package:flutter_app/app/backend/parse/settings_parse.dart';
 import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'package:indexed/indexed.dart';
@@ -27,7 +27,7 @@ class _PasswordState extends State<Password> {
     super.initState();
     // Initialize SettingsController if not already registered
     if (!Get.isRegistered<SettingsParser>()) {
-      final sessionStore = Get.find<SessionStore>();
+      final sessionStore = Get.find<SessionController>();
       Get.lazyPut(() => SettingsParser(
         apiService: Get.find<ApiService>(),
         sharedPreferencesManager: Get.find<SharedPreferencesManager>(),
@@ -35,9 +35,9 @@ class _PasswordState extends State<Password> {
       ));
     }
     if (!Get.isRegistered<SettingsController>()) {
-      final sessionStore = Get.find<SessionStore>();
+      final sessionStore = Get.find<SessionController>();
       Get.lazyPut(() => SettingsController(
-        sessionStore: sessionStore, 
+        sessionStore: sessionStore,
         parser: Get.find<SettingsParser>()
       ));
     }

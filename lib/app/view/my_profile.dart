@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:ui';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/my_profile_controller.dart';
 import 'package:flutter_app/app/controller/settings_controller.dart';
 import 'package:flutter_app/app/backend/parse/settings_parse.dart';
@@ -13,12 +12,11 @@ import 'package:flutter_app/app/view/components/profile/my-order-screen.dart';
 import 'package:flutter_app/app/view/components/profile/profile-screen.dart';
 import 'package:get/get.dart';
 import 'package:flutter_app/app/util/theme.dart';
-import 'package:watch_it/watch_it.dart';
 
 import 'components/profile/settings-screen.dart';
 import 'my_certificates.dart';
 
-class MyProfileScreen extends WatchingStatefulWidget {
+class MyProfileScreen extends StatefulWidget {
   MyProfileScreen({Key? key}) : super(key: key);
 
   @override
@@ -41,7 +39,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     super.dispose();
   }
 
-  final sessionStore = locator<SessionStore>();
+  final sessionStore = Get.find<SessionController>();
 
   void _goToPage(int page) {
     _pageController.animateToPage(

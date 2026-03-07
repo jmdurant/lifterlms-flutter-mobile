@@ -1,23 +1,20 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/backend/models/learning-lesson-model.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
-import 'package:watch_it/watch_it.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../env.dart';
 
-class LearningAssignmentResult extends WatchingWidget {
+class LearningAssignmentResult extends StatelessWidget {
   final LessonsAssignment data;
 
   LearningAssignmentResult({super.key, required this.data});
 
-  final courseStore = locator<CourseStore>();
+  final courseStore = Get.find<CourseStoreController>();
 
   void _launchUrl(String url) async {
     if (await canLaunch(url)) {

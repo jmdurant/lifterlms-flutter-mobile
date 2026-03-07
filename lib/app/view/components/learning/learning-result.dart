@@ -1,20 +1,18 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/backend/models/learning-lesson-model.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/view/components/learning/review-quiz.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
-import 'package:watch_it/watch_it.dart';
+import 'package:get/get.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 
-class LearningResult extends WatchingWidget {
+class LearningResult extends StatelessWidget {
   final LearningLessonModel data;
   LearningResult({super.key, required this.data});
-  final courseStore = locator<CourseStore>();
+  final courseStore = Get.find<CourseStoreController>();
 
   @override
   Widget build(BuildContext context) {

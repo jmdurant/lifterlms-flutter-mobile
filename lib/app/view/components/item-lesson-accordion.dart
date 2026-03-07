@@ -1,9 +1,9 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
 import 'package:flutter_app/app/backend/models/lesson-model.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
+import 'package:get/get.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 import '../../controller/lifterlms/learning_controller.dart';
@@ -35,7 +35,7 @@ class ItemLessonAccordion extends StatefulWidget {
 }
 
 class _ItemLessonState extends State<ItemLessonAccordion> {
-  final courseStore = locator<CourseStore>();
+  final courseStore = Get.find<CourseStoreController>();
 
   // Show or hide the content
   bool _showContent = false;

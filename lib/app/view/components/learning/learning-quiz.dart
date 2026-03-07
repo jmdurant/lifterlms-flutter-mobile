@@ -1,23 +1,21 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_quiz_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
-import 'package:watch_it/watch_it.dart';
+import 'package:get/get.dart';
 
-class LearningQuiz extends WatchingWidget {
+class LearningQuiz extends StatelessWidget {
   final LLMSLessonModel data;
   final LLMSQuizModel dataQuiz;
 
   LearningQuiz({super.key, required this.data, required this.dataQuiz});
 
-  final courseStore = locator<CourseStore>();
+  final courseStore = Get.find<CourseStoreController>();
 
   @override
   Widget build(BuildContext context) {

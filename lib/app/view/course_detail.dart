@@ -4,9 +4,7 @@ import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:feather_icons/feather_icons.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
+import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/backend/models/instructor-model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_instructor_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/course_detail_controller.dart';
@@ -18,12 +16,10 @@ import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/accordion-lesson-lifterlms.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:html/parser.dart' as HtmlParser;
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:indexed/indexed.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,7 +27,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../helper/dialog_helper.dart';
 
 
-class CourseDetailScreen extends WatchingStatefulWidget {
+class CourseDetailScreen extends StatefulWidget {
   CourseDetailScreen({Key? key}) : super(key: key);
 
   @override
@@ -45,8 +41,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   var screenHeight =
       (window.physicalSize.longestSide / window.devicePixelRatio);
 
-  final courseStore = locator<CourseStore>();
-  final WishlistStore wishlistStore = Get.find<WishlistStore>();
+  final WishlistController wishlistStore = Get.find<WishlistController>();
   final CoursesController courseController = Get.find<CoursesController>();
   final PaymentController paymentController = Get.find<PaymentController>();
   final HomeController homeController = Get.find<HomeController>();

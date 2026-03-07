@@ -2,18 +2,15 @@ import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/backend/models/learning-lesson-model.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
 
-import 'package:watch_it/watch_it.dart';
-
 typedef OnNavigateCallback = void Function();
 
-class ReviewQuiz extends WatchingStatefulWidget {
+class ReviewQuiz extends StatefulWidget {
   final LearningLessonModel data;
   final OnNavigateCallback onClose;
 
@@ -31,7 +28,7 @@ class _ReviewQuizState extends State<ReviewQuiz> {
     return ReviewQuiz(data: data, onClose: onClose);
   }
 
-  final courseStore = locator<CourseStore>();
+  final courseStore = Get.find<CourseStoreController>();
   var screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);
   var screenHeight =

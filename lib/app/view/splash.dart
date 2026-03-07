@@ -1,17 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
 import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/splash_controller.dart';
 import 'package:flutter_app/app/env.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/util/theme.dart';
-import 'package:watch_it/watch_it.dart';
 // import 'package:flutter_app/app/util/toast.dart';
 
-class SplashScreen extends WatchingStatefulWidget {
+class SplashScreen extends StatefulWidget {
   SplashScreen({Key? key}) : super(key: key);
 
   @override

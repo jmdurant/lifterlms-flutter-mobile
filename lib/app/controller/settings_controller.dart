@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/app/backend/parse/settings_parse.dart';
 import 'package:flutter_app/app/controller/lifterlms/profile_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
@@ -19,7 +19,7 @@ import '../helper/dialog_helper.dart';
 import '../helper/router.dart';
 
 class SettingsController extends GetxController {
-  final SessionStore sessionStore;
+  final SessionController sessionStore;
   final SettingsParser parser;
   String st = "{}";
 

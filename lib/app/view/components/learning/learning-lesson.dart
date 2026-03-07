@@ -1,15 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/course_store.dart';
-import 'package:flutter_app/app/backend/mobx-store/init_store.dart';
+import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:fwfh_just_audio/fwfh_just_audio.dart';
 import 'package:fwfh_webview/fwfh_webview.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
-import 'package:watch_it/watch_it.dart';
+import 'package:get/get.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -24,7 +22,7 @@ class LearningLesson extends StatefulWidget {
 }
 
 class _LearningLessonState extends State<LearningLesson> {
-  final courseStore = locator<CourseStore>();
+  final courseStore = Get.find<CourseStoreController>();
   final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
   YoutubePlayerController? _youtubeController;
 

@@ -7,22 +7,15 @@ import 'package:flutter_app/app/util/constant.dart';
 import 'package:flutter_app/app/util/secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:jwt_decode/jwt_decode.dart';
-import 'package:mobx/mobx.dart';
 
-import '../../env.dart';
+import '../env.dart';
 
-part 'session_store.g.dart';
-
-class SessionStore = _SessionStore with _$SessionStore;
-
-abstract class _SessionStore with Store {
+class SessionController extends GetxController {
   SharedPreferencesManager? sharedPreferencesManager;
   ApiService? apiService;
 
-  @observable
-  String token = "";
-  @observable
-  UserInfoModel? userInfo;
+  final RxString token = ''.obs;
+  final Rxn<UserInfoModel> userInfo = Rxn<UserInfoModel>();
 
   void initStore(sharedPref, apiServiceTemp) {
     sharedPreferencesManager = sharedPref;
@@ -30,25 +23,23 @@ abstract class _SessionStore with Store {
     getUser();
   }
 
-  @action
   void setToken(value) {
-    token = value;
+    token.value = value;
   }
 
-  @action
   void setUserInfo(value) {
-    userInfo = value;
+    userInfo.value = value;
   }
 
   Future<void> getUser() async {
     final apiService = ApiService(appBaseUrl: Environments.apiBaseURL);
     String tokenTemp = await getToken();
     setToken(tokenTemp);
-    if (token == "") return;
-    Map<String, dynamic> payload = Jwt.parseJwt(token);
+    if (token.value == "") return;
+    Map<String, dynamic> payload = Jwt.parseJwt(token.value);
     String userId = payload["data"]["user"]["id"];
     Response response = await apiService.getPrivate(
-        AppConstants.getUser + "/" + userId, token, null);
+        AppConstants.getUser + "/" + userId, token.value, null);
     if (response.statusCode == 200) {
       UserInfoModel user = UserInfoModel.fromJson(response.body);
       saveUserInfo(user);
@@ -63,10 +54,12 @@ abstract class _SessionStore with Store {
   Future<String> getToken() async {
     return await SecureStorageService.getToken() ?? "";
   }
-  String getCurrentCoursesId(){
+
+  String getCurrentCoursesId() {
     return sharedPreferencesManager!.getString('overview') ?? "";
   }
-  String getFcmToken(){
+
+  String getFcmToken() {
     return sharedPreferencesManager!.getString('fcm_token') ?? "";
   }
 }

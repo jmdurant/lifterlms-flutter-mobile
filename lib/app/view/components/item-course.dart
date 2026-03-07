@@ -1,15 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/wishlist_store.dart';
+import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/backend/models/course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
-import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
-
 import '../../backend/parse/course_detail_parse.dart';
 import '../course_detail.dart';
 
@@ -86,7 +83,7 @@ class _WishlistHeartState extends State<WishlistHeart> {
   }
 }
 
-class ItemCourse extends WatchingWidget {
+class ItemCourse extends StatelessWidget {
   final dynamic item; // Can be CourseModel or LLMSCourseModel
   bool hideCategory = false;
   final CourseDetailParser courseDetailParser;
@@ -107,7 +104,7 @@ class ItemCourse extends WatchingWidget {
         arguments: [courseId], preventDuplicates: false);
   }
 
-  final WishlistStore wishlistStore = Get.find<WishlistStore>();
+  final WishlistController wishlistStore = Get.find<WishlistController>();
   
   // Get course ID for wishlist checking
   int _getCourseId() {

@@ -7,12 +7,12 @@ import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
+
 import 'package:indexed/indexed.dart';
 
 typedef OnNavigateCallback = void Function(int page);
 
-class SettingsScreen extends WatchingStatefulWidget {
+class SettingsScreen extends StatefulWidget {
   final PageController pageController;
   final OnNavigateCallback goBack;
   @override

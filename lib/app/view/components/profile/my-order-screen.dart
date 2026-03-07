@@ -3,19 +3,17 @@ import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/backend/mobx-store/session_store.dart';
+import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:watch_it/watch_it.dart';
 import 'package:indexed/indexed.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 typedef OnNavigateCallback = void Function(int page);
 
-class MyOrderScreen extends WatchingWidget {
+class MyOrderScreen extends StatelessWidget {
   final PageController pageController;
   final OnNavigateCallback goBack;
 
@@ -227,7 +225,7 @@ class MyOrderScreen extends WatchingWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sessionStore = Provider.of<SessionStore>(context);
+    final sessionStore = Get.find<SessionController>();
     List<Map<String, dynamic>> getData() {
       final data = sessionStore.userInfo?.tabs["orders"]["content"];
       final List<Map<String, dynamic>> result = [];
