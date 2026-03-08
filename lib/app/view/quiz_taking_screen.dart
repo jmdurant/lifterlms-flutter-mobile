@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
@@ -18,6 +19,9 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
   List<Map<String, dynamic>> questions = [];
   int? attemptId;
   bool isLoading = true;
+  Timer? _timer;
+  int _remainingSeconds = 0;
+  bool _hasTimeLimit = false;
   
   @override
   void initState() {
@@ -79,7 +83,33 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
   }
   
   void _startTimer(int seconds) {
-    // TODO: Implement countdown timer
+    _timer?.cancel();
+    setState(() {
+      _remainingSeconds = seconds;
+      _hasTimeLimit = true;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds <= 0) {
+        timer.cancel();
+        _submitQuiz();
+        return;
+      }
+      setState(() {
+        _remainingSeconds--;
+      });
+    });
+  }
+
+  String _formatTime(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
   
   void _onAnswerChanged(int questionId, dynamic answer) {
@@ -273,10 +303,13 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
                   onPressed: () {
                     Navigator.pop(context);
                     // Reset for retry
+                    _timer?.cancel();
                     setState(() {
                       answers.clear();
                       currentQuestionIndex = 0;
                       isLoading = true;
+                      _hasTimeLimit = false;
+                      _remainingSeconds = 0;
                     });
                     _startQuizAttempt();
                   },
@@ -340,7 +373,36 @@ class _QuizTakingScreenState extends State<QuizTakingScreen> {
       appBar: AppBar(
         title: Text(quiz.title),
         actions: [
-          // Timer widget if needed
+          if (_hasTimeLimit)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _remainingSeconds <= 60 ? Colors.red : Colors.black26,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.timer,
+                        size: 16,
+                        color: _remainingSeconds <= 60 ? Colors.white : Colors.white70),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatTime(_remainingSeconds),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _remainingSeconds <= 60 ? Colors.white : Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

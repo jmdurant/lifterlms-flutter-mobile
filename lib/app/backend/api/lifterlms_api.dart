@@ -414,22 +414,6 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
     }
   }
   
-  // Submit quiz attempt
-  Future<Response> submitQuizAttempt({
-    required int quizId, 
-    required int userId,
-    required Map<String, dynamic> answers,
-  }) async {
-    // Placeholder for future implementation
-    return const Response(
-      statusCode: 501,
-      statusText: 'Quiz submission not yet available',
-      body: {
-        'message': 'Quiz submission coming soon',
-      }
-    );
-  }
-
   // GET Instructors
   @override
   Future<Response> getInstructors({Map<String, dynamic>? params}) async {
@@ -1217,6 +1201,29 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       return parseResponse(response, url.toString());
     } catch (e) {
       // finish quiz error
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // Get quiz results for a completed attempt
+  @override
+  Future<Response> getQuizResults({
+    required int quizId,
+    required int attemptId,
+  }) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/quiz/attempt/$attemptId/results');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(Duration(seconds: timeoutInSeconds));
+
+      return parseResponse(response, url.toString());
+    } catch (e) {
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
