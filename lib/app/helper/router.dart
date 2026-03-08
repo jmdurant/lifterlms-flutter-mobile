@@ -44,6 +44,7 @@ import '../view/components/profile/settings/delete-account.dart';
 import '../view/components/profile/settings/general.dart';
 import '../view/components/profile/settings/language.dart';
 import '../view/components/profile/settings/password.dart';
+import '../view/components/profile/settings/site_connection.dart';
 import '../view/my_certificates.dart';
 import '../view/certificate_detail.dart';
 import '../view/certificate_viewer_screen.dart';
@@ -84,6 +85,7 @@ class AppRouter {
   static const String myCertificates = '/myCertificates';
   static const String certificateDetail = '/certificateDetail';
   static const String certificateViewer = '/certificateViewer';
+  static const String siteConnection = '/siteConnection';
 
   static String getInitialRoute() => initial;
   static String getSplashRoute() => splash;
@@ -120,6 +122,7 @@ class AppRouter {
   static String getMyCertificates() => myCertificates;
   static String getCertificateDetail() => certificateDetail;
   static String getCertificateViewer() => certificateViewer;
+  static String getSiteConnection() => siteConnection;
 
   static List<GetPage> routes = [
     // GetPage(
@@ -204,6 +207,11 @@ class AppRouter {
     GetPage(
         name: certificateViewer,
         page: () => CertificateViewerScreen(),
+        preventDuplicates: false
+    ),
+    GetPage(
+        name: siteConnection,
+        page: () => SiteConnection(),
         preventDuplicates: false
     ),
   ];

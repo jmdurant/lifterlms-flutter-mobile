@@ -30,6 +30,11 @@ class LMSService extends GetxService {
   int? get currentUserId => _currentUserId;
   String? get currentUserToken => _currentUserToken;
   bool get isLoggedIn => _currentUserId != null;
+
+  // Configuration getters
+  String get baseUrl => _baseUrl;
+  String get consumerKey => _consumerKey;
+  String get consumerSecret => _consumerSecret;
   
   /// Get current user (for compatibility)
   Map<String, dynamic>? get currentUser => _currentUserId != null 

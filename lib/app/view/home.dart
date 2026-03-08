@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
+import 'package:flutter_app/app/view/components/connection_error_widget.dart';
 
 import 'package:indexed/indexed.dart';
 import 'package:flutter_app/app/config/branding_config.dart';
@@ -188,6 +189,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             value.overview != null &&
                             value.overview["id"] != null)
                           Overview(overview: value.overview),
+                        if (value.hasError.value &&
+                            value.topCoursesList.isEmpty &&
+                            value.newCourseList.isEmpty)
+                          ConnectionErrorWidget(
+                            onRetry: () => value.refreshData(),
+                          )
+                        else ...[
                         Categories(
                           categoriesList: value.cateHomeList,
                         ),
@@ -197,6 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (value.newCourseList.isNotEmpty)
                           NewCourse(newCoursesList: value.newCourseList),
                         Instructors(instructorList: value.instructorList),
+                        ],
                         SizedBox(height: 60,)
                       ],
                     )),

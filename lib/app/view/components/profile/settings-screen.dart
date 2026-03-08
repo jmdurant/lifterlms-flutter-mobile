@@ -108,6 +108,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       InkWell(
                         borderRadius: BorderRadius.circular(8),
+                        onTap: () => Get.toNamed(AppRouter.siteConnection),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.dns,size: 18,),
+                                  SizedBox(width: 5,),
+                                  Text(
+                                      'Site Connection',
+                                      style: TextStyle(
+                                        fontFamily: 'medium',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 16,
+                                      ))
+                                ],
+                              ),
+                              Icon(
+                                Ionicons.chevron_forward_outline,
+                                size: 18,
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 8,),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
                         onTap: () => Get.toNamed(AppRouter.general),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),

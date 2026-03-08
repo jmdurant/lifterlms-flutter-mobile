@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
+import 'package:flutter_app/app/view/components/connection_error_widget.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'package:indexed/indexed.dart';
@@ -171,6 +172,17 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     }
                     
                     if (controller.hasError.value) {
+                      final isConnectionError = controller.errorMessage.value.contains('526') ||
+                          controller.errorMessage.value.contains('status 0') ||
+                          controller.errorMessage.value.contains('SocketException') ||
+                          controller.errorMessage.value.contains('Connection') ||
+                          controller.errorMessage.value.contains('connection') ||
+                          controller.errorMessage.value.contains('Failed to load courses');
+                      if (isConnectionError) {
+                        return ConnectionErrorWidget(
+                          onRetry: () => controller.getCourses(isRefresh: true),
+                        );
+                      }
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
