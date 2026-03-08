@@ -65,7 +65,13 @@ class _HomeScreenState extends State<HomeScreen> {
           key: _scaffoldKey,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           drawerEnableOpenDragGesture: false,
-          body: SingleChildScrollView(
+          body: (value.hasError.value &&
+                  value.topCoursesList.isEmpty &&
+                  value.newCourseList.isEmpty)
+              ? ConnectionErrorWidget(
+                  onRetry: () => value.refreshData(),
+                )
+              : SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: Stack(
               children: [
@@ -189,16 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             value.overview != null &&
                             value.overview["id"] != null)
                           Overview(overview: value.overview),
-                        if (value.hasError.value &&
-                            value.topCoursesList.isEmpty &&
-                            value.newCourseList.isEmpty)
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.5,
-                            child: ConnectionErrorWidget(
-                              onRetry: () => value.refreshData(),
-                            ),
-                          )
-                        else ...[
+                        ...[
                         Categories(
                           categoriesList: value.cateHomeList,
                         ),

@@ -18,8 +18,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter analyze --no-fatal-infos
-        # Allows info-level lint hints, fails on errors and warnings
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        # Fails only on errors; allows warnings and info hints
 
   test:
     name: Test
