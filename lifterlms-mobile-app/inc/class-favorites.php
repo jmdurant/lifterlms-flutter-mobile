@@ -75,8 +75,6 @@ class LLMS_Mobile_Favorites {
             
             require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
             dbDelta( $sql );
-            
-            error_log( 'LLMS Mobile: Created favorites table' );
         }
     }
     
@@ -204,8 +202,8 @@ class LLMS_Mobile_Favorites {
      */
     public function toggle_favorite( $request ) {
         $user_id = get_current_user_id();
-        $object_id = $request->get_param( 'object_id' );
-        $object_type = $request->get_param( 'object_type' );
+        $object_id = absint( $request->get_param( 'object_id' ) );
+        $object_type = sanitize_text_field( $request->get_param( 'object_type' ) );
         
         if ( $this->is_favorite( $user_id, $object_id, $object_type ) ) {
             return $this->remove_favorite_internal( $user_id, $object_id, $object_type );
@@ -218,21 +216,15 @@ class LLMS_Mobile_Favorites {
      * Add favorite
      */
     public function add_favorite( $request ) {
-        error_log( 'LLMS Favorites: add_favorite called' );
-        
         $user_id = get_current_user_id();
-        error_log( 'LLMS Favorites: Current user ID: ' . $user_id );
-        
+
         if ( ! $user_id ) {
-            error_log( 'LLMS Favorites: No user logged in' );
             return new WP_Error( 'not_logged_in', 'User not logged in', array( 'status' => 401 ) );
         }
-        
-        $object_id = $request->get_param( 'object_id' );
-        $object_type = $request->get_param( 'object_type' );
-        
-        error_log( 'LLMS Favorites: Object ID: ' . $object_id . ', Type: ' . $object_type );
-        
+
+        $object_id = absint( $request->get_param( 'object_id' ) );
+        $object_type = sanitize_text_field( $request->get_param( 'object_type' ) );
+
         return $this->add_favorite_internal( $user_id, $object_id, $object_type );
     }
     
@@ -241,8 +233,8 @@ class LLMS_Mobile_Favorites {
      */
     public function remove_favorite( $request ) {
         $user_id = get_current_user_id();
-        $object_id = $request->get_param( 'object_id' );
-        $object_type = $request->get_param( 'object_type' );
+        $object_id = absint( $request->get_param( 'object_id' ) );
+        $object_type = sanitize_text_field( $request->get_param( 'object_type' ) );
         
         return $this->remove_favorite_internal( $user_id, $object_id, $object_type );
     }
@@ -289,12 +281,20 @@ class LLMS_Mobile_Favorites {
             );
         }
         
+        // Batch-fetch all posts to avoid N+1 queries
+        $favorite_ids = wp_list_pluck( $favorites, 'object_id' );
+        $posts = get_posts( array(
+            'post__in'       => $favorite_ids,
+            'post_type'      => 'course',
+            'post_status'    => 'publish',
+            'posts_per_page' => count( $favorite_ids ),
+        ) );
+        $valid_post_ids = wp_list_pluck( $posts, 'ID' );
+
         $courses = array();
-        
+
         foreach ( $favorites as $favorite ) {
-            // Check if course post exists
-            $post = get_post( $favorite->object_id );
-            if ( ! $post || $post->post_type !== 'course' ) {
+            if ( ! in_array( intval( $favorite->object_id ), $valid_post_ids, true ) ) {
                 continue;
             }
             
@@ -380,31 +380,27 @@ class LLMS_Mobile_Favorites {
      */
     private function add_favorite_internal( $user_id, $object_id, $object_type ) {
         global $wpdb;
-        
-        error_log( "LLMS Favorites: Adding favorite - User: $user_id, Object: $object_id, Type: $object_type" );
-        
+
         try {
             // Ensure table exists
             $this->ensure_table_exists();
-            
+
             // Check if already favorited
             if ( $this->is_favorite( $user_id, $object_id, $object_type ) ) {
-                error_log( "LLMS Favorites: Already favorited" );
                 return array(
                     'success' => true,
                     'message' => 'Already favorited',
                     'is_favorite' => true,
                 );
             }
-            
+
             // Validate object exists
             if ( ! $this->validate_object( $object_id, $object_type ) ) {
-                error_log( "LLMS Favorites: Object validation failed for ID: $object_id, Type: $object_type" );
                 return new WP_Error( 'invalid_object', 'Invalid object ID or type', array( 'status' => 400 ) );
             }
         } catch ( Exception $e ) {
-            error_log( 'LLMS Favorites: Exception during validation - ' . $e->getMessage() );
-            return new WP_Error( 'validation_error', 'Validation error: ' . $e->getMessage(), array( 'status' => 500 ) );
+            llms_mobile_log( 'Favorites validation error: ' . $e->getMessage(), 'error' );
+            return new WP_Error( 'validation_error', 'Validation failed', array( 'status' => 500 ) );
         }
         
         // Add to favorites
@@ -420,11 +416,9 @@ class LLMS_Mobile_Favorites {
         );
         
         if ( $result === false ) {
-            error_log( "LLMS Favorites: Database error - " . $wpdb->last_error );
-            return new WP_Error( 'database_error', 'Failed to add favorite: ' . $wpdb->last_error, array( 'status' => 500 ) );
+            llms_mobile_log( 'Favorites DB error: ' . $wpdb->last_error, 'error' );
+            return new WP_Error( 'database_error', 'Failed to add favorite', array( 'status' => 500 ) );
         }
-        
-        error_log( "LLMS Favorites: Successfully added favorite" );
         
         // Trigger action hook
         do_action( 'llms_mobile_favorite_added', $user_id, $object_id, $object_type );
@@ -487,76 +481,29 @@ class LLMS_Mobile_Favorites {
      * Validate object exists
      */
     private function validate_object( $object_id, $object_type ) {
-        error_log( "LLMS Favorites: Validating object - ID: $object_id, Type: $object_type" );
-        
-        // Check if LifterLMS is active
         if ( ! class_exists( 'LifterLMS' ) ) {
-            error_log( 'LLMS Favorites: LifterLMS not found' );
             return false;
         }
-        
-        try {
-            switch ( $object_type ) {
-                case 'course':
-                    if ( ! class_exists( 'LLMS_Course' ) ) {
-                        error_log( 'LLMS Favorites: LLMS_Course class not found' );
-                        // Fallback to checking post existence
-                        $post = get_post( $object_id );
-                        return ( $post && $post->post_type === 'course' );
-                    }
-                    // LLMS_Course doesn't have exists() method, check the post directly
-                    $post = get_post( $object_id );
-                    $exists = ( $post && $post->post_type === 'course' );
-                    error_log( "LLMS Favorites: Course exists: " . ( $exists ? 'yes' : 'no' ) );
-                    return $exists;
-                    
-                case 'lesson':
-                    if ( ! class_exists( 'LLMS_Lesson' ) ) {
-                        error_log( 'LLMS Favorites: LLMS_Lesson class not found' );
-                        $post = get_post( $object_id );
-                        return ( $post && $post->post_type === 'lesson' );
-                    }
-                    // Check the post directly
-                    $post = get_post( $object_id );
-                    return ( $post && $post->post_type === 'lesson' );
-                    
-                case 'section':
-                    if ( ! class_exists( 'LLMS_Section' ) ) {
-                        error_log( 'LLMS Favorites: LLMS_Section class not found' );
-                        $post = get_post( $object_id );
-                        return ( $post && $post->post_type === 'section' );
-                    }
-                    // Check the post directly
-                    $post = get_post( $object_id );
-                    return ( $post && $post->post_type === 'section' );
-                    
-                default:
-                    error_log( "LLMS Favorites: Invalid object type: $object_type" );
-                    return false;
-            }
-        } catch ( Exception $e ) {
-            error_log( 'LLMS Favorites: Exception in validate_object - ' . $e->getMessage() );
+
+        $type_map = array(
+            'course'  => 'course',
+            'lesson'  => 'lesson',
+            'section' => 'section',
+        );
+
+        if ( ! isset( $type_map[ $object_type ] ) ) {
             return false;
         }
+
+        $post = get_post( $object_id );
+        return ( $post && $post->post_type === $type_map[ $object_type ] );
     }
     
     /**
      * Permission callback
      */
     public function check_permissions() {
-        $logged_in = is_user_logged_in();
-        $user_id = get_current_user_id();
-        
-        error_log( 'LLMS Favorites: Permission check - Logged in: ' . ( $logged_in ? 'yes' : 'no' ) . ', User ID: ' . $user_id );
-        
-        // Additional debug info
-        if ( ! $logged_in ) {
-            error_log( 'LLMS Favorites: Authentication failed - checking headers' );
-            $auth_header = isset( $_SERVER['HTTP_AUTHORIZATION'] ) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
-            error_log( 'LLMS Favorites: Auth header present: ' . ( ! empty( $auth_header ) ? 'yes' : 'no' ) );
-        }
-        
-        return $logged_in;
+        return is_user_logged_in();
     }
     
     /**

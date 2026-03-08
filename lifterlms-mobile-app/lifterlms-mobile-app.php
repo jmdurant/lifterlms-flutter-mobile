@@ -183,9 +183,8 @@ class LifterLMS_Mobile_App {
      */
     public function verify_receipt( $request ) {
         $receipt_data = $request->get_param( 'receipt-data' );
-        $is_ios = $request->get_param( 'is-ios' );
-        $course_id = $request->get_param( 'course-id' );
-        $platform = $request->get_param( 'platform' );
+        $is_ios = (bool) $request->get_param( 'is-ios' );
+        $course_id = sanitize_text_field( $request->get_param( 'course-id' ) );
         
         // Get current user
         $user_id = get_current_user_id();
@@ -248,9 +247,13 @@ class LifterLMS_Mobile_App {
      * Register device for push notifications
      */
     public function register_device( $request ) {
-        $device_token = $request->get_param( 'device_token' );
-        $platform = $request->get_param( 'platform' ); // ios or android
+        $device_token = sanitize_text_field( $request->get_param( 'device_token' ) );
+        $platform = sanitize_text_field( $request->get_param( 'platform' ) );
         $user_id = get_current_user_id();
+
+        if ( empty( $device_token ) || ! in_array( $platform, array( 'ios', 'android' ), true ) ) {
+            return new WP_Error( 'invalid_params', 'Invalid device token or platform', array( 'status' => 400 ) );
+        }
         
         if ( class_exists( 'LLMS_Mobile_Push_Notifications' ) ) {
             $push = new LLMS_Mobile_Push_Notifications();

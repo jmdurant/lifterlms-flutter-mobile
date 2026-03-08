@@ -224,7 +224,7 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
-        if ( $certificate->get_user_id() != $user_id ) {
+        if ( absint( $certificate->get_user_id() ) !== $user_id ) {
             return new WP_Error( 'unauthorized', 'Unauthorized access', array( 'status' => 403 ) );
         }
         
@@ -249,7 +249,7 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
-        if ( $certificate->get_user_id() != $user_id ) {
+        if ( absint( $certificate->get_user_id() ) !== $user_id ) {
             return new WP_Error( 'unauthorized', 'Unauthorized access', array( 'status' => 403 ) );
         }
         
@@ -321,7 +321,7 @@ class LLMS_Mobile_Certificate_Handler {
         $html .= '<h1 class="certificate-title">Certificate of Completion</h1>';
         $html .= '</div>';
         $html .= '<div class="certificate-content">';
-        $html .= $content;
+        $html .= wp_kses_post( $content );
         $html .= '</div>';
         $html .= '<div class="certificate-footer">';
         if ( $certificate->get( 'certificate_template_id' ) ) {
@@ -359,7 +359,7 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
-        if ( $certificate->get_user_id() != $user_id ) {
+        if ( absint( $certificate->get_user_id() ) !== $user_id ) {
             return new WP_Error( 'unauthorized', 'Unauthorized access', array( 'status' => 403 ) );
         }
         
@@ -382,7 +382,7 @@ class LLMS_Mobile_Certificate_Handler {
         $html .= '</style>';
         $html .= '</head><body>';
         $html .= '<div class="certificate">';
-        $html .= $content;
+        $html .= wp_kses_post( $content );
         $html .= '</div>';
         $html .= '</body></html>';
         
@@ -409,7 +409,7 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate = new LLMS_User_Certificate( $certificate_id );
         
         // Verify certificate belongs to user
-        if ( $certificate->get_user_id() != $user_id ) {
+        if ( absint( $certificate->get_user_id() ) !== $user_id ) {
             return new WP_Error( 'unauthorized', 'Unauthorized access', array( 'status' => 403 ) );
         }
         
@@ -600,11 +600,11 @@ class LLMS_Mobile_Certificate_Handler {
         $certificate_id = $certificate->get( 'id' );
         $data = array(
             'id' => $certificate_id,
-            'title' => $certificate->get( 'title' ),
+            'title' => sanitize_text_field( $certificate->get( 'title' ) ),
             'earned_date' => $certificate->get( 'earned_date' ),
             'course_id' => $certificate->get( 'parent' ),
-            'course_title' => get_the_title( $certificate->get( 'parent' ) ),
-            'preview_url' => get_permalink( $certificate_id ),
+            'course_title' => sanitize_text_field( get_the_title( $certificate->get( 'parent' ) ) ),
+            'preview_url' => esc_url( get_permalink( $certificate_id ) ),
             // For download, provide the API endpoint which returns proper URLs
             'download_url' => rest_url( 'llms/v1/mobile-app/certificate/' . $certificate_id . '/download' ),
         );

@@ -251,7 +251,11 @@ class LLMS_Mobile_Push_Notifications {
             $signature = '';
             $private_key = $service_account['private_key'];
             
-            openssl_sign( "$header_encoded.$claim_encoded", $signature, $private_key, 'sha256' );
+            $signed = openssl_sign( "$header_encoded.$claim_encoded", $signature, $private_key, 'sha256' );
+            if ( ! $signed ) {
+                error_log( 'LLMS Mobile: Failed to sign Firebase JWT with OpenSSL' );
+                return false;
+            }
             $signature_encoded = $this->base64url_encode( $signature );
             
             $jwt = "$header_encoded.$claim_encoded.$signature_encoded";

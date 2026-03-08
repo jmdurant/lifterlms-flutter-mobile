@@ -235,15 +235,22 @@ class LLMS_Mobile_Database {
      */
     public function get_user_devices( $user_id, $active_only = true ) {
         global $wpdb;
-        
+
         $table_name = $wpdb->prefix . 'llms_mobile_devices';
-        
-        $where = $active_only ? "AND active = 1" : "";
-        
-        return $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM $table_name WHERE user_id = %d $where ORDER BY last_active DESC",
-            $user_id
-        ) );
+
+        if ( $active_only ) {
+            $results = $wpdb->get_results( $wpdb->prepare(
+                "SELECT * FROM $table_name WHERE user_id = %d AND active = 1 ORDER BY last_active DESC",
+                $user_id
+            ) );
+        } else {
+            $results = $wpdb->get_results( $wpdb->prepare(
+                "SELECT * FROM $table_name WHERE user_id = %d ORDER BY last_active DESC",
+                $user_id
+            ) );
+        }
+
+        return is_array( $results ) ? $results : array();
     }
     
     /**
@@ -524,13 +531,13 @@ class LLMS_Mobile_Database {
      */
     public function cleanup_inactive_devices( $days = 90 ) {
         global $wpdb;
-        
+
         $table_name = $wpdb->prefix . 'llms_mobile_devices';
-        
-        $date = date( 'Y-m-d H:i:s', strtotime( "-$days days" ) );
-        
+        $days = absint( $days );
+        $date = gmdate( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+
         return $wpdb->query( $wpdb->prepare(
-            "DELETE FROM $table_name WHERE last_active < %s",
+            "DELETE FROM $table_name WHERE active = 0 AND last_active < %s",
             $date
         ) );
     }

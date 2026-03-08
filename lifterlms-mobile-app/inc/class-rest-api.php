@@ -76,8 +76,12 @@ class LLMS_Mobile_REST_API {
      * Check enrollment status with IAP info
      */
     public function check_enrollment( $request ) {
-        $course_id = $request->get_param( 'course_id' );
+        $course_id = absint( $request->get_param( 'course_id' ) );
         $user_id = get_current_user_id();
+
+        if ( ! $course_id ) {
+            return new WP_Error( 'invalid_course_id', 'Invalid course ID', array( 'status' => 400 ) );
+        }
         
         $is_enrolled = llms_is_user_enrolled( $user_id, $course_id );
         $is_iap = llms_mobile_is_course_iap( $course_id );
@@ -103,18 +107,28 @@ class LLMS_Mobile_REST_API {
      */
     public function get_user_mobile_data( $request ) {
         $user_id = get_current_user_id();
-        
+        $student = llms_get_student( $user_id );
+
+        $stats = array(
+            'courses_enrolled'  => 0,
+            'courses_completed' => 0,
+            'certificates'      => 0,
+            'achievements'      => 0,
+        );
+
+        if ( $student ) {
+            $stats['courses_enrolled']  = count( $student->get_enrolled_courses() );
+            $stats['courses_completed'] = count( $student->get_completed_courses() );
+            $stats['certificates']      = count( $student->get_certificates() );
+            $stats['achievements']      = count( $student->get_achievements() );
+        }
+
         return array(
-            'user_id' => $user_id,
-            'devices' => $this->get_user_devices_safe( $user_id ),
-            'push_enabled' => llms_mobile_user_has_app( $user_id ),
+            'user_id'       => $user_id,
+            'devices'       => $this->get_user_devices_safe( $user_id ),
+            'push_enabled'  => llms_mobile_user_has_app( $user_id ),
             'iap_purchases' => $this->get_user_iap_purchases( $user_id ),
-            'stats' => array(
-                'courses_enrolled' => count( llms_get_user( $user_id )->get_enrolled_courses() ),
-                'courses_completed' => count( llms_get_user( $user_id )->get_completed_courses() ),
-                'certificates' => count( llms_get_user( $user_id )->get_certificates() ),
-                'achievements' => count( llms_get_user( $user_id )->get_achievements() ),
-            ),
+            'stats'         => $stats,
         );
     }
     

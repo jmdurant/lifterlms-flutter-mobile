@@ -138,18 +138,18 @@ class LLMS_Mobile_Social_Login {
      * Verify Google login
      */
     public function verify_google( $request ) {
-        $id_token = $request->get_param( 'idToken' );
-        
+        $id_token = sanitize_text_field( $request->get_param( 'idToken' ) );
+
         try {
             // Verify token with Google
             $google_client_id = get_option( 'llms_mobile_google_client_id', '' );
-            
+
             if ( empty( $google_client_id ) ) {
                 throw new Exception( 'Google login not configured' );
             }
-            
+
             // Verify the ID token
-            $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . $id_token;
+            $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode( $id_token );
             $response = wp_remote_get( $url );
             
             if ( is_wp_error( $response ) ) {
@@ -164,13 +164,18 @@ class LLMS_Mobile_Social_Login {
                 throw new Exception( 'Invalid token audience' );
             }
             
-            if ( ! isset( $token_info['email'] ) ) {
-                throw new Exception( 'Email not provided' );
+            if ( ! isset( $token_info['email'] ) || ! is_email( $token_info['email'] ) ) {
+                throw new Exception( 'Valid email not provided' );
             }
-            
+
+            // Verify token is not expired
+            if ( isset( $token_info['exp'] ) && intval( $token_info['exp'] ) < time() ) {
+                throw new Exception( 'Token has expired' );
+            }
+
             // Get or create user
             $user_data = $this->get_or_create_user( array(
-                'email' => $token_info['email'],
+                'email' => sanitize_email( $token_info['email'] ),
                 'name' => isset( $token_info['name'] ) ? $token_info['name'] : '',
                 'provider' => 'google',
                 'provider_user_id' => $token_info['sub'],
@@ -241,10 +246,10 @@ class LLMS_Mobile_Social_Login {
             }
             
             // Get email from token or request
-            $user_email = ! empty( $payload->email ) ? $payload->email : $email;
-            
-            if ( empty( $user_email ) ) {
-                throw new Exception( 'Email not provided' );
+            $user_email = ! empty( $payload->email ) ? sanitize_email( $payload->email ) : sanitize_email( $email );
+
+            if ( ! is_email( $user_email ) ) {
+                throw new Exception( 'Valid email not provided' );
             }
             
             // Get or create user
@@ -430,13 +435,18 @@ class LLMS_Mobile_Social_Login {
             $user_body = wp_remote_retrieve_body( $user_response );
             $fb_user = json_decode( $user_body, true );
             
-            if ( ! isset( $fb_user['email'] ) ) {
-                throw new Exception( 'Email not provided by Facebook' );
+            if ( ! isset( $fb_user['email'] ) || ! is_email( $fb_user['email'] ) ) {
+                throw new Exception( 'Valid email not provided by Facebook' );
             }
-            
+
+            // Verify the token belongs to our app
+            if ( isset( $token_data['data']['app_id'] ) && $token_data['data']['app_id'] !== $fb_app_id ) {
+                throw new Exception( 'Token does not belong to this application' );
+            }
+
             // Get or create user
             $user_data = $this->get_or_create_user( array(
-                'email' => $fb_user['email'],
+                'email' => sanitize_email( $fb_user['email'] ),
                 'name' => isset( $fb_user['name'] ) ? $fb_user['name'] : '',
                 'provider' => 'facebook',
                 'provider_user_id' => $fb_user['id'],

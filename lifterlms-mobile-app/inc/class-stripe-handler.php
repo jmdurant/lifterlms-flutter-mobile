@@ -119,9 +119,9 @@ class LLMS_Mobile_Stripe_Handler {
      * Create payment intent
      */
     public function create_payment_intent( $request ) {
-        $course_id = $request->get_param( 'course_id' );
-        $access_plan_id = $request->get_param( 'access_plan_id' );
-        $coupon_code = $request->get_param( 'coupon_code' );
+        $course_id = absint( $request->get_param( 'course_id' ) );
+        $access_plan_id = absint( $request->get_param( 'access_plan_id' ) );
+        $coupon_code = sanitize_text_field( $request->get_param( 'coupon_code' ) );
         $user_id = get_current_user_id();
         
         try {
@@ -169,9 +169,10 @@ class LLMS_Mobile_Stripe_Handler {
             );
             
             $response = $this->stripe_request( 'POST', '/payment_intents', $intent_data, $secret_key );
-            
-            if ( isset( $response['error'] ) ) {
-                throw new Exception( $response['error']['message'] );
+
+            if ( ! is_array( $response ) || isset( $response['error'] ) ) {
+                $error_msg = isset( $response['error']['message'] ) ? $response['error']['message'] : 'Failed to create payment intent';
+                throw new Exception( $error_msg );
             }
             
             // Store payment intent in database for tracking
@@ -194,8 +195,8 @@ class LLMS_Mobile_Stripe_Handler {
      * Confirm payment and enroll user
      */
     public function confirm_payment( $request ) {
-        $payment_intent_id = $request->get_param( 'payment_intent_id' );
-        $course_id = $request->get_param( 'course_id' );
+        $payment_intent_id = sanitize_text_field( $request->get_param( 'payment_intent_id' ) );
+        $course_id = absint( $request->get_param( 'course_id' ) );
         $user_id = get_current_user_id();
         
         try {
@@ -217,8 +218,8 @@ class LLMS_Mobile_Stripe_Handler {
             }
             
             // Verify metadata matches
-            if ( $response['metadata']['user_id'] != $user_id || 
-                 $response['metadata']['course_id'] != $course_id ) {
+            if ( absint( $response['metadata']['user_id'] ) !== $user_id ||
+                 absint( $response['metadata']['course_id'] ) !== $course_id ) {
                 throw new Exception( 'Payment verification failed' );
             }
             
@@ -404,16 +405,26 @@ class LLMS_Mobile_Stripe_Handler {
      */
     public function handle_webhook( $request ) {
         $payload = $request->get_body();
-        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
+        $sig_header = $request->get_header( 'stripe_signature' );
         $endpoint_secret = get_option( 'llms_mobile_stripe_webhook_secret', '' );
-        
+
         try {
-            // Verify webhook signature
-            if ( $endpoint_secret ) {
-                $this->verify_webhook_signature( $payload, $sig_header, $endpoint_secret );
+            // Require webhook signature verification
+            if ( empty( $endpoint_secret ) ) {
+                return new WP_Error( 'webhook_not_configured', 'Webhook secret not configured', array( 'status' => 500 ) );
             }
-            
+
+            if ( empty( $sig_header ) ) {
+                return new WP_Error( 'missing_signature', 'Missing Stripe signature', array( 'status' => 400 ) );
+            }
+
+            $this->verify_webhook_signature( $payload, $sig_header, $endpoint_secret );
+
             $event = json_decode( $payload, true );
+
+            if ( ! is_array( $event ) || ! isset( $event['type'] ) ) {
+                return new WP_Error( 'invalid_payload', 'Invalid webhook payload', array( 'status' => 400 ) );
+            }
             
             // Handle the event
             switch ( $event['type'] ) {
@@ -594,9 +605,15 @@ class LLMS_Mobile_Stripe_Handler {
         }
         
         if ( ! $timestamp ) {
-            throw new Exception( 'Invalid webhook signature' );
+            throw new Exception( 'Invalid webhook signature: missing timestamp' );
         }
-        
+
+        // Reject webhooks older than 5 minutes to prevent replay attacks
+        $tolerance = 300;
+        if ( abs( time() - intval( $timestamp ) ) > $tolerance ) {
+            throw new Exception( 'Webhook timestamp too old' );
+        }
+
         $signed_payload = $timestamp . '.' . $payload;
         $expected_signature = hash_hmac( 'sha256', $signed_payload, $endpoint_secret );
         

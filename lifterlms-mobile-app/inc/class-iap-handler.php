@@ -199,7 +199,11 @@ class LLMS_Mobile_IAP_Handler {
                 return false;
             }
             
-            openssl_sign( "$header_encoded.$claim_encoded", $signature, $private_key, 'sha256' );
+            $signed = openssl_sign( "$header_encoded.$claim_encoded", $signature, $private_key, 'sha256' );
+            if ( ! $signed ) {
+                error_log( 'LLMS Mobile: Failed to sign Google JWT with OpenSSL' );
+                return false;
+            }
             $signature_encoded = $this->base64url_encode( $signature );
             
             $jwt = "$header_encoded.$claim_encoded.$signature_encoded";
