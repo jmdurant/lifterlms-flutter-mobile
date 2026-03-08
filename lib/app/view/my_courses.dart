@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/my_courses_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/item-my-course.dart';
+import 'package:flutter_app/app/view/components/login_required_widget.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
 import 'package:indexed/indexed.dart';
@@ -54,12 +55,6 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
     }
   }
 
-  void onLogin() {
-    Future.delayed(Duration.zero, () {
-      Get.toNamed(AppRouter.getLoginRoute());
-    });
-  }
-
   var screenWidth =
       (window.physicalSize.shortestSide / window.devicePixelRatio);
   var screenHeight =
@@ -101,44 +96,9 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
               children: <Widget>[
                 SizedBox(height: math.max(20, MediaQuery.of(context).viewPadding.top)),
                 !controller.lmsService.isLoggedIn
-                    ? Expanded(
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                tr(LocaleKeys.needLogin),
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 16,
-                                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                                ),
-                              ),
-                              SizedBox(
-                                height: 20,
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).primaryColor,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 10, horizontal: 30),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(5),
-                                  ),
-                                ),
-                                onPressed: onLogin,
-                                child: Text(
-                                  tr(LocaleKeys.login),
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                    ? const Expanded(
+                        child: LoginRequiredWidget(
+                          message: 'Sign in to view your enrolled courses',
                         ),
                       )
                     : Column(

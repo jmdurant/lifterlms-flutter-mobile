@@ -3,6 +3,7 @@ import 'package:flutter_app/app/controller/lifterlms/wishlist_controller.dart';
 import 'package:flutter_app/app/controller/tabs_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/view/components/item-course.dart';
+import 'package:flutter_app/app/view/components/login_required_widget.dart';
 import 'package:get/get.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -39,10 +40,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> with SingleTickerProv
     // This will call the API to get favorited lessons and sections
   }
   
-  void onLogin() {
-    Get.toNamed(AppRouter.getLoginRoute());
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,7 +135,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> with SingleTickerProv
     return GetBuilder<WishlistController>(
       builder: (controller) {
         if (!controller.lmsService.isLoggedIn) {
-          return _buildLoginPrompt('Sign in to save courses to your wishlist');
+          return const LoginRequiredWidget(
+            message: 'Sign in to save courses to your wishlist',
+          );
         }
         
         if (controller.isLoading.value && controller.wishlistCourses.isEmpty) {
@@ -265,49 +264,4 @@ class _FavoritesScreenState extends State<FavoritesScreen> with SingleTickerProv
     );
   }
   
-  Widget _buildLoginPrompt(String message) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.lock_outline,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            SizedBox(height: 24),
-            Text(
-              'Sign In Required',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: onLogin,
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text('Sign In'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
+import 'package:flutter_app/app/view/components/login_required_widget.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
@@ -35,12 +35,6 @@ class _Profile extends State<Profile> {
   @override
   void initState() {
     super.initState();
-  }
-
-  void onLogin() {
-    Future.delayed(Duration.zero, () {
-      Get.toNamed(AppRouter.getLoginRoute());
-    });
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -98,41 +92,8 @@ class _Profile extends State<Profile> {
                   ? Container(
                       width: screenWidth,
                       height: screenHeight * 0.7,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            tr(LocaleKeys.needLogin),
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 16,
-                              color: Theme.of(context).textTheme.bodyLarge?.color,
-                            ),
-                          ),
-                          SizedBox(
-                            height: 20,
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 30),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                            ),
-                            onPressed: onLogin,
-                            child: Text(
-                              tr(LocaleKeys.login),
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: const LoginRequiredWidget(
+                        message: 'Sign in to view your profile',
                       ),
                     )
                   : SingleChildScrollView(
