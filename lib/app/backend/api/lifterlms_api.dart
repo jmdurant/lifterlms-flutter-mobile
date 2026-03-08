@@ -788,7 +788,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
           'Session Expired',
           'Please log in again to continue',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.9),
+          backgroundColor: Colors.red.withValues(alpha: 0.9),
           colorText: Colors.white,
           duration: Duration(seconds: 3),
         );
@@ -799,7 +799,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         'Access Denied',
         body?['message'] ?? 'You do not have permission to access this resource',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.withOpacity(0.9),
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
         colorText: Colors.white,
         duration: Duration(seconds: 3),
       );

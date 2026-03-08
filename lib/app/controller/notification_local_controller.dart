@@ -3,7 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 class NotificationLocalController {
   static Future initialize(
       FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin) async {
-    var androidInitialize = new AndroidInitializationSettings(
+    var androidInitialize = AndroidInitializationSettings(
         'mipmap/ic_launcher');
     final DarwinInitializationSettings initializationSettingsDarwin =
     DarwinInitializationSettings(
@@ -14,7 +14,7 @@ class NotificationLocalController {
     var linuxInitialize = LinuxInitializationSettings(
       defaultActionName: 'Open notification',
     );
-    var initializationsSettings = new InitializationSettings(
+    var initializationsSettings = InitializationSettings(
         android: androidInitialize,
         iOS: initializationSettingsDarwin,
         linux: linuxInitialize);
@@ -26,7 +26,7 @@ class NotificationLocalController {
         var payload, required FlutterLocalNotificationsPlugin fln
       }) async {
     AndroidNotificationDetails androidPlatformChannelSpecifics =
-    new AndroidNotificationDetails(
+    AndroidNotificationDetails(
       'you_can_name_it_whatever1',
       'channel_name',
       playSound: true,

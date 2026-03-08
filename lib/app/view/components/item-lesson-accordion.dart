@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lesson-model.dart';
 import 'package:flutter_app/app/controller/course_store_controller.dart';
@@ -39,9 +37,6 @@ class _ItemLessonState extends State<ItemLessonAccordion> {
 
   // Show or hide the content
   bool _showContent = false;
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-
   @override
   void initState() {
     _showContent = widget.showContent;
@@ -51,6 +46,7 @@ class _ItemLessonState extends State<ItemLessonAccordion> {
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GestureDetector(
         onTap: () => {
               setState(() {
@@ -103,15 +99,11 @@ class _ItemLessonState extends State<ItemLessonAccordion> {
             ),
           ),
           _showContent
-              ? Container(
-                  // padding:
-                  //     const EdgeInsets.symmetric(horizontal: 15),
-                  child: Wrap(
+              ? Wrap(
                       direction: Axis.vertical,
                       children: List.generate(
                         widget.item.items!.length,
-                        (i) => Container(
-                            child: GestureDetector(
+                        (i) => GestureDetector(
                           onTap: () {
                             widget.onNavigate(widget.item.items![i]);
                           },
@@ -221,9 +213,8 @@ class _ItemLessonState extends State<ItemLessonAccordion> {
                                         ),
                                     ])),
                           ),
-                        )),
-                      )),
-                )
+                        ),
+                      ))
               : Container()
         ]));
   }

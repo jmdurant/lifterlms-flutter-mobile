@@ -259,7 +259,8 @@ class CoursesController extends GetxController implements GetxService {
           _categories.addAll(response.body);
         }
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       isLoadingCategories.value = false;
     }

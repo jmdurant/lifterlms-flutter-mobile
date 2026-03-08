@@ -1,14 +1,9 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:flutter_app/app/view/components/login_required_widget.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
-
 import '../../../controller/lifterlms/profile_controller.dart';
 import '../../../env.dart';
 
@@ -39,42 +34,16 @@ class _Profile extends State<Profile> {
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
+    var screenHeight = MediaQuery.of(context).size.height;
     final value = widget.profileController;
     return Scaffold(
         key: _scaffoldKey,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
-        body: Stack(children: <Widget>[
-          Indexed(
-            index: 1,
-            child: Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Column(
+        body: Column(
             children: [
               Container(
                 padding: EdgeInsets.only(
@@ -312,7 +281,6 @@ class _Profile extends State<Profile> {
                 style: TextStyle(fontFamily: 'poppins', fontSize: 12),
               ).tr(args: [Environments.appVersion, Environments.appBuild])
             ],
-          )
-        ]));
+          ));
   }
 }

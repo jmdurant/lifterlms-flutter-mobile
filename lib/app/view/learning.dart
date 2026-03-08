@@ -1,10 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:vimeo_video_player/vimeo_video_player.dart';
@@ -27,9 +25,6 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   String? _vimeoVideoId;
   int? _currentLessonId;
   
-  var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight = (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   void initState() {
     super.initState();
@@ -180,31 +175,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
         drawer: _buildDrawer(controller),
-        body: Stack(
-          children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Column(
+        body: Column(
               children: <Widget>[
                 _buildHeader(controller),
                 Expanded(
@@ -266,12 +237,10 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 _buildNavigationBar(controller),
               ],
             ),
-          ],
-        ),
       );
     });
   }
-  
+
   Widget _buildHeader(LearningController controller) {
     return Container(
       padding: EdgeInsets.only(
@@ -317,6 +286,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   }
   
   Widget _buildDrawer(LearningController controller) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return Drawer(
       child: Container(
         padding: EdgeInsets.fromLTRB(
@@ -970,10 +940,10 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
           return Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 21),
             decoration: BoxDecoration(
-              color: Theme.of(context).dividerColor.withOpacity(0.1),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).dividerColor.withOpacity(0.3),
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                   spreadRadius: 1,
                   blurRadius: 5,
                   offset: const Offset(0, -2),
@@ -1018,10 +988,10 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
       return Container(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 21),
         decoration: BoxDecoration(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).dividerColor.withOpacity(0.3),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, -2),

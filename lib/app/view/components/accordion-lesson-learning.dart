@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lesson-model.dart';
 import 'package:flutter_app/app/view/components/item-lesson-accordion.dart';
@@ -31,11 +29,9 @@ class AccordionLessonLearning extends StatefulWidget {
 }
 
 class _AccordionState extends State<AccordionLessonLearning> {
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return SizedBox(
       width: screenWidth * 0.5,
       child: SingleChildScrollView(

@@ -394,8 +394,9 @@ class NotificationController extends GetxController implements GetxService {
       if (lmsService.isLoggedIn) {
         await loadServerNotifications();
       }
-      
-    } catch (e) {
+
+    } catch (_) {
+      // ignored
     } finally {
       isLoading.value = false;
     }
@@ -477,8 +478,9 @@ class NotificationController extends GetxController implements GetxService {
       
       // For now, mark as no more notifications
       hasMoreNotifications.value = false;
-      
-    } catch (e) {
+
+    } catch (_) {
+      // ignored
     } finally {
       isLoading.value = false;
     }

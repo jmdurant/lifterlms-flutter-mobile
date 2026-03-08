@@ -87,7 +87,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               ? (val) => value.selectPaymentMethod(val!)
                               : null,
                           )
-                        ).toList(),
+                        ),
                         
                         SizedBox(height: 20),
                         

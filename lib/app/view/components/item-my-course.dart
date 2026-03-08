@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
@@ -21,11 +19,9 @@ class ItemMyCourse extends StatelessWidget {
     this.onDetail,
   });
 
-  final screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     // Calculate progress bar width
     double progressWidth = (progress / 100) * (screenWidth - 132);
     
@@ -106,8 +102,7 @@ class ItemMyCourse extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Container(
-                        child: Row(
+                      Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
@@ -136,7 +131,6 @@ class ItemMyCourse extends StatelessWidget {
                                       fontSize: 10, color: Color(0xFF939393)),
                                 ),
                             ]),
-                      ),
                       if (onContinue != null && progress > 0 && progress < 100)
                         Container(
                           margin: const EdgeInsets.only(top: 8),

@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +8,6 @@ import 'package:flutter_app/app/view/components/item-my-course.dart';
 import 'package:flutter_app/app/view/components/login_required_widget.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 
 class MyCoursesScreen extends StatefulWidget {
   const MyCoursesScreen({Key? key}) : super(key: key);
@@ -55,11 +53,6 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
     }
   }
 
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   Widget build(BuildContext context) {
     return GetBuilder<MyCoursesController>(
@@ -68,31 +61,7 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
         key: _scaffoldKey,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
-        body: Stack(
-          children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                right: 0,
-                top: 0,
-                left: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Column(
+        body: Column(
               children: <Widget>[
                 SizedBox(height: math.max(20, MediaQuery.of(context).viewPadding.top)),
                 !controller.lmsService.isLoggedIn
@@ -229,8 +198,6 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
                     : Container(),
               ],
             ),
-          ],
-        ),
       );
     });
   }
@@ -243,7 +210,7 @@ class _MyCoursesScreenState extends State<MyCoursesScreen> with WidgetsBindingOb
         decoration: BoxDecoration(
           color: controller.selectedTab.value == index 
               ? Theme.of(context).primaryColor 
-              : Theme.of(context).dividerColor.withOpacity(0.2),
+              : Theme.of(context).dividerColor.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

@@ -113,7 +113,8 @@ class NotificationController extends GetxController implements GetxService {
             throw Exception('Failed to load notifications');
           }
         }
-      } catch (e) {
+      } catch (_) {
+        // ignored
       } finally {
         isLoading = false; // hide loading indicator
         update();
@@ -135,7 +136,8 @@ class NotificationController extends GetxController implements GetxService {
       } else {
         throw Exception('Failed to register FCMToken');
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {}
   }
 
@@ -149,7 +151,8 @@ class NotificationController extends GetxController implements GetxService {
       } else {
         throw Exception('Failed to delete FCMToken');
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {}
   }
 }

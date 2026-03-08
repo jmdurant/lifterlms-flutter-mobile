@@ -218,7 +218,8 @@ class SearchCourseController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       isSearching.value = false;
     }

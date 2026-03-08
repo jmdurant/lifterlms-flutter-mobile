@@ -172,7 +172,7 @@ class ApiService extends GetxService {
   ) async {
     try {
       final url = Uri.parse(appBaseUrl + uri);
-      var request = new http.MultipartRequest('POST', url);
+      var request = http.MultipartRequest('POST', url);
       request = jsonToFormData(request, body);
       var headers = {
         // 'Content-Type': 'multipart/form-data',

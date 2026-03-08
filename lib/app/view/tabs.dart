@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/my_courses_controller.dart';
@@ -27,8 +26,6 @@ class TabScreen extends StatefulWidget {
 
 class _TabScreenState extends State<TabScreen>
     with SingleTickerProviderStateMixin {
-  Size size = WidgetsBinding.instance.window.physicalSize;
-  var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
   final List<Widget> _tabViews = [
     HomeScreen(),
     const CoursesScreen(),
@@ -212,6 +209,7 @@ class _TabScreenState extends State<TabScreen>
   }
 
   Widget bottomHeightLight(){
+      var screenWidth = MediaQuery.of(context).size.width;
       return Divider(
         color: Theme.of(context).primaryColor,
         height: 3,

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:feather_icons/feather_icons.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +5,6 @@ import 'package:flutter_app/app/controller/lifterlms/instructor_detail_controlle
 import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class InstructorDetailScreen extends StatefulWidget {
@@ -20,11 +17,6 @@ class InstructorDetailScreen extends StatefulWidget {
 class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-  
   @override
   void initState() {
     super.initState();
@@ -56,36 +48,13 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GetBuilder<InstructorDetailController>(builder: (value) {
       return Scaffold(
         key: _scaffoldKey,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
-        body: Stack(
-          children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Column(
+        body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
@@ -98,9 +67,7 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
-                        Container(
-                          // width: 40,
-                          child: IconButton(
+                        IconButton(
                             onPressed: () {
                               Get.back();
                             },
@@ -108,7 +75,6 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                             color: Theme.of(context).iconTheme.color,
                             iconSize: 24,
                           ),
-                        ),
                         Text(
                           tr(LocaleKeys.instructorScreen_title),
                           style: const TextStyle(
@@ -291,8 +257,6 @@ class _InstructorDetailScreenState extends State<InstructorDetailScreen> {
                 ),
               ],
             ),
-          ],
-        ),
       );
     });
   }

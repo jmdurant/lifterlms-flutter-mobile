@@ -4,8 +4,6 @@ import 'package:flutter_app/app/controller/lifterlms/forgot_password_controller.
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'dart:ui';
-
 class ForgotPasswordScreen extends StatefulWidget {
   ForgotPasswordScreen({Key? key}) : super(key: key);
 
@@ -21,14 +19,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordScreen> {
     });
   }
 
-  Size size = WidgetsBinding.instance.window.physicalSize;
-  var screenWidth =
-  (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-  (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     final value = Get.find<ForgotPasswordController>();
 
     return Scaffold(

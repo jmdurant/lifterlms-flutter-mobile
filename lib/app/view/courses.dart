@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:math' as math;
 
 import 'package:easy_localization/easy_localization.dart';
@@ -9,7 +8,6 @@ import 'package:flutter_app/app/view/components/item-course.dart';
 import 'package:flutter_app/app/view/components/connection_error_widget.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({Key? key}) : super(key: key);
@@ -20,10 +18,6 @@ class CoursesScreen extends StatefulWidget {
 
 class _CoursesScreenState extends State<CoursesScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
   final HomeController homeController = Get.find<HomeController>();
 
   @override
@@ -33,31 +27,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
         key: _scaffoldKey,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
-        body: Stack(
-          children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Column(
+        body: Column(
               children: <Widget>[
                 SizedBox(height: math.max(20, MediaQuery.of(context).viewPadding.top)),
                 Obx(() => Column(
@@ -96,7 +66,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             child: Container(
                               height: 40,
                               decoration: BoxDecoration(
-                                color: Theme.of(context).dividerColor.withOpacity(0.1),
+                                color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: TextField(
@@ -123,7 +93,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Theme.of(context).unselectedWidgetColor.withOpacity(0.5),
+                                  color: Theme.of(context).unselectedWidgetColor.withValues(alpha: 0.5),
                                   spreadRadius: 1,
                                   blurRadius: 1,
                                   offset: const Offset(0, 1),
@@ -245,8 +215,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 ),
               ],
             ),
-          ],
-        ),
       );
     });
   }

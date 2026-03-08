@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/course_store_controller.dart';
@@ -9,7 +7,6 @@ import 'package:flutter_app/app/view/components/learning/learning-lesson.dart';
 import 'package:flutter_app/app/view/components/learning/learning-quiz.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 
 class FinishLearningScreen extends StatefulWidget {
   FinishLearningScreen({Key? key}) : super(key: key);
@@ -21,13 +18,9 @@ class FinishLearningScreen extends StatefulWidget {
 class _FinishLearningState extends State<FinishLearningScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final courseStore = Get.find<CourseStoreController>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GetBuilder<LearningController>(builder: (value) {
       if (value.currentLesson.value == null && value.currentCourse.value == null) {
         return Scaffold(
@@ -42,31 +35,7 @@ class _FinishLearningState extends State<FinishLearningScreen> {
           key: _scaffoldKey,
           backgroundColor: Colors.white,
           drawerEnableOpenDragGesture: false,
-          body: Stack(
-            children: <Widget>[
-              Indexed(
-                index: 1,
-                child: Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: screenWidth,
-                    height: (209 / 375) * screenWidth,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Theme.of(context).primaryColor.withOpacity(0.1),
-                          Theme.of(context).primaryColor.withOpacity(0.05),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Column(children: <Widget>[
+          body: Column(children: <Widget>[
                 Container(
                   height: 80.0,
                   width: screenWidth,
@@ -75,9 +44,7 @@ class _FinishLearningState extends State<FinishLearningScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      Container(
-                        // width: 40,
-                        child: IconButton(
+                      IconButton(
                           onPressed: () {
                             Get.back();
                           },
@@ -85,10 +52,7 @@ class _FinishLearningState extends State<FinishLearningScreen> {
                           color: Colors.grey[900],
                           iconSize: 24,
                         ),
-                      ),
-                      Container(
-                        // width: 40,
-                        child: IconButton(
+                      IconButton(
                           onPressed: () {
                             Get.back();
                           },
@@ -96,7 +60,6 @@ class _FinishLearningState extends State<FinishLearningScreen> {
                           color: Colors.grey[900],
                           iconSize: 24,
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -106,8 +69,7 @@ class _FinishLearningState extends State<FinishLearningScreen> {
                         child: SingleChildScrollView(
                             padding: const EdgeInsets.only(bottom: 100),
                             scrollDirection: Axis.vertical,
-                            child: Container(
-                                child: Column(
+                            child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
@@ -162,10 +124,8 @@ class _FinishLearningState extends State<FinishLearningScreen> {
                                         ),
                                       ),
                                     )
-                                ]))))),
+                                ])))),
               ]),
-            ],
-          ),
         );
       }
     });

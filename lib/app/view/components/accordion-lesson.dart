@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lesson-model.dart';
 import 'package:flutter_app/app/view/components/item-lesson.dart';
@@ -18,8 +16,6 @@ class AccordionLesson extends StatefulWidget {
 
 class _AccordionState extends State<AccordionLesson> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
   @override
   Widget build(BuildContext context) {
     CourseDetailController value = Get.find();

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/theme_controller.dart';
@@ -8,7 +6,6 @@ import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
 
-import 'package:indexed/indexed.dart';
 
 typedef OnNavigateCallback = void Function(int page);
 
@@ -37,10 +34,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
   int pageActive = 0;
   @override
   Widget build(BuildContext context) {
@@ -48,30 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         key: _scaffoldKey,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
-        body: Stack(children: <Widget>[
-          Indexed(
-            index: 1,
-            child: Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Column(
+        body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
@@ -264,7 +234,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 )
-              ]),
-        ]));
+              ]));
   }
 }

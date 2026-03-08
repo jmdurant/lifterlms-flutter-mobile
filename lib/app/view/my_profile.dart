@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/my_profile_controller.dart';
 import 'package:flutter_app/app/controller/settings_controller.dart';
@@ -117,33 +116,9 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
-    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          // Background image
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: Container(
-              width: screenWidth,
-              height: (209 / 375) * screenWidth,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.1),
-                    Theme.of(context).primaryColor.withOpacity(0.05),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Column(
+      body: Column(
             children: [
               SizedBox(height: math.max(20, MediaQuery.of(context).viewPadding.top)),
               
@@ -225,8 +200,6 @@ class ProfileView extends StatelessWidget {
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 }
@@ -236,11 +209,9 @@ class Page3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Text(
+    return Text(
         "page 3",
         style: TextStyle(fontFamily: 'bold', color: Theme.of(context).textTheme.bodyLarge?.color),
-      ),
-    );
+      );
   }
 }

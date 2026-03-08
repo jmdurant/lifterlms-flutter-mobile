@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/register_controller.dart';
@@ -19,14 +17,10 @@ class _RegisterPageState extends State<RegisterScreen> {
 
   bool _isVisiblePassword = false;
   bool _isVisibleConfirm = false;
-  Size size = WidgetsBinding.instance.window.physicalSize;
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GetBuilder<RegisterController>(builder: (value) {
       return Scaffold(
           backgroundColor: Colors.white,

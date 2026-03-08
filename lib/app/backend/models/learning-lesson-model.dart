@@ -150,13 +150,7 @@ class MetaData {
   String? lp_duration;
   String? lp_preview;
   int? lp_passing_grade;
-  String? _lp_instant_check;
-  String? _lp_negative_marking;
-  String? _lp_minus_skip_questions;
   int? lp_retake_count;
-  int? _lp_pagination;
-  bool? _lp_review;
-  bool? _lp_show_correct_review;
 
   MetaData({this.lp_duration, this.lp_preview, this.lp_passing_grade});
 
@@ -312,7 +306,7 @@ class QuizModel extends LessonResult {
 
   @override
   String toString() {
-    return 'QuizModel: {status: ${status}, passing_grade: ${passing_grade},negative_marking: ${negative_marking},instant_check: ${instant_check},passing_grade: ${passing_grade},retake_count: ${retake_count},questions_per_page: ${questions_per_page},page_numbers: ${page_numbers},review_questions: ${review_questions},support_options: ${support_options},duration: ${duration},total_time: ${total_time},questions:${questions})})';
+    return 'QuizModel: {status: $status, passing_grade: $passing_grade,negative_marking: $negative_marking,instant_check: $instant_check,passing_grade: $passing_grade,retake_count: $retake_count,questions_per_page: $questions_per_page,page_numbers: $page_numbers,review_questions: $review_questions,support_options: $support_options,duration: $duration,total_time: $total_time,questions:$questions})})';
   }
 }
 

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter_app/app/controller/lifterlms/certificates_controller.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 
 class MyCertificatesScreen extends StatefulWidget {
   const MyCertificatesScreen({Key? key}) : super(key: key);
@@ -39,36 +37,9 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
-    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          // Gradient background
-          Indexed(
-            index: 1,
-            child: Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Column(
+      body: Column(
             children: [
               // Custom header
               Container(
@@ -134,8 +105,6 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 
@@ -159,7 +128,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
                 )
               : null,
           filled: true,
-          fillColor: Theme.of(context).dividerColor.withOpacity(0.1),
+          fillColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -227,7 +196,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: Offset(0, 2),
             ),
@@ -334,7 +303,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
     // Simple skeleton placeholder without external dependency
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).dividerColor.withOpacity(0.2),
+        color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
       ),
     );
@@ -499,7 +468,7 @@ class _MyCertificatesScreenState extends State<MyCertificatesScreen> {
                   Get.back();
                 },
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

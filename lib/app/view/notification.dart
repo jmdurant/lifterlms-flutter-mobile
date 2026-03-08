@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/notification_controller.dart';
@@ -8,7 +6,6 @@ import 'package:flutter_app/app/backend/models/notification_model.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 import '../controller/notification_local_controller.dart';
 import 'components/item-notification.dart';
 
@@ -24,10 +21,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   NotificationController notificationController = Get.find<NotificationController>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
   @override
   void initState(){
     NotificationLocalController.initialize(flutterLocalNotificationsPlugin);
@@ -50,32 +43,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         key: _scaffoldKey,
         backgroundColor: Colors.white,
         drawerEnableOpenDragGesture: false,
-        body: Stack(children: <Widget>[
-          Indexed(
-            index: 1,
-            child: Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Indexed(
-            index: 2,
-            child: Column(
+        body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
@@ -226,8 +194,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                 ),
               ]),
-          ),
-        ]),
       );
     });
   }

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lesson-model.dart';
 import 'package:flutter_app/app/helper/function_helper.dart';
@@ -26,9 +24,6 @@ class AccordionItemLesson extends StatefulWidget {
 class _ItemLessonState extends State<AccordionItemLesson> {
   // Show or hide the content
   bool _showContent = false;
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-
   @override
   void initState() {
     _showContent = widget.showContent;
@@ -37,6 +32,7 @@ class _ItemLessonState extends State<AccordionItemLesson> {
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GestureDetector(
         onTap: () => {
               setState(() {
@@ -50,8 +46,7 @@ class _ItemLessonState extends State<AccordionItemLesson> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  child: Row(
+                Row(
                     children: [
                       InkWell(
                         onTap: () {
@@ -78,7 +73,6 @@ class _ItemLessonState extends State<AccordionItemLesson> {
                       )
                     ],
                   ),
-                ),
                 Text(
                   widget.item.items!.length.toString(),
                   style: TextStyle(fontFamily: 'semibold'),
@@ -87,13 +81,11 @@ class _ItemLessonState extends State<AccordionItemLesson> {
             ),
           ),
           _showContent
-              ? Container(
-                  child: Wrap(
+              ? Wrap(
                       direction: Axis.vertical,
                       children: List.generate(
                         widget.item.items!.length,
-                        (i) => Container(
-                            child: GestureDetector(
+                        (i) => GestureDetector(
                           onTap: () {
                             if (widget.item.items![i].status == "completed" ||
                                 widget.item.items![i].locked.toString() ==
@@ -208,9 +200,8 @@ class _ItemLessonState extends State<AccordionItemLesson> {
                                         ],
                                       ),
                                   ])),
-                        )),
-                      )),
-                )
+                        ),
+                      ))
               : Container()
         ]));
   }

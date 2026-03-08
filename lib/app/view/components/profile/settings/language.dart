@@ -1,13 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/language_controller.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:get/get_state_manager/src/simple/get_state.dart';
-import 'dart:ui';
 
-import 'package:indexed/indexed.dart';
 import 'package:ionicons/ionicons.dart';
 import '../../../../helper/shared_pref.dart';
 
@@ -23,10 +19,6 @@ class _MultiLanguageState extends State<MultiLanguage> {
   LanguageController languageController = Get.find<LanguageController>();
   SharedPreferencesManager sharedPreferencesManager = Get.find();
 
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
   @override
   void initState() {
     languageController.handleChoiceLanguage(sharedPreferencesManager.getString('language')??'en');
@@ -34,35 +26,13 @@ class _MultiLanguageState extends State<MultiLanguage> {
   }
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GetBuilder<LanguageController>(builder: (value) {
       return Scaffold(
           key: _scaffoldKey,
           backgroundColor: Colors.white,
           drawerEnableOpenDragGesture: false,
-          body: Stack(children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Column(
+          body: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
@@ -73,9 +43,7 @@ class _MultiLanguageState extends State<MultiLanguage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Container(
-                          // width: 40,
-                          child: IconButton(
+                        IconButton(
                             onPressed: () {
                               Navigator.pop(context);
                             },
@@ -83,7 +51,6 @@ class _MultiLanguageState extends State<MultiLanguage> {
                             color: Colors.grey[900],
                             iconSize: 26,
                           ),
-                        ),
                         Expanded(child: Text(
                           tr( LocaleKeys.language),
                           style: const TextStyle(
@@ -145,36 +112,29 @@ class _MultiLanguageState extends State<MultiLanguage> {
                               return Container();
                             }
                           })),
-                ]),
-            Indexed(
-              index: 1,
-                child: Positioned(
-                  right: 20,
-                  bottom: 30,
-                  left: 20,
-                  child: ElevatedButton(
-                    onPressed: () {
-                       var currentLanguage = languageController.handleChoiceLanguage(languageController.currentKeyLanguage.isNotEmpty?languageController.currentKeyLanguage:sharedPreferencesManager.getString('language')??'en');
-                       languageController.handleUpdate(currentLanguage);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFFBC815),
-                      minimumSize: Size(double.infinity, 46),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+                    child: ElevatedButton(
+                      onPressed: () {
+                         var currentLanguage = languageController.handleChoiceLanguage(languageController.currentKeyLanguage.isNotEmpty?languageController.currentKeyLanguage:sharedPreferencesManager.getString('language')??'en');
+                         languageController.handleUpdate(currentLanguage);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFFBC815),
+                        minimumSize: Size(double.infinity, 46),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      tr(LocaleKeys.settings_update),
-                      style: TextStyle(
-                        color: Colors.black,
+                      child: Text(
+                        tr(LocaleKeys.settings_update),
+                        style: TextStyle(
+                          color: Colors.black,
+                        ),
                       ),
                     ),
                   ),
-                )
-            ),
-
-          ]));
+                ]));
     });
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
@@ -29,11 +27,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
   final WishlistController wishlistController = Get.find<WishlistController>();
   final HomeController homeController = Get.find<HomeController>();
   final CoursesController courseController = Get.find<CoursesController>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   Widget build(BuildContext context) {
     return GetBuilder<WishlistController>(builder: (value) {
@@ -41,28 +34,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         key: _scaffoldKey,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawerEnableOpenDragGesture: false,
-        body: Stack(
-          children: <Widget>[
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Column(
+        body: Column(
               children: <Widget>[
                 // Add header like other screens
                 Container(
@@ -227,8 +199,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                       ),
               ],
             ),
-          ],
-        ),
       );
     });
   }

@@ -1,9 +1,6 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/notification_model.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 
 import '../../helper/router.dart';
 
@@ -14,11 +11,10 @@ class ItemNotification extends StatelessWidget {
   ItemNotification({super.key, required this.item, this.onDelete});
 
   void onNavigate() {}
-  final screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return GestureDetector(
         onTap: (){
           RegExp regExp = RegExp(r'\d+');
@@ -37,7 +33,7 @@ class ItemNotification extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).shadowColor.withOpacity(0.2),
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.2),
                   spreadRadius: 1,
                   blurRadius: 1,
                   offset: const Offset(0, 1), // Thay đổi hướng đổ bóng

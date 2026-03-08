@@ -47,7 +47,7 @@ class LearningResult extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.5),
+                  color: Colors.grey.withValues(alpha: 0.5),
                   spreadRadius: 1,
                   blurRadius: 1,
                   offset: const Offset(0, 1), // Thay đổi hướng đổ bóng
@@ -60,8 +60,7 @@ class LearningResult extends StatelessWidget {
               children: [
                 Expanded(
                   // flex: 1,
-                  child: Container(
-                    child: CircularPercentIndicator(
+                  child: CircularPercentIndicator(
                       radius: 70,
                       percent: (data.results?.results["result"].round() / 100),
                       lineWidth: 10,
@@ -77,7 +76,6 @@ class LearningResult extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
                 const SizedBox(width: 24),
                 Expanded(
                   // flex: 2,

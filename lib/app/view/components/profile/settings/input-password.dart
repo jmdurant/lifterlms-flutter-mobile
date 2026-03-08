@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class InputPassword extends StatefulWidget {
@@ -15,8 +14,7 @@ class _InputPasswordState extends State<InputPassword> {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth =
-        (window.physicalSize.shortestSide / window.devicePixelRatio);
+    var screenWidth = MediaQuery.of(context).size.width;
     return Container(
       width: screenWidth - 32,
       height: 42,

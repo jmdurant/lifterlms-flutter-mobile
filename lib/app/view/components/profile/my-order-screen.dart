@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -8,8 +7,7 @@ import 'package:flutter_app/app/helper/function_helper.dart';
 import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
-import 'package:intl/intl.dart';
+
 
 typedef OnNavigateCallback = void Function(int page);
 
@@ -27,11 +25,6 @@ class MyOrderScreen extends StatelessWidget {
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  final screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  final screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
 
   Widget renderHeader(BuildContext context) {
     return Container(
@@ -225,6 +218,7 @@ class MyOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     final sessionStore = Get.find<SessionController>();
     List<Map<String, dynamic>> getData() {
       final data = sessionStore.userInfo.value?.tabs["orders"]["content"];
@@ -248,30 +242,7 @@ class MyOrderScreen extends StatelessWidget {
         key: _scaffoldKey,
         backgroundColor: Colors.white,
         drawerEnableOpenDragGesture: false,
-        body: Stack(children: <Widget>[
-          Indexed(
-            index: 1,
-            child: Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Column(
+        body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
@@ -284,9 +255,7 @@ class MyOrderScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      Container(
-                        // width: 40,
-                        child: IconButton(
+                      IconButton(
                           onPressed: () {
                             goBack(0);
                           },
@@ -294,7 +263,6 @@ class MyOrderScreen extends StatelessWidget {
                           color: Colors.grey[900],
                           iconSize: 24,
                         ),
-                      ),
                       Expanded(
                           child: Align(
                         child: Text(
@@ -323,8 +291,7 @@ class MyOrderScreen extends StatelessWidget {
                         ),
                       )
                     : renderItemOrders(getData())
-              ]),
-        ]));
+              ]));
   }
 
   Widget renderItemOrders(value) {

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/course_store_controller.dart';
@@ -24,10 +22,7 @@ class ReviewQuiz extends StatefulWidget {
 
 class _ReviewQuizState extends State<ReviewQuiz> {
   final courseStore = Get.find<CourseStoreController>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
+  double get screenWidth => MediaQuery.of(context).size.width;
   int pageActive = 0;
   QuestionModel? question;
 
@@ -424,12 +419,10 @@ class _ReviewQuizState extends State<ReviewQuiz> {
                                 (index) => itemOptionMultiChoice(
                                     question!.options?[index]))),
                       if (question?.type == 'sorting_choice')
-                        Container(
-                          child: Column(
+                        Column(
                            children: [
                              ...handleSortingChoice()
                            ],
-                          ),
                         ),
                       if (question?.type == 'fill_in_blanks')
                         renderFillInBlanks(),

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/settings_controller.dart';
@@ -8,7 +6,6 @@ import 'package:flutter_app/app/helper/shared_pref.dart';
 import 'package:flutter_app/app/controller/session_controller.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 import 'input-password.dart';
 
 class Password extends StatefulWidget {
@@ -40,36 +37,11 @@ class _PasswordState extends State<Password> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
     return Scaffold(
         key: _scaffoldKey,
         backgroundColor: Colors.white,
         drawerEnableOpenDragGesture: false,
-        body: Stack(children: <Widget>[
-          Indexed(
-            index: 1,
-            child: Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Column(
+        body: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
@@ -80,9 +52,7 @@ class _PasswordState extends State<Password> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: <Widget>[
-                      Container(
-                        // width: 40,
-                        child: IconButton(
+                      IconButton(
                           onPressed: () {
                             Navigator.pop(context);
                           },
@@ -90,7 +60,6 @@ class _PasswordState extends State<Password> {
                           color: Colors.grey[900],
                           iconSize: 26,
                         ),
-                      ),
                       Expanded(
                           child: Text(
                         tr(LocaleKeys.settings_password),
@@ -183,7 +152,6 @@ class _PasswordState extends State<Password> {
                     ),
                   ),
                 )
-              ]),
-        ]));
+              ]));
   }
 }

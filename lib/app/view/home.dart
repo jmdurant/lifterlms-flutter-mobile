@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_app/app/controller/tabs_controller.dart';
 import 'package:flutter_app/app/view/components/categories.dart';
@@ -14,7 +13,6 @@ import 'package:get/get.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
 import 'package:flutter_app/app/view/components/connection_error_widget.dart';
 
-import 'package:indexed/indexed.dart';
 import 'package:flutter_app/app/config/branding_config.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -34,12 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
     homeController.getOverview();
     super.initState();
   }
-
-  Size size = WidgetsBinding.instance.window.physicalSize;
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
 
   void onLogin() {
     Future.delayed(Duration.zero, () {
@@ -73,30 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : SingleChildScrollView(
             scrollDirection: Axis.vertical,
-            child: Stack(
+            child: Column(
               children: [
-                Indexed(
-                  index: 1,
-                  child: Positioned(
-                    right: 0,
-                    top: 0,
-                    left: 0,
-                    child: Container(
-                      width: screenWidth,
-                      height: (198 / 375) * screenWidth,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Theme.of(context).primaryColor.withOpacity(0.1),
-                            Theme.of(context).primaryColor.withOpacity(0.05),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                       16, MediaQuery.of(context).viewPadding.top + 20, 16, 0),

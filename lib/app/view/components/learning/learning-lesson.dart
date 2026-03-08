@@ -141,9 +141,7 @@ class _LearningLessonState extends State<LearningLesson> {
             ),
           )
         else if (widget.data.videoEmbed != null)
-          Container(
-              // padding: EdgeInsets.only(left: 10),
-              child: HtmlWidget(
+          HtmlWidget(
             widget.data.videoEmbed!,
             textStyle: TextStyle(
               fontFamily: 'Poppins-ExtraLight',
@@ -151,7 +149,7 @@ class _LearningLessonState extends State<LearningLesson> {
               color: Colors.black,
               fontWeight: FontWeight.w300,
             ),
-          )),
+          ),
         if (pdfUrl == null)
           Container(
             padding: EdgeInsets.symmetric(horizontal: 15),

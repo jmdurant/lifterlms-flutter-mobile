@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:feather_icons/feather_icons.dart';
@@ -8,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/settings_controller.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 
 class GeneralAccount extends StatefulWidget {
   @override
@@ -30,38 +28,14 @@ class _GeneralAccountState extends State<GeneralAccount> {
   Widget build(BuildContext context) {
     final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-    var screenWidth =
-        (window.physicalSize.shortestSide / window.devicePixelRatio);
+    var screenWidth = MediaQuery.of(context).size.width;
 
     return GetBuilder<SettingsController>(builder: (value) {
       return Scaffold(
           key: _scaffoldKey,
           backgroundColor: Colors.white,
           drawerEnableOpenDragGesture: false,
-          body: Stack(children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Container(
+          body: Container(
                 padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,9 +48,7 @@ class _GeneralAccountState extends State<GeneralAccount> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: <Widget>[
-                          Container(
-                            // width: 40,
-                            child: IconButton(
+                          IconButton(
                               onPressed: () {
                                 Navigator.pop(context);
                               },
@@ -84,7 +56,6 @@ class _GeneralAccountState extends State<GeneralAccount> {
                               color: Colors.grey[900],
                               iconSize: 26,
                             ),
-                          ),
                           Expanded(
                               child: Text(
                                 tr(LocaleKeys.settings_general),
@@ -243,7 +214,7 @@ class _GeneralAccountState extends State<GeneralAccount> {
                                 color: Colors.black,
                               ),
                               decoration: InputDecoration(
-                                contentPadding: new EdgeInsets.fromLTRB(
+                                contentPadding: EdgeInsets.fromLTRB(
                                     10.0, 10.0, 100.0, 10.0),
                                 border: InputBorder.none,
                                 focusedBorder: InputBorder.none,
@@ -285,7 +256,7 @@ class _GeneralAccountState extends State<GeneralAccount> {
                                 color: Colors.black,
                               ),
                               decoration: InputDecoration(
-                                contentPadding: new EdgeInsets.fromLTRB(
+                                contentPadding: EdgeInsets.fromLTRB(
                                     10.0, 10.0, 100.0, 10.0),
                                 border: InputBorder.none,
                                 focusedBorder: InputBorder.none,
@@ -327,7 +298,7 @@ class _GeneralAccountState extends State<GeneralAccount> {
                                 color: Colors.black,
                               ),
                               decoration: InputDecoration(
-                                contentPadding: new EdgeInsets.fromLTRB(
+                                contentPadding: EdgeInsets.fromLTRB(
                                     10.0, 10.0, 100.0, 10.0),
                                 border: InputBorder.none,
                                 focusedBorder: InputBorder.none,
@@ -362,8 +333,7 @@ class _GeneralAccountState extends State<GeneralAccount> {
                       ),
                     ))
                   ],
-                ))
-          ]));
+                )));
     });
   }
 }

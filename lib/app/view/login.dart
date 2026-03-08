@@ -6,8 +6,6 @@ import 'package:flutter_app/app/helper/router.dart';
 import 'package:flutter_app/app/config/branding_config.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:get/get.dart';
-import 'dart:ui';
-
 import 'package:auth_buttons/auth_buttons.dart';
 
 import '../controller/social_login_controller.dart';
@@ -37,12 +35,6 @@ class _LoginPageState extends State<LoginScreen> {
     });
   }
 
-  Size size = WidgetsBinding.instance.window.physicalSize;
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   void initState() {
     super.initState();
@@ -50,6 +42,7 @@ class _LoginPageState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     final sessionStore = Get.find<SessionController>();
 
     // Get the LifterLMS LoginController

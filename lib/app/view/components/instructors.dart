@@ -33,9 +33,7 @@ class Instructors extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 25),
-        Container(
-          // height: 200,
-          child: SingleChildScrollView(
+        SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
@@ -58,7 +56,7 @@ class Instructors extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(14),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Theme.of(context).shadowColor.withOpacity(0.1),
+                                      color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                                       spreadRadius: 1,
                                       blurRadius: 1,
                                       offset: const Offset(
@@ -90,8 +88,7 @@ class Instructors extends StatelessWidget {
                                     SizedBox(
                                       width: 12,
                                     ),
-                                    Container(
-                                        child: Column(
+                                    Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.start,
                                       crossAxisAlignment:
@@ -146,7 +143,7 @@ class Instructors extends StatelessWidget {
                                           ],
                                         )
                                       ],
-                                    ))
+                                    )
                                   ],
                                 )),
                           )),
@@ -154,7 +151,6 @@ class Instructors extends StatelessWidget {
               ],
             ),
           ),
-        ),
       ],
     );
   }

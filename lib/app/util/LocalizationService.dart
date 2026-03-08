@@ -3,8 +3,6 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_navigation/src/root/internacionalization.dart';
 
 class LocalizationService extends Translations {
   static final locale = _getLocaleFromLanguage('en');
@@ -51,8 +49,8 @@ class LocalizationService extends Translations {
       } else {
 
       }
-    } catch (e) {
-
+    } catch (_) {
+      // ignored
     }
   }
 

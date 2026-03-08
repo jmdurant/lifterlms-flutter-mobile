@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/search_course_controller.dart';
@@ -14,12 +12,9 @@ class SearchCourseScreen extends StatefulWidget {
 }
 
 class _SearchCourseScreenState extends State<SearchCourseScreen> {
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GetBuilder<SearchCourseController>(builder: (value) {
       return Scaffold(
           backgroundColor: Colors.white,
@@ -43,8 +38,7 @@ class _SearchCourseScreenState extends State<SearchCourseScreen> {
                   const SizedBox(
                     width: 10,
                   ),
-                  Container(
-                    child: Flexible(
+                  Flexible(
                       flex: 1,
                       child: Container(
                         decoration: BoxDecoration(
@@ -76,8 +70,7 @@ class _SearchCourseScreenState extends State<SearchCourseScreen> {
                           ),
                         ]),
                       ),
-                    ),
-                  )
+                    )
                 ],
               ),
             ),

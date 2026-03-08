@@ -77,8 +77,7 @@ class TopCourse extends StatelessWidget {
   }
   
   Widget _buildHorizontalScrollView(CoursesController courseController, WishlistController wishlistStore) {
-    return Container(
-      child: SingleChildScrollView(
+    return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
@@ -95,7 +94,6 @@ class TopCourse extends StatelessWidget {
                 )),
           ],
         ),
-      ),
     );
   }
   

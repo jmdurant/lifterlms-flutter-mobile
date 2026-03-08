@@ -479,7 +479,8 @@ $htmlContent
           _showAvailableCertificates(available);
         }
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       isLoading.value = false;
     }

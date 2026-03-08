@@ -267,12 +267,13 @@ class InstructorDetailController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       isLoadingCourses.value = false;
     }
   }
-  
+
   /// Load more courses (pagination)
   Future<void> loadMoreCourses() async {
     if (isLoadingCourses.value || !hasMoreCourses.value) return;
@@ -383,12 +384,13 @@ class InstructorDetailController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       isLoadingCourses.value = false;
     }
   }
-  
+
   /// Extract social links from instructor data
   void extractSocialLinks() {
     if (instructor.value == null) return;

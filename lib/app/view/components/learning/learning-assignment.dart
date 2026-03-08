@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/learning_controller.dart';
@@ -8,11 +6,6 @@ import 'package:get/get.dart';
 
 class _LearningAssignment extends State<LearningAssignment> {
   final courseStore = Get.find<CourseStoreController>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-
   @override
   void initState() {
     // Assignment functionality not yet implemented in LifterLMS

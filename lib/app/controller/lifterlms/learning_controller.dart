@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
@@ -421,7 +420,8 @@ class LearningController extends GetxController implements GetxService {
             });
           }
         }
-      } catch (e) {
+      } catch (_) {
+        // ignored
       } finally {
         isLoadingStructure.value = false;
       }

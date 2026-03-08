@@ -35,9 +35,7 @@ class Categories extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 10),
-        Container(
-          // height: 200,
-          child: SingleChildScrollView(
+        SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
@@ -65,7 +63,6 @@ class Categories extends StatelessWidget {
               ],
             ),
           ),
-        ),
       ],
     );
   }

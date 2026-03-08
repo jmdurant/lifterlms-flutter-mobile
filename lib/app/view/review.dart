@@ -1,12 +1,9 @@
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/review_controller.dart';
 import 'package:flutter_app/l10n/locale_keys.g.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
-import 'package:indexed/indexed.dart';
 
 class ReviewScreen extends StatefulWidget {
   const ReviewScreen({Key? key}) : super(key: key);
@@ -17,11 +14,6 @@ class ReviewScreen extends StatefulWidget {
 
 class _ReviewScreenState extends State<ReviewScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
 
   Widget renderItem({item}) {
     return Container(
@@ -98,36 +90,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GetBuilder<ReviewController>(builder: (value) {
       return Scaffold(
         key: _scaffoldKey,
         backgroundColor: Colors.white,
         drawerEnableOpenDragGesture: false,
-        body: Stack(
-          children: <Widget>[
-            Indexed(
-              index: 1,
-              child: Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: screenWidth,
-                  height: (209 / 375) * screenWidth,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        Theme.of(context).primaryColor.withOpacity(0.05),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Column(
+        body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
@@ -139,9 +108,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      Container(
-                        // width: 40,
-                        child: IconButton(
+                      IconButton(
                           onPressed: () {
                             Get.back();
                           },
@@ -149,7 +116,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           color: Colors.grey[900],
                           iconSize: 24,
                         ),
-                      ),
                       Text(
                         tr( LocaleKeys.reviews_title),
                         style: const TextStyle(
@@ -187,8 +153,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 ),
               ],
             ),
-          ],
-        ),
       );
     });
   }

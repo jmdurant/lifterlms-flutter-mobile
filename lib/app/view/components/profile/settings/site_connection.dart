@@ -1,11 +1,9 @@
 import 'dart:convert';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/services/lms_service.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:indexed/indexed.dart';
 
 class SiteConnection extends StatefulWidget {
   @override
@@ -160,37 +158,12 @@ class _SiteConnectionState extends State<SiteConnection> {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth =
-        (window.physicalSize.shortestSide / window.devicePixelRatio);
+    var screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       drawerEnableOpenDragGesture: false,
-      body: Stack(
-        children: <Widget>[
-          Indexed(
-            index: 1,
-            child: Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: Container(
-                width: screenWidth,
-                height: (209 / 375) * screenWidth,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Container(
+      body: Container(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +225,7 @@ class _SiteConnectionState extends State<SiteConnection> {
                             border: Border.all(
                                 color: Theme.of(context)
                                     .dividerColor
-                                    .withOpacity(0.3)),
+                                    .withValues(alpha: 0.3)),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: TextField(
@@ -289,7 +262,7 @@ class _SiteConnectionState extends State<SiteConnection> {
                             border: Border.all(
                                 color: Theme.of(context)
                                     .dividerColor
-                                    .withOpacity(0.3)),
+                                    .withValues(alpha: 0.3)),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: TextField(
@@ -325,7 +298,7 @@ class _SiteConnectionState extends State<SiteConnection> {
                             border: Border.all(
                                 color: Theme.of(context)
                                     .dividerColor
-                                    .withOpacity(0.3)),
+                                    .withValues(alpha: 0.3)),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: TextField(
@@ -354,8 +327,8 @@ class _SiteConnectionState extends State<SiteConnection> {
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
                               color: _testResultSuccess == true
-                                  ? Colors.green.withOpacity(0.1)
-                                  : Colors.red.withOpacity(0.1),
+                                  ? Colors.green.withValues(alpha: 0.1)
+                                  : Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: _testResultSuccess == true
@@ -439,8 +412,6 @@ class _SiteConnectionState extends State<SiteConnection> {
               ],
             ),
           ),
-        ],
-      ),
     );
   }
 }

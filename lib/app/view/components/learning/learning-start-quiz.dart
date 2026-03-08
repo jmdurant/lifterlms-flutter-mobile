@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/course_store_controller.dart';
 import 'package:flutter_app/app/controller/quiz_state_controller.dart';
@@ -11,10 +9,7 @@ import 'package:get/get.dart';
 class _LearningStartQuiz extends State<LearningStartQuiz> {
   final courseStore = Get.find<CourseStoreController>();
   final learingQuizStore = Get.find<QuizStateController>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
+  double get screenWidth => MediaQuery.of(context).size.width;
 
   @override
   Widget build(BuildContext context) {

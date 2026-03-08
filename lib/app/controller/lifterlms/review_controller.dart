@@ -164,7 +164,8 @@ class ReviewController extends GetxController implements GetxService {
         // Reviews not implemented
         _showReviewsNotAvailable();
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       isLoading.value = false;
     }
@@ -192,7 +193,8 @@ class ReviewController extends GetxController implements GetxService {
           }
         }
       }
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       isLoading.value = false;
     }

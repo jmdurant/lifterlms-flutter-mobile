@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:feather_icons/feather_icons.dart';
@@ -30,11 +29,6 @@ class CourseDetailScreen extends StatefulWidget {
 
 class _CourseDetailScreenState extends State<CourseDetailScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  var screenWidth =
-      (window.physicalSize.shortestSide / window.devicePixelRatio);
-  var screenHeight =
-      (window.physicalSize.longestSide / window.devicePixelRatio);
-
   final WishlistController wishlistStore = Get.find<WishlistController>();
   final CoursesController courseController = Get.find<CoursesController>();
   final PaymentController paymentController = Get.find<PaymentController>();
@@ -249,8 +243,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
   Widget renderComment(value) {
     if (value.review != null && value.review?["can_review"] == true) {
-      return Container(
-        child: Column(
+      return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -372,7 +365,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               ),
             ),
           ],
-        ),
       );
     } else {
       return Container(); // Return an empty container if the condition is not met
@@ -381,6 +373,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var screenWidth = MediaQuery.of(context).size.width;
     return GetBuilder<CourseDetailController>(
       builder: (value) {
       // Don't use .value here, GetBuilder doesn't watch reactive values
@@ -403,28 +396,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           drawerEnableOpenDragGesture: false,
           body: Stack(
             children: <Widget>[
-              Indexed(
-                index: 1,
-                child: Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: screenWidth,
-                    height: (209 / 375) * screenWidth,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Theme.of(context).primaryColor.withOpacity(0.1),
-                          Theme.of(context).primaryColor.withOpacity(0.05),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
               Column(
                 children: <Widget>[
                   Container(
@@ -436,16 +407,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
-                        Container(
-                          // width: 40,
-                          child: IconButton(
+                        IconButton(
                             onPressed: () {
                               homeController.getOverview();
                               value.onBack();
                             },
                             icon: Image.asset('assets/images/icon/icon-back.png',color: Theme.of(context).iconTheme.color,height: 14,width: 14,),
                           ),
-                        ),
                         Spacer(),
                       ],
                     ),
@@ -456,8 +424,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.only(bottom: 100),
                         scrollDirection: Axis.vertical,
-                        child: Container(
-                            child: Column(
+                        child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                               Stack(children: [
@@ -602,7 +569,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   style: TextStyle(
                                                     fontFamily: 'Poppins',
                                                     fontSize: 14,
-                                                    color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.45),
+                                                    color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.45),
                                                     fontWeight: FontWeight.w500,
                                                     decoration: TextDecoration
                                                         .lineThrough,
@@ -614,7 +581,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                                   style: TextStyle(
                                                     fontFamily: 'Poppins',
                                                     fontSize: 14,
-                                                    color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.45),
+                                                    color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.45),
                                                     fontWeight: FontWeight.w500,
                                                     decoration: TextDecoration
                                                         .lineThrough,
@@ -937,7 +904,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                     ],
                                   ),
                                 )
-                            ])),
+                            ]),
                       ),
                     ),
                   )
@@ -950,7 +917,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   bottom: 0,
                   left: 0,
                   child: Container(
-                    color: Theme.of(context).dividerColor.withOpacity(0.1),
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),

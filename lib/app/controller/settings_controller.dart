@@ -345,7 +345,8 @@ class SettingsController extends GetxController {
         }
 
       });
-    } catch (e) {
+    } catch (_) {
+      // ignored
     } finally {
       DialogHelper.hideLoading();
     }

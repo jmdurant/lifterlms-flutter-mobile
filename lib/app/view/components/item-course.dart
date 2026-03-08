@@ -66,8 +66,8 @@ class _WishlistHeartState extends State<WishlistHeart> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.all(Radius.circular(10)),
           color: _isInWishlist 
-            ? Theme.of(context).colorScheme.error.withOpacity(0.8)
-            : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+            ? Theme.of(context).colorScheme.error.withValues(alpha: 0.8)
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
         ),
         child: Icon(
           _isInWishlist 
@@ -308,7 +308,7 @@ class ItemCourse extends StatelessWidget {
                                     style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 14,
-                                      color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.45),
+                                      color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.45),
                                       fontWeight: FontWeight.w500,
                                       decoration: TextDecoration.lineThrough,
                                     ),

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
 import 'package:get/get.dart';
@@ -25,8 +23,6 @@ class AccordionLessonLifterLMS extends StatefulWidget {
 }
 
 class _AccordionLifterLMSState extends State<AccordionLessonLifterLMS> {
-  var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
-  
   @override
   Widget build(BuildContext context) {
     if (widget.data == null || widget.data!.isEmpty) {
@@ -81,7 +77,6 @@ class AccordionItemLessonLifterLMS extends StatefulWidget {
 
 class _AccordionItemLessonLifterLMSState extends State<AccordionItemLessonLifterLMS> {
   late bool _showContent;
-  var screenWidth = (window.physicalSize.shortestSide / window.devicePixelRatio);
   
   @override
   void initState() {
