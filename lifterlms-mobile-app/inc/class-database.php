@@ -55,9 +55,12 @@ class LLMS_Mobile_Database {
         
         // Favorites table
         $this->create_favorites_table( $charset_collate );
-        
+
+        // CME tables
+        $this->create_cme_tables( $charset_collate );
+
         // Update database version
-        update_option( 'llms_mobile_db_version', '1.0.0' );
+        update_option( 'llms_mobile_db_version', '1.1.0' );
     }
     
     /**
@@ -526,6 +529,75 @@ class LLMS_Mobile_Database {
         dbDelta( $sql );
     }
     
+    /**
+     * Create CME tables
+     */
+    private function create_cme_tables( $charset_collate ) {
+        global $wpdb;
+
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+
+        // CME credits table
+        $table_name = $wpdb->prefix . 'llms_mobile_cme_credits';
+
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            course_id bigint(20) NOT NULL,
+            credit_type varchar(50) NOT NULL,
+            credit_hours decimal(5,2) NOT NULL,
+            earned_date datetime NOT NULL,
+            expiration_date datetime DEFAULT NULL,
+            status varchar(20) DEFAULT 'active',
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY course_id (course_id),
+            KEY credit_type (credit_type),
+            KEY status (status),
+            KEY earned_date (earned_date),
+            KEY expiration_date (expiration_date),
+            UNIQUE KEY user_course (user_id, course_id)
+        ) $charset_collate;";
+
+        dbDelta( $sql );
+
+        // CME attestations table
+        $table_name = $wpdb->prefix . 'llms_mobile_cme_attestations';
+
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            course_id bigint(20) NOT NULL,
+            attestation_text text NOT NULL,
+            credit_type varchar(50) NOT NULL,
+            credit_hours decimal(5,2) NOT NULL,
+            signed_date datetime NOT NULL,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY course_id (course_id),
+            UNIQUE KEY user_course_attest (user_id, course_id)
+        ) $charset_collate;";
+
+        dbDelta( $sql );
+
+        // CME evaluations table
+        $table_name = $wpdb->prefix . 'llms_mobile_cme_evaluations';
+
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            course_id bigint(20) NOT NULL,
+            responses longtext NOT NULL,
+            submitted_at datetime NOT NULL,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY course_id (course_id),
+            UNIQUE KEY user_course_eval (user_id, course_id)
+        ) $charset_collate;";
+
+        dbDelta( $sql );
+    }
+
     /**
      * Clean up old inactive devices
      */

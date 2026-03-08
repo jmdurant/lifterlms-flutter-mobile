@@ -101,7 +101,9 @@ class LifterLMS_Mobile_App {
         require_once LLMS_MOBILE_APP_PATH . 'inc/class-favorites.php';
         require_once LLMS_MOBILE_APP_PATH . 'inc/class-quiz-handler.php';
         require_once LLMS_MOBILE_APP_PATH . 'inc/class-certificate-handler.php';
-        
+        require_once LLMS_MOBILE_APP_PATH . 'inc/class-cme-handler.php';
+        require_once LLMS_MOBILE_APP_PATH . 'inc/class-cme-evaluations.php';
+
         // Helper functions
         require_once LLMS_MOBILE_APP_PATH . 'inc/functions.php';
     }

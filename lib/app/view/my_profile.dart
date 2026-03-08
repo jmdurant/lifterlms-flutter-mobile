@@ -182,6 +182,13 @@ class ProfileView extends StatelessWidget {
                       ),
                       Divider(),
                       ListTile(
+                        leading: Icon(Icons.school),
+                        title: Text('CME Credits'),
+                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () => Get.toNamed(AppRouter.getCmeCredits()),
+                      ),
+                      Divider(),
+                      ListTile(
                         leading: Icon(Icons.shopping_cart),
                         title: Text('My Orders'),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),

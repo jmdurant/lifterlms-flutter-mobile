@@ -1227,4 +1227,128 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
+
+  // CME: Get user's credit transcript
+  Future<Response> getCmeCredits({String? creditType, String? status}) async {
+    final params = <String, String>{};
+    if (creditType != null) params['credit_type'] = creditType;
+    if (status != null) params['status'] = status;
+    final queryString = params.isNotEmpty ? '?${Uri(queryParameters: params).query}' : '';
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/credits$queryString');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': _getAuthHeader(),
+        'Content-Type': 'application/json',
+      }).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Get credit summary (totals by type)
+  Future<Response> getCmeSummary() async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/summary');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': _getAuthHeader(),
+        'Content-Type': 'application/json',
+      }).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Submit attestation to claim credits
+  Future<Response> submitCmeAttestation({required int courseId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/attest');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'course_id': courseId}),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Get course CME configuration
+  Future<Response> getCourseCmeConfig({required int courseId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/course/$courseId');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': _getAuthHeader(),
+        'Content-Type': 'application/json',
+      }).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Get evaluation questions for a course
+  Future<Response> getCmeEvaluationQuestions({required int courseId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/evaluation/$courseId');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': _getAuthHeader(),
+        'Content-Type': 'application/json',
+      }).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Submit evaluation responses
+  Future<Response> submitCmeEvaluation({
+    required int courseId,
+    required List<Map<String, String>> responses,
+  }) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/evaluation/$courseId');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'responses': responses}),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Get transcript
+  Future<Response> getCmeTranscript({String? startDate, String? endDate}) async {
+    final params = <String, String>{};
+    if (startDate != null) params['start_date'] = startDate;
+    if (endDate != null) params['end_date'] = endDate;
+    final queryString = params.isNotEmpty ? '?${Uri(queryParameters: params).query}' : '';
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/transcript$queryString');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': _getAuthHeader(),
+        'Content-Type': 'application/json',
+      }).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
 }

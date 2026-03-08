@@ -48,6 +48,7 @@ import '../view/components/profile/settings/site_connection.dart';
 import '../view/my_certificates.dart';
 import '../view/certificate_detail.dart';
 import '../view/certificate_viewer_screen.dart';
+import '../view/cme_credits_screen.dart';
 
 class AppRouter {
   static const String initial = '/';
@@ -86,6 +87,7 @@ class AppRouter {
   static const String certificateDetail = '/certificateDetail';
   static const String certificateViewer = '/certificateViewer';
   static const String siteConnection = '/siteConnection';
+  static const String cmeCredits = '/cmeCredits';
 
   static String getInitialRoute() => initial;
   static String getSplashRoute() => splash;
@@ -123,6 +125,7 @@ class AppRouter {
   static String getCertificateDetail() => certificateDetail;
   static String getCertificateViewer() => certificateViewer;
   static String getSiteConnection() => siteConnection;
+  static String getCmeCredits() => cmeCredits;
 
   static List<GetPage> routes = [
     // GetPage(
@@ -212,6 +215,11 @@ class AppRouter {
     GetPage(
         name: siteConnection,
         page: () => SiteConnection(),
+        preventDuplicates: false
+    ),
+    GetPage(
+        name: cmeCredits,
+        page: () => const CmeCreditsScreen(),
         preventDuplicates: false
     ),
   ];
