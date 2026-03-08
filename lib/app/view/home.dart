@@ -192,8 +192,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (value.hasError.value &&
                             value.topCoursesList.isEmpty &&
                             value.newCourseList.isEmpty)
-                          ConnectionErrorWidget(
-                            onRetry: () => value.refreshData(),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.5,
+                            child: ConnectionErrorWidget(
+                              onRetry: () => value.refreshData(),
+                            ),
                           )
                         else ...[
                         Categories(
