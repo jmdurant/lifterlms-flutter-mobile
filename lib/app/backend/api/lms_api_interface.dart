@@ -81,7 +81,10 @@ abstract class LMSApiInterface {
   Future<Response> submitQuizAnswer({required int quizId, required int questionId, required dynamic answer, int? attemptId});
   Future<Response> finishQuiz({required int quizId, required int attemptId});
   Future<Response> getQuizResults({required int quizId, required int attemptId});
-  
+
+  // Lesson script/narration
+  Future<Response> getLessonScript({required int lessonId});
+
   // Assignments (Custom Implementation Required for LifterLMS)
   Future<Response> getAssignment({required int assignmentId});
   Future<Response> startAssignment({required int assignmentId, required int userId});

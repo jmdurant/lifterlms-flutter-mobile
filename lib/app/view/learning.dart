@@ -548,8 +548,13 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 height: 1.5,
               ),
             )),
+            const SizedBox(height: 16),
+
+            // Narration script section
+            _LessonScriptWidget(lessonId: lesson.id),
+
             const SizedBox(height: 32),
-            
+
             // Show quiz section if available
             Obx(() {
               final currentLesson = controller.currentLesson.value;
@@ -1597,5 +1602,116 @@ class MyWidgetFactory extends WidgetFactory {
     } else {
       return false;
     }
+  }
+}
+
+/// Displays the narration script for a lesson if one exists
+class _LessonScriptWidget extends StatefulWidget {
+  final int lessonId;
+  const _LessonScriptWidget({required this.lessonId});
+
+  @override
+  State<_LessonScriptWidget> createState() => _LessonScriptWidgetState();
+}
+
+class _LessonScriptWidgetState extends State<_LessonScriptWidget> {
+  String? _script;
+  bool _isExpanded = false;
+  bool _loaded = false;
+  int _lastLessonId = 0;
+
+  @override
+  void didUpdateWidget(covariant _LessonScriptWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lessonId != widget.lessonId) {
+      _loaded = false;
+      _script = null;
+      _isExpanded = false;
+      _loadScript();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScript();
+  }
+
+  Future<void> _loadScript() async {
+    if (_loaded && _lastLessonId == widget.lessonId) return;
+    _lastLessonId = widget.lessonId;
+
+    try {
+      final api = Get.find<LearningController>().lmsService.api;
+      final response = await api.getLessonScript(lessonId: widget.lessonId);
+      if (response.statusCode == 200 && mounted) {
+        final data = response.body;
+        setState(() {
+          _script = (data['has_script'] == true) ? data['script'] : null;
+          _loaded = true;
+        });
+      }
+    } catch (_) {
+      // Script is optional — fail silently
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || _script == null || _script!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.blue.shade200),
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.blue.shade50,
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.article_outlined, size: 20, color: Colors.blue.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Narration Script',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.blue.shade700,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_isExpanded)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SelectableText(
+                _script!,
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.6,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

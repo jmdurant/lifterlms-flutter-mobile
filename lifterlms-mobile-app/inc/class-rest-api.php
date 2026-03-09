@@ -48,6 +48,36 @@ class LLMS_Mobile_REST_API {
             'callback'            => array( $this, 'get_user_mobile_data' ),
             'permission_callback' => array( $this, 'is_user_logged_in' ),
         ) );
+
+        // Get lesson script (narration text)
+        register_rest_route( 'llms/v1', '/mobile-app/lesson/(?P<lesson_id>\d+)/script', array(
+            'methods'             => 'GET',
+            'callback'            => array( $this, 'get_lesson_script' ),
+            'permission_callback' => array( $this, 'is_user_logged_in' ),
+            'args'                => array(
+                'lesson_id' => array(
+                    'required' => true,
+                    'type'     => 'integer',
+                ),
+            ),
+        ) );
+
+        // Save lesson script (admin/MCP use)
+        register_rest_route( 'llms/v1', '/mobile-app/lesson/(?P<lesson_id>\d+)/script', array(
+            'methods'             => 'POST',
+            'callback'            => array( $this, 'save_lesson_script' ),
+            'permission_callback' => array( $this, 'can_edit_lessons' ),
+            'args'                => array(
+                'lesson_id' => array(
+                    'required' => true,
+                    'type'     => 'integer',
+                ),
+                'script' => array(
+                    'required' => true,
+                    'type'     => 'string',
+                ),
+            ),
+        ) );
     }
     
     /**
@@ -209,10 +239,59 @@ class LLMS_Mobile_REST_API {
     }
     
     /**
-     * Permission callback
+     * Get lesson narration script
+     */
+    public function get_lesson_script( $request ) {
+        $lesson_id = absint( $request->get_param( 'lesson_id' ) );
+
+        if ( ! $lesson_id || get_post_type( $lesson_id ) !== 'lesson' ) {
+            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        }
+
+        $script = get_post_meta( $lesson_id, '_llms_lesson_script', true );
+
+        return array(
+            'lesson_id' => $lesson_id,
+            'script'    => $script ?: '',
+            'has_script' => ! empty( $script ),
+        );
+    }
+
+    /**
+     * Save lesson narration script
+     */
+    public function save_lesson_script( $request ) {
+        $lesson_id = absint( $request->get_param( 'lesson_id' ) );
+        $script    = $request->get_param( 'script' );
+
+        if ( ! $lesson_id || get_post_type( $lesson_id ) !== 'lesson' ) {
+            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        }
+
+        // Sanitize but allow basic formatting
+        $script = wp_kses_post( $script );
+
+        update_post_meta( $lesson_id, '_llms_lesson_script', $script );
+
+        return array(
+            'status'    => 'success',
+            'lesson_id' => $lesson_id,
+            'length'    => strlen( $script ),
+        );
+    }
+
+    /**
+     * Permission callback - logged in
      */
     public function is_user_logged_in() {
         return is_user_logged_in();
+    }
+
+    /**
+     * Permission callback - can edit lessons (admin/instructor)
+     */
+    public function can_edit_lessons() {
+        return current_user_can( 'edit_posts' );
     }
 }
 

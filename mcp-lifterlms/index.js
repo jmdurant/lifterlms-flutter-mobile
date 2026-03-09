@@ -180,8 +180,9 @@ server.tool(
     order: z.number().optional().describe("Position order within the section"),
     video_embed: z.string().optional().describe("Video embed URL"),
     audio_embed: z.string().optional().describe("Audio embed URL"),
+    script: z.string().optional().describe("Narration script / text to read for this lesson"),
   },
-  async ({ title, parent_id, content, excerpt, order, video_embed, audio_embed }) => {
+  async ({ title, parent_id, content, excerpt, order, video_embed, audio_embed, script }) => {
     const body = { title, parent_id };
     if (content) body.content = content;
     if (excerpt) body.excerpt = excerpt;
@@ -190,10 +191,26 @@ server.tool(
     if (audio_embed) body.audio_embed = audio_embed;
 
     const lesson = await apiCall("POST", "llms/v1/lessons", body);
+
+    // Save script as post meta
+    if (script) {
+      try {
+        await apiCall("POST", `llms/v1/mobile-app/lesson/${lesson.id}/script`, { script });
+      } catch (_) {
+        // Fallback: save via WP post meta
+        try {
+          await apiCall("POST", `wp/v2/lessons/${lesson.id}`, {
+            meta: { _llms_lesson_script: script },
+          });
+        } catch (_) {}
+      }
+    }
+
     return {
       content: [{
         type: "text",
-        text: `Lesson created: ID ${lesson.id}, title "${title}" in section ${parent_id}`,
+        text: `Lesson created: ID ${lesson.id}, title "${title}" in section ${parent_id}` +
+          (script ? ` (with narration script, ${script.length} chars)` : ""),
       }],
     };
   }
@@ -361,6 +378,7 @@ server.tool(
       lessons: z.array(z.object({
         title: z.string().describe("Lesson title"),
         content: z.string().optional().describe("Lesson content (HTML)"),
+        script: z.string().optional().describe("Narration script / text to read for this lesson"),
         video_embed: z.string().optional().describe("Video URL"),
         quiz: z.object({
           title: z.string().describe("Quiz title"),
@@ -438,6 +456,23 @@ server.tool(
 
           const lesson = await apiCall("POST", "llms/v1/lessons", lessonBody);
           lessonResult.id = lesson.id;
+
+          // Save narration script if provided
+          if (les.script) {
+            try {
+              await apiCall("POST", `llms/v1/mobile-app/lesson/${lesson.id}/script`, { script: les.script });
+              lessonResult.has_script = true;
+            } catch (_) {
+              try {
+                await apiCall("POST", `wp/v2/lessons/${lesson.id}`, {
+                  meta: { _llms_lesson_script: les.script },
+                });
+                lessonResult.has_script = true;
+              } catch (_) {
+                result.errors.push(`Script for "${les.title}": failed to save`);
+              }
+            }
+          }
         } catch (err) {
           result.errors.push(`Lesson "${les.title}": ${err.message}`);
           sectionResult.lessons.push(lessonResult);
