@@ -14,6 +14,19 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
   final LifterLMSApiService api = Get.find<LifterLMSApiService>();
   late TabController _tabController;
 
+  static const _creditTypes = {
+    'ama_pra_1': 'AMA PRA Category 1',
+    'ama_pra_2': 'AMA PRA Category 2',
+    'ancc': 'ANCC Contact Hours',
+    'acpe': 'ACPE Credits',
+    'aafp': 'AAFP Prescribed Credits',
+    'aapa': 'AAPA Category 1 CME',
+    'moc': 'MOC Points',
+    'ce': 'CE Credits',
+    'ceu': 'CEU Credits',
+    'custom': 'Custom Credits',
+  };
+
   bool isLoading = true;
   Map<String, dynamic> summary = {};
   List<dynamic> credits = [];
@@ -76,6 +89,10 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddCreditDialog(),
+        child: const Icon(Icons.add),
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage != null
@@ -113,7 +130,6 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Total credits card
           Card(
             elevation: 2,
             child: Padding(
@@ -152,7 +168,7 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Complete courses with CME credits to see them here.',
+                      'Complete courses or add credits manually.',
                       style: TextStyle(fontSize: 14, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
@@ -161,18 +177,16 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
               ),
             ),
 
-          // Credits by type
           ...activeCredits.map<Widget>((credit) {
             return Card(
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: Colors.blue.shade100,
-                  child:
-                      Icon(Icons.verified, color: Colors.blue.shade700),
+                  child: Icon(Icons.verified, color: Colors.blue.shade700),
                 ),
                 title: Text(credit['credit_type_label'] ?? ''),
-                subtitle: Text(
-                    '${credit['total_activities']} activities completed'),
+                subtitle:
+                    Text('${credit['total_activities']} activities completed'),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -192,7 +206,6 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
             );
           }),
 
-          // Expired credits section
           if (expiredCredits.isNotEmpty) ...[
             const SizedBox(height: 24),
             const Text(
@@ -205,7 +218,7 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
             ),
             const SizedBox(height: 8),
             ...expiredCredits.entries.map<Widget>((entry) {
-              final label = _creditTypeLabel(entry.key);
+              final label = _creditTypes[entry.key] ?? entry.key;
               return Card(
                 color: Colors.grey.shade100,
                 child: ListTile(
@@ -226,15 +239,21 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
 
   Widget _buildHistoryTab() {
     if (credits.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 48, color: Colors.grey),
-            SizedBox(height: 12),
-            Text(
+            const Icon(Icons.history, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            const Text(
               'No credit history',
               style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _showAddCreditDialog(),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Credit'),
             ),
           ],
         ),
@@ -250,18 +269,30 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
           final credit = credits[index];
           final status = credit['status'] ?? 'active';
           final isExpired = status == 'expired';
+          final isManual = credit['source'] == 'manual';
+          final title = isManual
+              ? (credit['activity_title'] ?? 'Manual Entry')
+              : (credit['course_title'] ?? 'Unknown Course');
+          final provider = credit['provider'] ?? '';
 
           return Card(
             child: ListTile(
               leading: Icon(
-                isExpired ? Icons.schedule : Icons.check_circle,
-                color: isExpired ? Colors.orange : Colors.green,
+                isManual
+                    ? Icons.edit_note
+                    : (isExpired ? Icons.schedule : Icons.check_circle),
+                color: isManual
+                    ? Colors.blue
+                    : (isExpired ? Colors.orange : Colors.green),
               ),
-              title: Text(credit['course_title'] ?? 'Unknown Course'),
+              title: Text(title),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(credit['credit_type_label'] ?? ''),
+                  if (provider.isNotEmpty)
+                    Text('Provider: $provider',
+                        style: const TextStyle(fontSize: 12)),
                   Text(
                     'Earned: ${_formatDate(credit['earned_date'])}',
                     style: const TextStyle(fontSize: 12),
@@ -292,11 +323,266 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
                 ],
               ),
               isThreeLine: true,
+              onTap: isManual ? () => _showEditCreditDialog(credit) : null,
+              onLongPress:
+                  isManual ? () => _confirmDeleteCredit(credit) : null,
             ),
           );
         },
       ),
     );
+  }
+
+  void _showAddCreditDialog() {
+    _showCreditForm(context);
+  }
+
+  void _showEditCreditDialog(Map<String, dynamic> credit) {
+    _showCreditForm(context, existing: credit);
+  }
+
+  Future<void> _showCreditForm(BuildContext context,
+      {Map<String, dynamic>? existing}) async {
+    final isEdit = existing != null;
+    final titleController =
+        TextEditingController(text: existing?['activity_title'] ?? '');
+    final hoursController = TextEditingController(
+        text: existing != null
+            ? (existing['credit_hours'] ?? 0).toString()
+            : '');
+    final providerController =
+        TextEditingController(text: existing?['provider'] ?? '');
+
+    String selectedType = existing?['credit_type'] ?? 'ama_pra_1';
+    DateTime earnedDate = existing?['earned_date'] != null
+        ? (DateTime.tryParse(existing!['earned_date']) ?? DateTime.now())
+        : DateTime.now();
+    DateTime? expirationDate = existing?['expiration_date'] != null
+        ? DateTime.tryParse(existing!['expiration_date'])
+        : null;
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setModalState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+                16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    isEdit ? 'Edit CME Credit' : 'Add CME Credit',
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Activity Title *',
+                      hintText: 'e.g., Annual CME Conference 2026',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: providerController,
+                    decoration: const InputDecoration(
+                      labelText: 'Provider / Organization',
+                      hintText: 'e.g., AMA, Mayo Clinic',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    decoration: const InputDecoration(
+                      labelText: 'Credit Type *',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _creditTypes.entries
+                        .map((e) => DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value,
+                                  style: const TextStyle(fontSize: 14)),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setModalState(() => selectedType = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: hoursController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Credit Hours *',
+                      hintText: 'e.g., 1.5',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Date Earned *'),
+                    subtitle: Text(_formatDate(earnedDate.toIso8601String())),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: earnedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setModalState(() => earnedDate = picked);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Expiration Date (optional)'),
+                    subtitle: Text(expirationDate != null
+                        ? _formatDate(expirationDate!.toIso8601String())
+                        : 'None'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (expirationDate != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () {
+                              setModalState(() => expirationDate = null);
+                            },
+                          ),
+                        const Icon(Icons.calendar_today),
+                      ],
+                    ),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: expirationDate ?? earnedDate.add(const Duration(days: 365)),
+                        firstDate: earnedDate,
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setModalState(() => expirationDate = picked);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final title = titleController.text.trim();
+                      final hoursText = hoursController.text.trim();
+
+                      if (title.isEmpty) {
+                        Get.snackbar('Required', 'Activity title is required.');
+                        return;
+                      }
+
+                      final hours = double.tryParse(hoursText);
+                      if (hours == null || hours <= 0) {
+                        Get.snackbar('Required', 'Enter valid credit hours.');
+                        return;
+                      }
+
+                      final dateStr =
+                          '${earnedDate.year}-${earnedDate.month.toString().padLeft(2, '0')}-${earnedDate.day.toString().padLeft(2, '0')}';
+                      String? expStr;
+                      if (expirationDate != null) {
+                        expStr =
+                            '${expirationDate!.year}-${expirationDate!.month.toString().padLeft(2, '0')}-${expirationDate!.day.toString().padLeft(2, '0')}';
+                      }
+
+                      Response response;
+                      if (isEdit) {
+                        response = await api.updateManualCmeCredit(
+                          creditId: existing['id'],
+                          activityTitle: title,
+                          creditType: selectedType,
+                          creditHours: hours,
+                          earnedDate: dateStr,
+                          expirationDate: expStr ?? '',
+                          provider: providerController.text.trim(),
+                        );
+                      } else {
+                        response = await api.addManualCmeCredit(
+                          activityTitle: title,
+                          creditType: selectedType,
+                          creditHours: hours,
+                          earnedDate: dateStr,
+                          expirationDate: expStr,
+                          provider: providerController.text.trim(),
+                        );
+                      }
+
+                      if (response.statusCode == 200) {
+                        Navigator.pop(ctx, true);
+                      } else {
+                        final msg = response.body is Map
+                            ? response.body['message']
+                            : 'Failed to save';
+                        Get.snackbar('Error', msg ?? 'Failed to save');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: Text(isEdit ? 'Update Credit' : 'Add Credit',
+                        style: const TextStyle(fontSize: 16)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+
+    if (result == true) {
+      _loadData();
+    }
+  }
+
+  Future<void> _confirmDeleteCredit(Map<String, dynamic> credit) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Credit?'),
+        content: Text(
+            'Delete "${credit['activity_title'] ?? 'this entry'}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final response =
+          await api.deleteManualCmeCredit(creditId: credit['id']);
+      if (response.statusCode == 200) {
+        Get.snackbar('Deleted', 'Credit entry removed.');
+        _loadData();
+      } else {
+        Get.snackbar('Error', 'Failed to delete entry.');
+      }
+    }
   }
 
   String _formatDate(String? dateStr) {
@@ -307,20 +593,5 @@ class _CmeCreditsScreenState extends State<CmeCreditsScreen>
     } catch (_) {
       return dateStr;
     }
-  }
-
-  String _creditTypeLabel(String type) {
-    const labels = {
-      'ama_pra_1': 'AMA PRA Category 1',
-      'ama_pra_2': 'AMA PRA Category 2',
-      'ancc': 'ANCC Contact Hours',
-      'acpe': 'ACPE Credits',
-      'aafp': 'AAFP Prescribed Credits',
-      'aapa': 'AAPA Category 1 CME',
-      'moc': 'MOC Points',
-      'ce': 'CE Credits',
-      'ceu': 'CEU Credits',
-    };
-    return labels[type] ?? type;
   }
 }

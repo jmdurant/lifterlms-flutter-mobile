@@ -1351,4 +1351,92 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
+
+  // CME: Add manual credit entry
+  Future<Response> addManualCmeCredit({
+    required String activityTitle,
+    required String creditType,
+    required double creditHours,
+    required String earnedDate,
+    String? expirationDate,
+    String? provider,
+  }) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/manual');
+
+    final body = <String, dynamic>{
+      'activity_title': activityTitle,
+      'credit_type': creditType,
+      'credit_hours': creditHours,
+      'earned_date': earnedDate,
+    };
+    if (expirationDate != null) body['expiration_date'] = expirationDate;
+    if (provider != null && provider.isNotEmpty) body['provider'] = provider;
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Update manual credit entry
+  Future<Response> updateManualCmeCredit({
+    required int creditId,
+    String? activityTitle,
+    String? creditType,
+    double? creditHours,
+    String? earnedDate,
+    String? expirationDate,
+    String? provider,
+  }) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/manual/$creditId');
+
+    final body = <String, dynamic>{};
+    if (activityTitle != null) body['activity_title'] = activityTitle;
+    if (creditType != null) body['credit_type'] = creditType;
+    if (creditHours != null) body['credit_hours'] = creditHours;
+    if (earnedDate != null) body['earned_date'] = earnedDate;
+    if (expirationDate != null) body['expiration_date'] = expirationDate;
+    if (provider != null) body['provider'] = provider;
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
+
+  // CME: Delete manual credit entry
+  Future<Response> deleteManualCmeCredit({required int creditId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/cme/manual/$creditId');
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': _getAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      ).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
 }

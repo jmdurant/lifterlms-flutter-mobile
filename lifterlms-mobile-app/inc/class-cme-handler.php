@@ -117,6 +117,65 @@ class LLMS_Mobile_CME_Handler {
 			'permission_callback' => '__return_true',
 		) );
 
+		// Manually add a CME credit entry
+		register_rest_route( $namespace, '/mobile-app/cme/manual', array(
+			'methods'             => 'POST',
+			'callback'            => array( $this, 'add_manual_credit' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+			'args'                => array(
+				'activity_title' => array(
+					'required' => true,
+					'type'     => 'string',
+				),
+				'credit_type' => array(
+					'required' => true,
+					'type'     => 'string',
+				),
+				'credit_hours' => array(
+					'required' => true,
+					'type'     => 'number',
+				),
+				'earned_date' => array(
+					'required' => true,
+					'type'     => 'string',
+				),
+				'expiration_date' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+				'provider' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+			),
+		) );
+
+		// Update a manual CME credit entry
+		register_rest_route( $namespace, '/mobile-app/cme/manual/(?P<credit_id>\d+)', array(
+			'methods'             => 'PUT',
+			'callback'            => array( $this, 'update_manual_credit' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+			'args'                => array(
+				'credit_id' => array(
+					'required' => true,
+					'type'     => 'integer',
+				),
+			),
+		) );
+
+		// Delete a manual CME credit entry
+		register_rest_route( $namespace, '/mobile-app/cme/manual/(?P<credit_id>\d+)', array(
+			'methods'             => 'DELETE',
+			'callback'            => array( $this, 'delete_manual_credit' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+			'args'                => array(
+				'credit_id' => array(
+					'required' => true,
+					'type'     => 'integer',
+				),
+			),
+		) );
+
 		// Download credit transcript as data
 		register_rest_route( $namespace, '/mobile-app/cme/transcript', array(
 			'methods'             => 'GET',
@@ -267,13 +326,26 @@ class LLMS_Mobile_CME_Handler {
 			$credits = array();
 		}
 
-		// Enrich with course data
+		// Enrich with course/activity data
 		$result = array();
 		foreach ( $credits as $credit ) {
+			$source = isset( $credit->source ) ? $credit->source : 'course';
+			$title  = '';
+
+			if ( $source === 'manual' ) {
+				$title = isset( $credit->activity_title ) ? $credit->activity_title : '';
+			} else {
+				$course_id = absint( $credit->course_id );
+				$title = $course_id > 0 ? get_the_title( $course_id ) : '';
+			}
+
 			$result[] = array(
 				'id'              => absint( $credit->id ),
 				'course_id'       => absint( $credit->course_id ),
-				'course_title'    => get_the_title( $credit->course_id ),
+				'course_title'    => $title,
+				'activity_title'  => isset( $credit->activity_title ) ? $credit->activity_title : '',
+				'provider'        => isset( $credit->provider ) ? $credit->provider : '',
+				'source'          => $source,
 				'credit_type'     => $credit->credit_type,
 				'credit_type_label' => self::CREDIT_TYPES[ $credit->credit_type ] ?? $credit->credit_type,
 				'credit_hours'    => floatval( $credit->credit_hours ),
@@ -576,6 +648,208 @@ class LLMS_Mobile_CME_Handler {
 			),
 			'credits'        => $transcript_items,
 			'totals'         => $this->calculate_transcript_totals( $credits ),
+		);
+	}
+
+	/**
+	 * Add a manual CME credit entry
+	 */
+	public function add_manual_credit( $request ) {
+		global $wpdb;
+
+		$user_id        = get_current_user_id();
+		$activity_title = sanitize_text_field( $request->get_param( 'activity_title' ) );
+		$credit_type    = sanitize_text_field( $request->get_param( 'credit_type' ) );
+		$credit_hours   = floatval( $request->get_param( 'credit_hours' ) );
+		$earned_date    = sanitize_text_field( $request->get_param( 'earned_date' ) );
+		$expiration_date = sanitize_text_field( $request->get_param( 'expiration_date' ) ?? '' );
+		$provider       = sanitize_text_field( $request->get_param( 'provider' ) ?? '' );
+
+		if ( empty( $activity_title ) ) {
+			return new WP_Error( 'missing_title', 'Activity title is required.', array( 'status' => 400 ) );
+		}
+
+		if ( ! isset( self::CREDIT_TYPES[ $credit_type ] ) ) {
+			return new WP_Error( 'invalid_credit_type', 'Invalid credit type.', array( 'status' => 400 ) );
+		}
+
+		if ( $credit_hours <= 0 || $credit_hours > 999 ) {
+			return new WP_Error( 'invalid_hours', 'Credit hours must be between 0 and 999.', array( 'status' => 400 ) );
+		}
+
+		// Validate date format
+		$parsed_date = strtotime( $earned_date );
+		if ( ! $parsed_date ) {
+			return new WP_Error( 'invalid_date', 'Invalid earned date.', array( 'status' => 400 ) );
+		}
+		$earned_date = gmdate( 'Y-m-d H:i:s', $parsed_date );
+
+		$parsed_expiration = null;
+		if ( ! empty( $expiration_date ) ) {
+			$parsed_expiration = strtotime( $expiration_date );
+			if ( ! $parsed_expiration ) {
+				return new WP_Error( 'invalid_date', 'Invalid expiration date.', array( 'status' => 400 ) );
+			}
+			$parsed_expiration = gmdate( 'Y-m-d H:i:s', $parsed_expiration );
+		}
+
+		$table = $wpdb->prefix . 'llms_mobile_cme_credits';
+
+		$result = $wpdb->insert(
+			$table,
+			array(
+				'user_id'         => $user_id,
+				'course_id'       => 0,
+				'credit_type'     => $credit_type,
+				'credit_hours'    => $credit_hours,
+				'earned_date'     => $earned_date,
+				'expiration_date' => $parsed_expiration,
+				'status'          => 'active',
+				'source'          => 'manual',
+				'activity_title'  => $activity_title,
+				'provider'        => $provider,
+			),
+			array( '%d', '%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		if ( ! $result ) {
+			return new WP_Error( 'insert_failed', 'Failed to save credit entry.', array( 'status' => 500 ) );
+		}
+
+		return array(
+			'status'  => 'success',
+			'message' => 'Credit entry added.',
+			'id'      => $wpdb->insert_id,
+		);
+	}
+
+	/**
+	 * Update a manual CME credit entry
+	 */
+	public function update_manual_credit( $request ) {
+		global $wpdb;
+
+		$user_id   = get_current_user_id();
+		$credit_id = absint( $request->get_param( 'credit_id' ) );
+		$table     = $wpdb->prefix . 'llms_mobile_cme_credits';
+
+		// Verify ownership and that it's a manual entry
+		$existing = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM $table WHERE id = %d AND user_id = %d",
+			$credit_id,
+			$user_id
+		) );
+
+		if ( ! $existing ) {
+			return new WP_Error( 'not_found', 'Credit entry not found.', array( 'status' => 404 ) );
+		}
+
+		if ( ( $existing->source ?? 'course' ) !== 'manual' ) {
+			return new WP_Error( 'not_manual', 'Only manual entries can be edited.', array( 'status' => 400 ) );
+		}
+
+		$updates = array();
+		$formats = array();
+
+		$activity_title = $request->get_param( 'activity_title' );
+		if ( $activity_title !== null ) {
+			$updates['activity_title'] = sanitize_text_field( $activity_title );
+			$formats[] = '%s';
+		}
+
+		$credit_type = $request->get_param( 'credit_type' );
+		if ( $credit_type !== null ) {
+			$credit_type = sanitize_text_field( $credit_type );
+			if ( ! isset( self::CREDIT_TYPES[ $credit_type ] ) ) {
+				return new WP_Error( 'invalid_credit_type', 'Invalid credit type.', array( 'status' => 400 ) );
+			}
+			$updates['credit_type'] = $credit_type;
+			$formats[] = '%s';
+		}
+
+		$credit_hours = $request->get_param( 'credit_hours' );
+		if ( $credit_hours !== null ) {
+			$credit_hours = floatval( $credit_hours );
+			if ( $credit_hours <= 0 || $credit_hours > 999 ) {
+				return new WP_Error( 'invalid_hours', 'Credit hours must be between 0 and 999.', array( 'status' => 400 ) );
+			}
+			$updates['credit_hours'] = $credit_hours;
+			$formats[] = '%f';
+		}
+
+		$earned_date = $request->get_param( 'earned_date' );
+		if ( $earned_date !== null ) {
+			$parsed = strtotime( sanitize_text_field( $earned_date ) );
+			if ( ! $parsed ) {
+				return new WP_Error( 'invalid_date', 'Invalid earned date.', array( 'status' => 400 ) );
+			}
+			$updates['earned_date'] = gmdate( 'Y-m-d H:i:s', $parsed );
+			$formats[] = '%s';
+		}
+
+		$expiration_date = $request->get_param( 'expiration_date' );
+		if ( $expiration_date !== null ) {
+			if ( empty( $expiration_date ) ) {
+				$updates['expiration_date'] = null;
+				$formats[] = '%s';
+			} else {
+				$parsed = strtotime( sanitize_text_field( $expiration_date ) );
+				if ( ! $parsed ) {
+					return new WP_Error( 'invalid_date', 'Invalid expiration date.', array( 'status' => 400 ) );
+				}
+				$updates['expiration_date'] = gmdate( 'Y-m-d H:i:s', $parsed );
+				$formats[] = '%s';
+			}
+		}
+
+		$provider = $request->get_param( 'provider' );
+		if ( $provider !== null ) {
+			$updates['provider'] = sanitize_text_field( $provider );
+			$formats[] = '%s';
+		}
+
+		if ( empty( $updates ) ) {
+			return new WP_Error( 'no_changes', 'No fields to update.', array( 'status' => 400 ) );
+		}
+
+		$wpdb->update( $table, $updates, array( 'id' => $credit_id ), $formats, array( '%d' ) );
+
+		return array(
+			'status'  => 'success',
+			'message' => 'Credit entry updated.',
+		);
+	}
+
+	/**
+	 * Delete a manual CME credit entry
+	 */
+	public function delete_manual_credit( $request ) {
+		global $wpdb;
+
+		$user_id   = get_current_user_id();
+		$credit_id = absint( $request->get_param( 'credit_id' ) );
+		$table     = $wpdb->prefix . 'llms_mobile_cme_credits';
+
+		// Verify ownership and that it's a manual entry
+		$existing = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM $table WHERE id = %d AND user_id = %d",
+			$credit_id,
+			$user_id
+		) );
+
+		if ( ! $existing ) {
+			return new WP_Error( 'not_found', 'Credit entry not found.', array( 'status' => 404 ) );
+		}
+
+		if ( ( $existing->source ?? 'course' ) !== 'manual' ) {
+			return new WP_Error( 'not_manual', 'Only manual entries can be deleted.', array( 'status' => 400 ) );
+		}
+
+		$wpdb->delete( $table, array( 'id' => $credit_id ), array( '%d' ) );
+
+		return array(
+			'status'  => 'success',
+			'message' => 'Credit entry deleted.',
 		);
 	}
 

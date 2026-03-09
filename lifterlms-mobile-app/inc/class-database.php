@@ -543,20 +543,23 @@ class LLMS_Mobile_Database {
         $sql = "CREATE TABLE IF NOT EXISTS $table_name (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
-            course_id bigint(20) NOT NULL,
+            course_id bigint(20) DEFAULT 0,
             credit_type varchar(50) NOT NULL,
             credit_hours decimal(5,2) NOT NULL,
             earned_date datetime NOT NULL,
             expiration_date datetime DEFAULT NULL,
             status varchar(20) DEFAULT 'active',
+            source varchar(20) DEFAULT 'course',
+            activity_title varchar(255) DEFAULT NULL,
+            provider varchar(255) DEFAULT NULL,
             PRIMARY KEY (id),
             KEY user_id (user_id),
             KEY course_id (course_id),
             KEY credit_type (credit_type),
             KEY status (status),
+            KEY source (source),
             KEY earned_date (earned_date),
-            KEY expiration_date (expiration_date),
-            UNIQUE KEY user_course (user_id, course_id)
+            KEY expiration_date (expiration_date)
         ) $charset_collate;";
 
         dbDelta( $sql );
