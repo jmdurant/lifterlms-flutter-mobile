@@ -60,6 +60,7 @@ Add this to your `.claude/settings.json` or project `.claude/settings.local.json
 ### One-Shot Course Creation
 - **scaffold_course** — Create an entire course in one call: course → sections → lessons (with slides + scripts) → quizzes → CME config
 - **import_powerpoint** — Import a `.pptx` file as a course, extracting slides and speaker notes as narration scripts
+- **export_powerpoint** — Export a course as a `.pptx` file with slides, speaker notes, and optionally quiz questions
 
 ### Student Management
 - **list_students** — List students (with search)
@@ -173,6 +174,9 @@ This satisfies ACCME requirements for disclosure and objectives before education
 
 **PowerPoint import:**
 > "Import the PowerPoint at `C:/Users/docto/Documents/wound-care.pptx` as a course. Split it into lessons of 12 slides each. Configure as 1.0 ANCC credit."
+
+**PowerPoint export:**
+> "Export course 15 as a PowerPoint to `C:/Users/docto/Documents/sepsis-course.pptx` and include the quiz questions."
 
 **Quiz creation:**
 > "Add a 10-question quiz to lesson 42. Mix of multiple choice and true/false. 80% passing score. 15 minute time limit."

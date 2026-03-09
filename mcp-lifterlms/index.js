@@ -2,8 +2,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import fs from "fs/promises";
+import path from "path";
 import JSZip from "jszip";
 import xml2js from "xml2js";
+import PptxGenJS from "pptxgenjs";
 
 // ── Configuration ──────────────────────────────────────────────────────────────
 
@@ -982,6 +984,309 @@ server.tool(
     };
   }
 );
+
+// ── Tool: export_powerpoint ────────────────────────────────────────────────────
+
+server.tool(
+  "export_powerpoint",
+  "Export a LifterLMS course as a PowerPoint (.pptx) file. Each lesson's slides become PowerPoint slides with speaker notes from narration scripts. If a lesson has no slides, its HTML content is placed as text on a single slide.",
+  {
+    course_id: z.number().describe("Course ID to export"),
+    output_path: z.string().describe("Absolute path for the output .pptx file"),
+    include_quizzes: z.boolean().optional().describe("Include quiz questions as slides (default: false)"),
+  },
+  async ({ course_id, output_path, include_quizzes = false }) => {
+    // 1. Fetch course
+    let course;
+    try {
+      course = await apiCall("GET", `llms/v1/courses/${course_id}`);
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to fetch course: ${err.message}` }] };
+    }
+
+    const courseTitle = course.title?.rendered || course.title || `Course ${course_id}`;
+
+    // 2. Fetch sections
+    let sections = [];
+    try {
+      const raw = await apiCall("GET", `llms/v1/sections?parent_id=${course_id}&per_page=50`);
+      sections = Array.isArray(raw) ? raw : [];
+    } catch (_) {}
+
+    // 3. Fetch lessons per section
+    const lessonsMap = {};
+    for (const sec of sections) {
+      try {
+        const raw = await apiCall("GET", `llms/v1/lessons?parent_id=${sec.id}&per_page=100`);
+        lessonsMap[sec.id] = Array.isArray(raw) ? raw : [];
+      } catch (_) {
+        lessonsMap[sec.id] = [];
+      }
+    }
+
+    // 4. Build the PowerPoint
+    const pptx = new PptxGenJS();
+    pptx.title = courseTitle;
+    pptx.subject = `Exported from LifterLMS (Course #${course_id})`;
+    pptx.layout = "LAYOUT_WIDE";
+
+    // Color palette
+    const COLORS = {
+      darkBlue: "1a237e",
+      blue: "0d47a1",
+      white: "FFFFFF",
+      lightGray: "F5F5F5",
+      darkText: "212121",
+      subtitleText: "616161",
+    };
+
+    // Title slide
+    const titleSlide = pptx.addSlide();
+    titleSlide.background = { color: COLORS.darkBlue };
+    titleSlide.addText(courseTitle, {
+      x: 0.8, y: 1.5, w: "85%", h: 1.5,
+      fontSize: 36, fontFace: "Calibri", color: COLORS.white, bold: true,
+    });
+    if (course.content?.rendered) {
+      // Strip HTML tags for subtitle
+      const desc = course.content.rendered.replace(/<[^>]*>/g, "").trim().substring(0, 200);
+      if (desc) {
+        titleSlide.addText(desc, {
+          x: 0.8, y: 3.2, w: "85%", h: 1,
+          fontSize: 16, fontFace: "Calibri", color: COLORS.white, italic: true,
+        });
+      }
+    }
+
+    let totalSlides = 1;
+    let lessonsExported = 0;
+
+    // 5. Process each section and lesson
+    for (const sec of sections) {
+      const sectionTitle = sec.title?.rendered || sec.title || "Section";
+
+      // Section divider slide
+      const secSlide = pptx.addSlide();
+      secSlide.background = { color: COLORS.blue };
+      secSlide.addText(sectionTitle, {
+        x: 0.8, y: 2.0, w: "85%", h: 1.5,
+        fontSize: 32, fontFace: "Calibri", color: COLORS.white, bold: true,
+      });
+      totalSlides++;
+
+      const lessons = lessonsMap[sec.id] || [];
+      for (const lesson of lessons) {
+        const lessonTitle = lesson.title?.rendered || lesson.title || "Lesson";
+
+        // Try to fetch slides for this lesson
+        let lessonSlides = [];
+        try {
+          const slideData = await apiCall("GET", `llms/v1/mobile-app/lesson/${lesson.id}/slides`);
+          if (slideData.has_slides && Array.isArray(slideData.slides)) {
+            lessonSlides = slideData.slides;
+          }
+        } catch (_) {}
+
+        if (lessonSlides.length > 0) {
+          // Render each slide
+          for (const s of lessonSlides) {
+            const slide = pptx.addSlide();
+            const bgHex = (s.background_color || "#FFFFFF").replace("#", "");
+            slide.background = { color: bgHex };
+
+            const isLight = isLightHex(bgHex);
+            const textColor = isLight ? COLORS.darkText : COLORS.white;
+            const subColor = isLight ? COLORS.subtitleText : "CCCCCC";
+
+            switch (s.layout) {
+              case "full_image":
+                if (s.image_url) {
+                  slide.addImage({ path: s.image_url, x: 0, y: 0, w: "100%", h: "100%" });
+                }
+                if (s.title) {
+                  slide.addText(s.title, {
+                    x: 0.5, y: 4.2, w: "90%", h: 0.8,
+                    fontSize: 24, fontFace: "Calibri", color: COLORS.white, bold: true,
+                    shadow: { type: "outer", blur: 6, offset: 2, color: "000000", opacity: 0.6 },
+                  });
+                }
+                break;
+
+              case "title_image":
+                slide.addText(s.title || "", {
+                  x: 0.8, y: 0.4, w: "85%", h: 0.8,
+                  fontSize: 28, fontFace: "Calibri", color: textColor, bold: true,
+                });
+                if (s.image_url) {
+                  slide.addImage({ path: s.image_url, x: 1.5, y: 1.5, w: 7, h: 4, sizing: { type: "contain" } });
+                }
+                break;
+
+              case "title_body":
+                slide.addText(s.title || "", {
+                  x: 0.8, y: 0.4, w: "85%", h: 0.8,
+                  fontSize: 28, fontFace: "Calibri", color: textColor, bold: true,
+                });
+                slide.addText(s.body || "", {
+                  x: 0.8, y: 1.5, w: "85%", h: 3.5,
+                  fontSize: 18, fontFace: "Calibri", color: subColor, lineSpacingMultiple: 1.3,
+                });
+                break;
+
+              case "title_bullets":
+              default:
+                slide.addText(s.title || "", {
+                  x: 0.8, y: 0.4, w: "85%", h: 0.8,
+                  fontSize: 28, fontFace: "Calibri", color: textColor, bold: true,
+                });
+                if (s.bullets && s.bullets.length > 0) {
+                  const bulletRows = s.bullets.map((b) => ({
+                    text: b,
+                    options: { fontSize: 18, color: subColor, bullet: { code: "2022" }, paraSpaceAfter: 8 },
+                  }));
+                  slide.addText(bulletRows, {
+                    x: 0.8, y: 1.5, w: "85%", h: 3.8,
+                    fontFace: "Calibri", lineSpacingMultiple: 1.2, valign: "top",
+                  });
+                }
+                break;
+            }
+
+            // Add speaker notes from narration script
+            if (s.script) {
+              slide.addNotes(s.script);
+            }
+
+            totalSlides++;
+          }
+        } else {
+          // No slides — create a single slide from lesson content
+          const slide = pptx.addSlide();
+          slide.background = { color: COLORS.lightGray };
+          slide.addText(lessonTitle, {
+            x: 0.8, y: 0.4, w: "85%", h: 0.8,
+            fontSize: 28, fontFace: "Calibri", color: COLORS.darkText, bold: true,
+          });
+
+          // Strip HTML from content
+          const content = (lesson.content?.rendered || "").replace(/<[^>]*>/g, "").trim();
+          if (content) {
+            slide.addText(content.substring(0, 1500), {
+              x: 0.8, y: 1.5, w: "85%", h: 3.8,
+              fontSize: 16, fontFace: "Calibri", color: COLORS.subtitleText,
+              lineSpacingMultiple: 1.3, valign: "top",
+            });
+          }
+
+          // Try to get lesson-level script for notes
+          try {
+            const scriptData = await apiCall("GET", `llms/v1/mobile-app/lesson/${lesson.id}/script`);
+            if (scriptData.has_script && scriptData.script) {
+              slide.addNotes(scriptData.script);
+            }
+          } catch (_) {}
+
+          totalSlides++;
+        }
+
+        // Quiz slides
+        if (include_quizzes && lesson.quiz_id) {
+          try {
+            const quiz = await apiCall("GET", `llms/v1/quizzes/${lesson.quiz_id}`);
+            const quizTitle = quiz.title?.rendered || quiz.title || "Quiz";
+
+            // Quiz title slide
+            const qSlide = pptx.addSlide();
+            qSlide.background = { color: "e65100" };
+            qSlide.addText(quizTitle, {
+              x: 0.8, y: 2.0, w: "85%", h: 1.5,
+              fontSize: 32, fontFace: "Calibri", color: COLORS.white, bold: true,
+            });
+            if (quiz.passing_percent) {
+              qSlide.addText(`Passing score: ${quiz.passing_percent}%`, {
+                x: 0.8, y: 3.5, w: "85%", h: 0.6,
+                fontSize: 18, fontFace: "Calibri", color: COLORS.white, italic: true,
+              });
+            }
+            totalSlides++;
+
+            // Individual question slides
+            let questions = [];
+            try {
+              const raw = await apiCall("GET", `llms/v1/quizzes/${lesson.quiz_id}/questions?per_page=50`);
+              questions = Array.isArray(raw) ? raw : [];
+            } catch (_) {}
+
+            for (let qi = 0; qi < questions.length; qi++) {
+              const q = questions[qi];
+              const questionSlide = pptx.addSlide();
+              questionSlide.background = { color: "fff3e0" };
+
+              questionSlide.addText(`Q${qi + 1}. ${q.title?.rendered || q.title || ""}`, {
+                x: 0.8, y: 0.4, w: "85%", h: 1.0,
+                fontSize: 22, fontFace: "Calibri", color: COLORS.darkText, bold: true,
+              });
+
+              // Show choices if available
+              if (q.choices && q.choices.length > 0) {
+                const choiceRows = q.choices.map((c, ci) => ({
+                  text: `${String.fromCharCode(65 + ci)}. ${c.choice || c.title || ""}`,
+                  options: { fontSize: 18, color: COLORS.subtitleText, paraSpaceAfter: 6 },
+                }));
+                questionSlide.addText(choiceRows, {
+                  x: 1.0, y: 1.6, w: "80%", h: 3.5,
+                  fontFace: "Calibri", valign: "top",
+                });
+              }
+
+              // Put correct answer in speaker notes
+              if (q.choices) {
+                const correct = q.choices.filter((c) => c.correct).map((c) => c.choice || c.title).join(", ");
+                if (correct) questionSlide.addNotes(`Correct answer: ${correct}`);
+              }
+
+              totalSlides++;
+            }
+          } catch (_) {}
+        }
+
+        lessonsExported++;
+      }
+    }
+
+    // 6. Write file
+    try {
+      const dir = path.dirname(output_path);
+      await fs.mkdir(dir, { recursive: true });
+      const buffer = await pptx.write({ outputType: "nodebuffer" });
+      await fs.writeFile(output_path, buffer);
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to write file: ${err.message}` }] };
+    }
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          status: "success",
+          file: output_path,
+          course: courseTitle,
+          sections: sections.length,
+          lessons_exported: lessonsExported,
+          total_slides: totalSlides,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+function isLightHex(hex) {
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5;
+}
 
 // ── Start Server ───────────────────────────────────────────────────────────────
 
