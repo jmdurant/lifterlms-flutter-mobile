@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_app/app/view/components/learning/learning-quiz.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_app/app/view/components/accordion-lesson-lifterlms.dart';
+import 'package:flutter_app/app/view/components/learning/slide_viewer_widget.dart';
 import 'package:html/parser.dart' as HtmlParser;
 
 class LearningScreen extends StatefulWidget {
@@ -538,20 +539,9 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 margin: const EdgeInsets.only(bottom: 16),
                 child: _buildInteractiveViewer(lesson.content),
               ),
-            Obx(() => HtmlWidget(
-              controller.cleanedLessonContent.value.isNotEmpty 
-                  ? controller.cleanedLessonContent.value 
-                  : lesson.content,
-              factoryBuilder: () => MyWidgetFactory(),
-              textStyle: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-              ),
-            )),
-            const SizedBox(height: 16),
 
-            // Narration script section
-            _LessonScriptWidget(lessonId: lesson.id),
+            // Slides or HTML content
+            _LessonSlidesOrContent(lessonId: lesson.id, lesson: lesson, controller: controller),
 
             const SizedBox(height: 32),
 
@@ -1606,6 +1596,107 @@ class MyWidgetFactory extends WidgetFactory {
 }
 
 /// Displays the narration script for a lesson if one exists
+class _LessonSlidesOrContent extends StatefulWidget {
+  final int lessonId;
+  final dynamic lesson;
+  final LearningController controller;
+  const _LessonSlidesOrContent({
+    required this.lessonId,
+    required this.lesson,
+    required this.controller,
+  });
+
+  @override
+  State<_LessonSlidesOrContent> createState() => _LessonSlidesOrContentState();
+}
+
+class _LessonSlidesOrContentState extends State<_LessonSlidesOrContent> {
+  List<SlideData>? _slides;
+  bool _loaded = false;
+  int _lastLessonId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSlides();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LessonSlidesOrContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lessonId != widget.lessonId) {
+      _loaded = false;
+      _slides = null;
+      _loadSlides();
+    }
+  }
+
+  Future<void> _loadSlides() async {
+    if (_loaded && _lastLessonId == widget.lessonId) return;
+    _lastLessonId = widget.lessonId;
+
+    try {
+      final api = Get.find<LearningController>().lmsService.api;
+      final response = await api.getLessonSlides(lessonId: widget.lessonId);
+      if (response.statusCode == 200 && mounted) {
+        final data = response.body;
+        if (data['has_slides'] == true && data['slides'] is List && (data['slides'] as List).isNotEmpty) {
+          setState(() {
+            _slides = (data['slides'] as List)
+                .map((s) => SlideData.fromJson(Map<String, dynamic>.from(s)))
+                .toList();
+            _loaded = true;
+          });
+          return;
+        }
+      }
+    } catch (_) {
+      // Slides are optional
+    }
+    if (mounted) {
+      setState(() {
+        _slides = null;
+        _loaded = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Show slides if available
+    if (_loaded && _slides != null && _slides!.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SlideViewerWidget(slides: _slides!),
+          const SizedBox(height: 16),
+          // Still show narration script (lesson-level) below slides
+          _LessonScriptWidget(lessonId: widget.lessonId),
+        ],
+      );
+    }
+
+    // Fallback: regular HTML content + script
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Obx(() => HtmlWidget(
+          widget.controller.cleanedLessonContent.value.isNotEmpty
+              ? widget.controller.cleanedLessonContent.value
+              : widget.lesson.content,
+          factoryBuilder: () => MyWidgetFactory(),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            height: 1.5,
+          ),
+        )),
+        const SizedBox(height: 16),
+        _LessonScriptWidget(lessonId: widget.lessonId),
+      ],
+    );
+  }
+}
+
 class _LessonScriptWidget extends StatefulWidget {
   final int lessonId;
   const _LessonScriptWidget({required this.lessonId});

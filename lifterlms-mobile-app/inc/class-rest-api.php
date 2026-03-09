@@ -78,6 +78,36 @@ class LLMS_Mobile_REST_API {
                 ),
             ),
         ) );
+
+        // Get lesson slides
+        register_rest_route( 'llms/v1', '/mobile-app/lesson/(?P<lesson_id>\d+)/slides', array(
+            'methods'             => 'GET',
+            'callback'            => array( $this, 'get_lesson_slides' ),
+            'permission_callback' => array( $this, 'is_user_logged_in' ),
+            'args'                => array(
+                'lesson_id' => array(
+                    'required' => true,
+                    'type'     => 'integer',
+                ),
+            ),
+        ) );
+
+        // Save lesson slides (admin/MCP use)
+        register_rest_route( 'llms/v1', '/mobile-app/lesson/(?P<lesson_id>\d+)/slides', array(
+            'methods'             => 'POST',
+            'callback'            => array( $this, 'save_lesson_slides' ),
+            'permission_callback' => array( $this, 'can_edit_lessons' ),
+            'args'                => array(
+                'lesson_id' => array(
+                    'required' => true,
+                    'type'     => 'integer',
+                ),
+                'slides' => array(
+                    'required' => true,
+                    'type'     => 'array',
+                ),
+            ),
+        ) );
     }
     
     /**
@@ -277,6 +307,88 @@ class LLMS_Mobile_REST_API {
             'status'    => 'success',
             'lesson_id' => $lesson_id,
             'length'    => strlen( $script ),
+        );
+    }
+
+    /**
+     * Get lesson slides
+     */
+    public function get_lesson_slides( $request ) {
+        $lesson_id = absint( $request->get_param( 'lesson_id' ) );
+
+        if ( ! $lesson_id || get_post_type( $lesson_id ) !== 'lesson' ) {
+            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        }
+
+        $slides_json = get_post_meta( $lesson_id, '_llms_lesson_slides', true );
+        $slides = array();
+
+        if ( ! empty( $slides_json ) ) {
+            $decoded = json_decode( $slides_json, true );
+            if ( is_array( $decoded ) ) {
+                $slides = $decoded;
+            }
+        }
+
+        return array(
+            'lesson_id'  => $lesson_id,
+            'has_slides' => ! empty( $slides ),
+            'slides'     => $slides,
+        );
+    }
+
+    /**
+     * Save lesson slides
+     */
+    public function save_lesson_slides( $request ) {
+        $lesson_id = absint( $request->get_param( 'lesson_id' ) );
+        $slides    = $request->get_param( 'slides' );
+
+        if ( ! $lesson_id || get_post_type( $lesson_id ) !== 'lesson' ) {
+            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        }
+
+        if ( ! is_array( $slides ) ) {
+            return new WP_Error( 'invalid_slides', 'Slides must be an array.', array( 'status' => 400 ) );
+        }
+
+        // Sanitize each slide
+        $sanitized = array();
+        foreach ( $slides as $slide ) {
+            $clean = array(
+                'title'  => sanitize_text_field( $slide['title'] ?? '' ),
+                'layout' => sanitize_text_field( $slide['layout'] ?? 'title_bullets' ),
+            );
+
+            if ( ! empty( $slide['body'] ) ) {
+                $clean['body'] = wp_kses_post( $slide['body'] );
+            }
+
+            if ( ! empty( $slide['bullets'] ) && is_array( $slide['bullets'] ) ) {
+                $clean['bullets'] = array_map( 'sanitize_text_field', $slide['bullets'] );
+            }
+
+            if ( ! empty( $slide['image_url'] ) ) {
+                $clean['image_url'] = esc_url_raw( $slide['image_url'] );
+            }
+
+            if ( ! empty( $slide['background_color'] ) ) {
+                $clean['background_color'] = sanitize_hex_color( $slide['background_color'] ) ?: '#FFFFFF';
+            }
+
+            if ( ! empty( $slide['script'] ) ) {
+                $clean['script'] = sanitize_textarea_field( $slide['script'] );
+            }
+
+            $sanitized[] = $clean;
+        }
+
+        update_post_meta( $lesson_id, '_llms_lesson_slides', wp_json_encode( $sanitized ) );
+
+        return array(
+            'status'      => 'success',
+            'lesson_id'   => $lesson_id,
+            'slide_count' => count( $sanitized ),
         );
     }
 

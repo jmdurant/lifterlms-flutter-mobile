@@ -112,6 +112,10 @@ mixin LifterLMSApiStubs {
   Future<Response> getLessonScript({required int lessonId}) async {
     return _notImplemented('Lesson script');
   }
+
+  Future<Response> getLessonSlides({required int lessonId}) async {
+    return _notImplemented('Lesson slides');
+  }
   
   // Assignment methods (not in current roadmap)
   Future<Response> getAssignment({required int assignmentId}) async {

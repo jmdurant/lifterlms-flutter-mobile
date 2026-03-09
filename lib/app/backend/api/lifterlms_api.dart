@@ -1454,4 +1454,19 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
       return const Response(statusCode: 1, statusText: connectionIssue);
     }
   }
+
+  // Get lesson slides
+  Future<Response> getLessonSlides({required int lessonId}) async {
+    final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/mobile-app/lesson/$lessonId/slides');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Authorization': _getAuthHeader(),
+        'Content-Type': 'application/json',
+      }).timeout(Duration(seconds: timeoutInSeconds));
+      return parseResponse(response, url.toString());
+    } catch (e) {
+      return const Response(statusCode: 1, statusText: connectionIssue);
+    }
+  }
 }

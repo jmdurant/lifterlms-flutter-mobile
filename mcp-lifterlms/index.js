@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import fs from "fs/promises";
+import JSZip from "jszip";
+import xml2js from "xml2js";
 
 // ── Configuration ──────────────────────────────────────────────────────────────
 
@@ -175,14 +178,23 @@ server.tool(
   {
     title: z.string().describe("Lesson title"),
     parent_id: z.number().describe("Parent section ID"),
-    content: z.string().optional().describe("Lesson content (HTML)"),
+    content: z.string().optional().describe("Lesson content (HTML) - used as fallback if no slides provided"),
     excerpt: z.string().optional().describe("Lesson excerpt"),
     order: z.number().optional().describe("Position order within the section"),
     video_embed: z.string().optional().describe("Video embed URL"),
     audio_embed: z.string().optional().describe("Audio embed URL"),
-    script: z.string().optional().describe("Narration script / text to read for this lesson"),
+    script: z.string().optional().describe("Single narration script for the whole lesson (use slides[].script for per-slide scripts instead)"),
+    slides: z.array(z.object({
+      title: z.string().describe("Slide title/heading"),
+      layout: z.enum(["title_bullets", "title_body", "title_image", "full_image"]).optional().describe("Slide layout (default title_bullets)"),
+      bullets: z.array(z.string()).optional().describe("Bullet points for the slide"),
+      body: z.string().optional().describe("Paragraph text for the slide"),
+      image_url: z.string().optional().describe("Image URL for the slide"),
+      background_color: z.string().optional().describe("Hex color for slide background (e.g. #1a73e8)"),
+      script: z.string().optional().describe("Narration script for this specific slide - what the presenter reads aloud"),
+    })).optional().describe("Slide deck for the lesson. Each slide has its own content and narration script. When slides are provided, the app displays a swipeable card deck instead of scrolling HTML."),
   },
-  async ({ title, parent_id, content, excerpt, order, video_embed, audio_embed, script }) => {
+  async ({ title, parent_id, content, excerpt, order, video_embed, audio_embed, script, slides }) => {
     const body = { title, parent_id };
     if (content) body.content = content;
     if (excerpt) body.excerpt = excerpt;
@@ -191,26 +203,31 @@ server.tool(
     if (audio_embed) body.audio_embed = audio_embed;
 
     const lesson = await apiCall("POST", "llms/v1/lessons", body);
+    const extras = [];
 
-    // Save script as post meta
+    // Save slides if provided
+    if (slides && slides.length > 0) {
+      try {
+        await apiCall("POST", `llms/v1/mobile-app/lesson/${lesson.id}/slides`, { slides });
+        extras.push(`${slides.length} slides`);
+      } catch (err) {
+        extras.push(`slides failed: ${err.message}`);
+      }
+    }
+
+    // Save single script if provided (and no per-slide scripts)
     if (script) {
       try {
         await apiCall("POST", `llms/v1/mobile-app/lesson/${lesson.id}/script`, { script });
-      } catch (_) {
-        // Fallback: save via WP post meta
-        try {
-          await apiCall("POST", `wp/v2/lessons/${lesson.id}`, {
-            meta: { _llms_lesson_script: script },
-          });
-        } catch (_) {}
-      }
+        extras.push("narration script");
+      } catch (_) {}
     }
 
     return {
       content: [{
         type: "text",
         text: `Lesson created: ID ${lesson.id}, title "${title}" in section ${parent_id}` +
-          (script ? ` (with narration script, ${script.length} chars)` : ""),
+          (extras.length > 0 ? ` (with ${extras.join(", ")})` : ""),
       }],
     };
   }
@@ -377,8 +394,17 @@ server.tool(
       title: z.string().describe("Section title"),
       lessons: z.array(z.object({
         title: z.string().describe("Lesson title"),
-        content: z.string().optional().describe("Lesson content (HTML)"),
-        script: z.string().optional().describe("Narration script / text to read for this lesson"),
+        content: z.string().optional().describe("Lesson content (HTML) - fallback if no slides"),
+        script: z.string().optional().describe("Single narration script for whole lesson"),
+        slides: z.array(z.object({
+          title: z.string().describe("Slide title"),
+          layout: z.enum(["title_bullets", "title_body", "title_image", "full_image"]).optional(),
+          bullets: z.array(z.string()).optional(),
+          body: z.string().optional(),
+          image_url: z.string().optional(),
+          background_color: z.string().optional(),
+          script: z.string().optional().describe("Narration for this slide"),
+        })).optional().describe("Slide deck - when provided, app shows swipeable cards"),
         video_embed: z.string().optional().describe("Video URL"),
         quiz: z.object({
           title: z.string().describe("Quiz title"),
@@ -402,7 +428,10 @@ server.tool(
       expiration_months: z.number().optional(),
       attestation_required: z.boolean().optional(),
       evaluation_required: z.boolean().optional(),
-      disclosure_text: z.string().optional(),
+      disclosure_text: z.string().optional().describe("Faculty disclosure statement (ACCME requirement)"),
+      learning_objectives: z.array(z.string()).optional().describe("Course-level learning objectives shown at start of each lesson"),
+      faculty_name: z.string().optional().describe("Faculty/presenter name for disclosure slide"),
+      accreditation_statement: z.string().optional().describe("Accreditation statement (e.g., 'This activity has been planned and implemented in accordance with...')"),
     }).optional().describe("Optional CME credit configuration"),
   },
   async ({ title, description, status = "draft", sections, cme }) => {
@@ -457,20 +486,55 @@ server.tool(
           const lesson = await apiCall("POST", "llms/v1/lessons", lessonBody);
           lessonResult.id = lesson.id;
 
-          // Save narration script if provided
-          if (les.script) {
+          // Save slides if provided — auto-prepend CME disclosure & objectives
+          if (les.slides && les.slides.length > 0) {
+            try {
+              const finalSlides = [];
+
+              // Prepend ACCME-required slides when CME is configured
+              if (cme) {
+                // Slide 1: Disclosure
+                const disclosureBullets = [];
+                if (cme.faculty_name) disclosureBullets.push(`Faculty: ${cme.faculty_name}`);
+                disclosureBullets.push(cme.disclosure_text || "The faculty for this activity have no relevant financial relationships with ineligible companies to disclose.");
+                if (cme.accreditation_statement) disclosureBullets.push(cme.accreditation_statement);
+                disclosureBullets.push(`Credit: ${cme.credit_hours} ${cme.credit_type.replace(/_/g, " ").toUpperCase()} hour(s)`);
+
+                finalSlides.push({
+                  title: "Disclosures",
+                  layout: "title_bullets",
+                  bullets: disclosureBullets,
+                  background_color: "#1a237e",
+                  script: "Before we begin, please review the following disclosure information as required by accreditation standards.",
+                });
+
+                // Slide 2: Learning Objectives
+                if (cme.learning_objectives && cme.learning_objectives.length > 0) {
+                  finalSlides.push({
+                    title: "Learning Objectives",
+                    layout: "title_bullets",
+                    bullets: cme.learning_objectives,
+                    background_color: "#0d47a1",
+                    script: "At the conclusion of this activity, participants should be able to achieve the following objectives.",
+                  });
+                }
+              }
+
+              finalSlides.push(...les.slides);
+              await apiCall("POST", `llms/v1/mobile-app/lesson/${lesson.id}/slides`, { slides: finalSlides });
+              lessonResult.slide_count = finalSlides.length;
+            } catch (err) {
+              result.errors.push(`Slides for "${les.title}": ${err.message}`);
+            }
+          }
+
+          // Save narration script if provided (single script, no slides)
+          if (les.script && (!les.slides || les.slides.length === 0)) {
             try {
               await apiCall("POST", `llms/v1/mobile-app/lesson/${lesson.id}/script`, { script: les.script });
               lessonResult.has_script = true;
             } catch (_) {
-              try {
-                await apiCall("POST", `wp/v2/lessons/${lesson.id}`, {
-                  meta: { _llms_lesson_script: les.script },
-                });
-                lessonResult.has_script = true;
-              } catch (_) {
-                result.errors.push(`Script for "${les.title}": failed to save`);
-              }
+              result.errors.push(`Script for "${les.title}": failed to save`);
             }
           }
         } catch (err) {
@@ -621,6 +685,300 @@ server.tool(
     });
     return {
       content: [{ type: "text", text: `Student ${student_id} enrolled in course ${course_id}.` }],
+    };
+  }
+);
+
+// ── PowerPoint Parser Helpers ──────────────────────────────────────────────────
+
+async function parsePptx(filePath) {
+  const fileBuffer = await fs.readFile(filePath);
+  const zip = await JSZip.loadAsync(fileBuffer);
+  const parser = new xml2js.Parser({ explicitArray: false, ignoreAttrs: false });
+
+  // Find all slide files in order
+  const slideFiles = Object.keys(zip.files)
+    .filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
+    .sort((a, b) => {
+      const numA = parseInt(a.match(/slide(\d+)/)[1]);
+      const numB = parseInt(b.match(/slide(\d+)/)[1]);
+      return numA - numB;
+    });
+
+  const slides = [];
+
+  for (const slideFile of slideFiles) {
+    const slideNum = parseInt(slideFile.match(/slide(\d+)/)[1]);
+    const xml = await zip.file(slideFile).async("text");
+    const parsed = await parser.parseStringPromise(xml);
+
+    const slide = { title: "", bullets: [], body: "", images: [] };
+
+    // Extract text from shape tree
+    const spTree = parsed?.["p:sld"]?.["p:cSld"]?.["p:spTree"];
+    if (spTree) {
+      const shapes = Array.isArray(spTree["p:sp"]) ? spTree["p:sp"] : spTree["p:sp"] ? [spTree["p:sp"]] : [];
+
+      for (const shape of shapes) {
+        const texts = extractTextsFromShape(shape);
+        if (texts.length === 0) continue;
+
+        // Check if this is likely a title (by placeholder type or first text block)
+        const phType = shape?.["p:nvSpPr"]?.["p:nvPr"]?.["p:ph"]?.["$"]?.type;
+        if (phType === "title" || phType === "ctrTitle") {
+          slide.title = texts.join(" ");
+        } else if (phType === "subTitle") {
+          slide.body = texts.join("\n");
+        } else if (texts.length > 1) {
+          slide.bullets.push(...texts);
+        } else if (!slide.title && texts[0].length < 100) {
+          slide.title = texts[0];
+        } else {
+          slide.bullets.push(...texts);
+        }
+      }
+
+      // Check for images (pictures)
+      const pics = Array.isArray(spTree["p:pic"]) ? spTree["p:pic"] : spTree["p:pic"] ? [spTree["p:pic"]] : [];
+      for (const pic of pics) {
+        const rId = pic?.["p:blipFill"]?.["a:blip"]?.["$"]?.["r:embed"];
+        if (rId) slide.images.push(rId);
+      }
+    }
+
+    // Get speaker notes
+    const notesFile = `ppt/notesSlides/notesSlide${slideNum}.xml`;
+    if (zip.file(notesFile)) {
+      try {
+        const notesXml = await zip.file(notesFile).async("text");
+        const notesParsed = await parser.parseStringPromise(notesXml);
+        const notesSpTree = notesParsed?.["p:notes"]?.["p:cSld"]?.["p:spTree"];
+        if (notesSpTree) {
+          const noteShapes = Array.isArray(notesSpTree["p:sp"]) ? notesSpTree["p:sp"] : notesSpTree["p:sp"] ? [notesSpTree["p:sp"]] : [];
+          const noteTexts = [];
+          for (const shape of noteShapes) {
+            const phType = shape?.["p:nvSpPr"]?.["p:nvPr"]?.["p:ph"]?.["$"]?.type;
+            if (phType === "body") {
+              noteTexts.push(...extractTextsFromShape(shape));
+            }
+          }
+          slide.script = noteTexts.join("\n").trim();
+        }
+      } catch (_) {}
+    }
+
+    // If no title was found, use first bullet as title
+    if (!slide.title && slide.bullets.length > 0) {
+      slide.title = slide.bullets.shift();
+    }
+
+    slides.push(slide);
+  }
+
+  return slides;
+}
+
+function extractTextsFromShape(shape) {
+  const texts = [];
+  const txBody = shape?.["p:txBody"];
+  if (!txBody) return texts;
+
+  const paragraphs = Array.isArray(txBody["a:p"]) ? txBody["a:p"] : txBody["a:p"] ? [txBody["a:p"]] : [];
+
+  for (const para of paragraphs) {
+    const runs = Array.isArray(para["a:r"]) ? para["a:r"] : para["a:r"] ? [para["a:r"]] : [];
+    const lineTexts = [];
+    for (const run of runs) {
+      const t = run["a:t"];
+      if (t) {
+        const text = typeof t === "string" ? t : t._ || "";
+        if (text.trim()) lineTexts.push(text.trim());
+      }
+    }
+    if (lineTexts.length > 0) {
+      texts.push(lineTexts.join(" "));
+    }
+  }
+
+  return texts;
+}
+
+function detectSlideLayout(slide) {
+  if (slide.images.length > 0 && !slide.title) return "full_image";
+  if (slide.images.length > 0) return "title_image";
+  if (slide.bullets.length > 0) return "title_bullets";
+  if (slide.body) return "title_body";
+  return "title_bullets";
+}
+
+// ── Tool: import_powerpoint ───────────────────────────────────────────────────
+
+server.tool(
+  "import_powerpoint",
+  "Import a PowerPoint (.pptx) file to create a course with slides. Extracts slide text, bullet points, and speaker notes (as narration scripts). Optionally splits into multiple lessons by a slide-per-lesson count.",
+  {
+    file_path: z.string().describe("Absolute path to the .pptx file"),
+    course_title: z.string().optional().describe("Course title (defaults to filename)"),
+    slides_per_lesson: z.number().optional().describe("Number of slides per lesson (default: all slides in one lesson)"),
+    section_title: z.string().optional().describe("Section title (default: 'Module 1')"),
+    status: z.enum(["publish", "draft"]).optional().describe("Course status (default: draft)"),
+    cme: z.object({
+      credit_type: z.enum(["ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom"]),
+      credit_hours: z.number(),
+      disclosure_text: z.string().optional(),
+      learning_objectives: z.array(z.string()).optional(),
+      faculty_name: z.string().optional(),
+      accreditation_statement: z.string().optional(),
+    }).optional().describe("Optional CME configuration — will auto-prepend disclosure/objectives slides"),
+  },
+  async ({ file_path, course_title, slides_per_lesson, section_title, status = "draft", cme }) => {
+    // 1. Parse the PowerPoint
+    let rawSlides;
+    try {
+      rawSlides = await parsePptx(file_path);
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Failed to parse PowerPoint: ${err.message}` }],
+      };
+    }
+
+    if (rawSlides.length === 0) {
+      return {
+        content: [{ type: "text", text: "No slides found in the PowerPoint file." }],
+      };
+    }
+
+    // Derive course title from filename if not provided
+    if (!course_title) {
+      const parts = file_path.replace(/\\/g, "/").split("/");
+      course_title = parts[parts.length - 1].replace(/\.pptx$/i, "").replace(/[-_]/g, " ");
+    }
+
+    // Convert raw slides to our slide format
+    const convertedSlides = rawSlides.map((s) => {
+      const slide = {
+        title: s.title || "Untitled Slide",
+        layout: detectSlideLayout(s),
+      };
+      if (s.bullets.length > 0) slide.bullets = s.bullets;
+      if (s.body) slide.body = s.body;
+      if (s.script) slide.script = s.script;
+      return slide;
+    });
+
+    // Build CME prefix slides
+    const cmePrefix = [];
+    if (cme) {
+      const disclosureBullets = [];
+      if (cme.faculty_name) disclosureBullets.push(`Faculty: ${cme.faculty_name}`);
+      disclosureBullets.push(cme.disclosure_text || "The faculty for this activity have no relevant financial relationships with ineligible companies to disclose.");
+      if (cme.accreditation_statement) disclosureBullets.push(cme.accreditation_statement);
+      disclosureBullets.push(`Credit: ${cme.credit_hours} ${cme.credit_type.replace(/_/g, " ").toUpperCase()} hour(s)`);
+
+      cmePrefix.push({
+        title: "Disclosures",
+        layout: "title_bullets",
+        bullets: disclosureBullets,
+        background_color: "#1a237e",
+        script: "Before we begin, please review the following disclosure information as required by accreditation standards.",
+      });
+
+      if (cme.learning_objectives && cme.learning_objectives.length > 0) {
+        cmePrefix.push({
+          title: "Learning Objectives",
+          layout: "title_bullets",
+          bullets: cme.learning_objectives,
+          background_color: "#0d47a1",
+          script: "At the conclusion of this activity, participants should be able to achieve the following objectives.",
+        });
+      }
+    }
+
+    // Split into lessons
+    const perLesson = slides_per_lesson || convertedSlides.length;
+    const lessonGroups = [];
+    for (let i = 0; i < convertedSlides.length; i += perLesson) {
+      lessonGroups.push(convertedSlides.slice(i, i + perLesson));
+    }
+
+    const result = { course: null, sections: [], slide_summary: { total_pptx_slides: rawSlides.length, lessons: lessonGroups.length }, errors: [] };
+
+    // 2. Create course
+    try {
+      const course = await apiCall("POST", "llms/v1/courses", { title: course_title, status });
+      result.course = { id: course.id, title: course_title };
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to create course: ${err.message}` }] };
+    }
+
+    const courseId = result.course.id;
+
+    // 3. Create section
+    let sectionId;
+    try {
+      const section = await apiCall("POST", "llms/v1/sections", {
+        title: section_title || "Module 1",
+        parent_id: courseId,
+        order: 1,
+      });
+      sectionId = section.id;
+    } catch (err) {
+      result.errors.push(`Section: ${err.message}`);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+
+    // 4. Create lessons with slides
+    for (let li = 0; li < lessonGroups.length; li++) {
+      const group = lessonGroups[li];
+      const lessonTitle = lessonGroups.length === 1
+        ? course_title
+        : `${course_title} - Part ${li + 1}`;
+
+      const lessonResult = { title: lessonTitle, id: null, slide_count: 0 };
+
+      try {
+        const lesson = await apiCall("POST", "llms/v1/lessons", {
+          title: lessonTitle,
+          parent_id: sectionId,
+          order: li + 1,
+        });
+        lessonResult.id = lesson.id;
+
+        // Prepend CME slides + lesson slides
+        const finalSlides = [...cmePrefix, ...group];
+        await apiCall("POST", `llms/v1/mobile-app/lesson/${lesson.id}/slides`, { slides: finalSlides });
+        lessonResult.slide_count = finalSlides.length;
+      } catch (err) {
+        result.errors.push(`Lesson "${lessonTitle}": ${err.message}`);
+      }
+
+      if (!result.sections[0]) result.sections[0] = { title: section_title || "Module 1", id: sectionId, lessons: [] };
+      result.sections[0].lessons.push(lessonResult);
+    }
+
+    // 5. Configure CME if specified
+    if (cme) {
+      try {
+        await apiCall("POST", `wp/v2/courses/${courseId}`, {
+          meta: {
+            _llms_cme_enabled: "yes",
+            _llms_cme_credit_type: cme.credit_type,
+            _llms_cme_credit_hours: String(cme.credit_hours),
+            _llms_cme_attestation_required: "yes",
+            _llms_cme_evaluation_required: "yes",
+          },
+        });
+        result.cme = "configured";
+      } catch (err) {
+        result.errors.push(`CME config: ${err.message}`);
+      }
+    }
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify(result, null, 2),
+      }],
     };
   }
 );

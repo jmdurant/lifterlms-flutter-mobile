@@ -85,6 +85,9 @@ abstract class LMSApiInterface {
   // Lesson script/narration
   Future<Response> getLessonScript({required int lessonId});
 
+  // Lesson slides
+  Future<Response> getLessonSlides({required int lessonId});
+
   // Assignments (Custom Implementation Required for LifterLMS)
   Future<Response> getAssignment({required int assignmentId});
   Future<Response> startAssignment({required int assignmentId, required int userId});
