@@ -1,6 +1,22 @@
 import axios, {AxiosInstance} from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Base64 encode that works in React Native (no Buffer)
+function base64Encode(str: string): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  let output = '';
+  for (let i = 0; i < str.length; i += 3) {
+    const a = str.charCodeAt(i);
+    const b = i + 1 < str.length ? str.charCodeAt(i + 1) : 0;
+    const c = i + 2 < str.length ? str.charCodeAt(i + 2) : 0;
+    output += chars[a >> 2];
+    output += chars[((a & 3) << 4) | (b >> 4)];
+    output += i + 1 < str.length ? chars[((b & 15) << 2) | (c >> 6)] : '=';
+    output += i + 2 < str.length ? chars[c & 63] : '=';
+  }
+  return output;
+}
+
 const STORAGE_KEY_TOKEN = '@llms_token';
 const STORAGE_KEY_USER = '@llms_user';
 
@@ -17,9 +33,7 @@ class LifterLMSApi {
   }
 
   configure(siteUrl: string, consumerKey: string, consumerSecret: string) {
-    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
-      'base64',
-    );
+    const auth = base64Encode(`${consumerKey}:${consumerSecret}`);
     this.client = axios.create({
       baseURL: `${siteUrl}/wp-json`,
       timeout: 30000,
