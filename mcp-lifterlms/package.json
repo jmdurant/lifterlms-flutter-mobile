@@ -1,0 +1,13 @@
+{
+  "name": "mcp-lifterlms",
+  "version": "1.0.0",
+  "description": "MCP server for creating and managing LifterLMS courses",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
