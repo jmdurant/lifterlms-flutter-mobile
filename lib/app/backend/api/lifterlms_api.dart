@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/api/lms_api_interface.dart';
 import 'package:flutter_app/app/backend/api/lifterlms_api_stubs.dart';
@@ -905,7 +906,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         body: jsonEncode({
           'device_token': token,
           'user_id': userId,
-          'platform': Platform.isIOS ? 'ios' : 'android',
+          'platform': !kIsWeb && Platform.isIOS ? 'ios' : 'android',
         }),
       ).timeout(Duration(seconds: timeoutInSeconds));
       
@@ -986,7 +987,7 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
         body: jsonEncode({
           'receipt': receipt,
           'product_id': productId,
-          'platform': Platform.isIOS ? 'ios' : 'android',
+          'platform': !kIsWeb && Platform.isIOS ? 'ios' : 'android',
         }),
       ).timeout(Duration(seconds: timeoutInSeconds));
       

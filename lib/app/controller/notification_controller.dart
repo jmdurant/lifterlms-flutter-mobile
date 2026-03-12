@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/api/api.dart';
 import 'package:flutter_app/app/backend/models/notification_model.dart';
@@ -128,7 +129,7 @@ class NotificationController extends GetxController implements GetxService {
       String token = _getToken();
       Map<String, String> body = {
         'device_token': fcmToken,
-        'device_type': Platform.isIOS ? 'ios' : 'android',
+        'device_type': !kIsWeb && Platform.isIOS ? 'ios' : 'android',
       };
       final response = await apiService.postPrivate(
           AppConstants.registerFCMToken, body, token);

@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/lifterlms/courses_controller.dart';
 import 'package:flutter_app/app/controller/lifterlms/home_controller.dart';
@@ -43,7 +44,7 @@ class _TabScreenState extends State<TabScreen>
 
   @override
   Widget build(BuildContext context) {
-    bool isAndroid = Platform.isAndroid;
+    bool isAndroid = !kIsWeb && Platform.isAndroid;
     return GetBuilder<TabControllerX>(
         builder: (value) {
       return Scaffold(

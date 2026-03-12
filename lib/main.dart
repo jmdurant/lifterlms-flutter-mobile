@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -74,8 +75,8 @@ void main() async {
   Get.lazyPut(() => ReviewController());
   Get.lazyPut(() => FinishLearningController());
   Get.lazyPut(() => ForgotPasswordController());
-  //firebase - skip on Linux and macOS desktop
-  if (!Platform.isLinux && !Platform.isMacOS) {
+  //firebase - skip on web, Linux, and macOS desktop
+  if (!kIsWeb && !Platform.isLinux && !Platform.isMacOS) {
     await Firebase.initializeApp();
     await FirebaseApiController().initNotifications();
   }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/services/lms_service.dart';
 import 'package:flutter_app/app/helper/router.dart';
@@ -93,8 +94,8 @@ class NotificationController extends GetxController implements GetxService {
   
   /// Initialize notifications
   Future<void> initializeNotifications() async {
-    // Skip Firebase on Linux and macOS
-    if (Platform.isLinux || Platform.isMacOS) {
+    // Skip Firebase on web, Linux, and macOS
+    if (kIsWeb || Platform.isLinux || Platform.isMacOS) {
       return;
     }
     
