@@ -319,31 +319,73 @@ server.tool(
   }
 );
 
+// ── CME Helpers ────────────────────────────────────────────────────────────────
+
+const CREDIT_LABELS = {
+  ama_pra_1: "AMA PRA Category 1",
+  ama_pra_2: "AMA PRA Category 2",
+  ancc: "ANCC Contact Hours",
+  acpe: "ACPE Credits",
+  aafp: "AAFP Prescribed Credits",
+  aapa: "AAPA Category 1 CME",
+  moc: "MOC Points",
+  ce: "CE Credits",
+  ceu: "CEU Credits",
+  custom: "Custom Credits",
+};
+
+const CME_CREDIT_SCHEMA = z.object({
+  credit_type: z.enum(["ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom"]),
+  credit_hours: z.number(),
+  expiration_months: z.number().optional(),
+  accrediting_institution: z.string().optional().describe("Institution providing accreditation (e.g., 'Duke University School of Nursing', 'UNC School of Medicine')"),
+  accreditation_statement: z.string().optional().describe("Accreditation statement specific to this credit type"),
+});
+
+function normalizeCmeToArray(cme) {
+  if (!cme) return [];
+  if (Array.isArray(cme)) return cme;
+  return [cme];
+}
+
+function buildCreditSummaryLines(credits) {
+  return credits.map((c) => {
+    const label = CREDIT_LABELS[c.credit_type] || c.credit_type;
+    const inst = c.accrediting_institution ? ` (${c.accrediting_institution})` : "";
+    return `${c.credit_hours} ${label}${inst}`;
+  });
+}
+
 // ── Tool: configure_cme ────────────────────────────────────────────────────────
 
 server.tool(
   "configure_cme",
-  "Configure CME (Continuing Medical Education) credits for a course",
+  "Configure CME credits for a course. Supports multiple credit types (e.g., AMA PRA Category 1 via UNC + ANCC Contact Hours via Duke) for dual-accredited courses.",
   {
     course_id: z.number().describe("Course ID"),
-    credit_type: z.enum([
-      "ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom",
-    ]).describe("CME credit type"),
-    credit_hours: z.number().describe("Number of credit hours"),
-    expiration_months: z.number().optional().describe("Months until credits expire (0 = never)"),
-    attestation_required: z.boolean().optional().describe("Require attestation before awarding credits"),
+    credits: z.array(z.object({
+      credit_type: z.enum([
+        "ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom",
+      ]).describe("CME credit type"),
+      credit_hours: z.number().describe("Number of credit hours for this type"),
+      expiration_months: z.number().optional().describe("Months until credits expire (0 = never)"),
+      accrediting_institution: z.string().optional().describe("Institution providing this accreditation (e.g., 'UNC School of Medicine')"),
+      accreditation_statement: z.string().optional().describe("Accreditation statement for this credit type"),
+    })).describe("Array of credit types — one entry per accrediting body"),
+    attestation_required: z.boolean().optional().describe("Require attestation before awarding credits (default: true)"),
     attestation_text: z.string().optional().describe("Attestation statement text"),
-    evaluation_required: z.boolean().optional().describe("Require post-activity evaluation"),
+    evaluation_required: z.boolean().optional().describe("Require post-activity evaluation (default: true)"),
     disclosure_text: z.string().optional().describe("Faculty disclosure/conflict of interest text"),
   },
-  async ({ course_id, credit_type, credit_hours, expiration_months = 0, attestation_required = true, attestation_text, evaluation_required = true, disclosure_text }) => {
-    // Set course meta via WordPress REST API
-    // These are stored as post meta on the course
+  async ({ course_id, credits, attestation_required = true, attestation_text, evaluation_required = true, disclosure_text }) => {
+    // Store all credit types as JSON in post meta
     const metaUpdates = {
       _llms_cme_enabled: "yes",
-      _llms_cme_credit_type: credit_type,
-      _llms_cme_credit_hours: String(credit_hours),
-      _llms_cme_expiration_months: String(expiration_months),
+      _llms_cme_credits: JSON.stringify(credits),
+      // Primary credit type (first in array) for backward compatibility
+      _llms_cme_credit_type: credits[0].credit_type,
+      _llms_cme_credit_hours: String(credits[0].credit_hours),
+      _llms_cme_expiration_months: String(credits[0].expiration_months || 0),
       _llms_cme_attestation_required: attestation_required ? "yes" : "no",
       _llms_cme_evaluation_required: evaluation_required ? "yes" : "no",
     };
@@ -358,26 +400,13 @@ server.tool(
     // Update via WordPress post meta endpoint
     await apiCall("POST", `wp/v2/courses/${course_id}`, { meta: metaUpdates });
 
-    const creditLabels = {
-      ama_pra_1: "AMA PRA Category 1",
-      ama_pra_2: "AMA PRA Category 2",
-      ancc: "ANCC Contact Hours",
-      acpe: "ACPE Credits",
-      aafp: "AAFP Prescribed Credits",
-      aapa: "AAPA Category 1 CME",
-      moc: "MOC Points",
-      ce: "CE Credits",
-      ceu: "CEU Credits",
-      custom: "Custom Credits",
-    };
+    const creditLines = buildCreditSummaryLines(credits);
 
     return {
       content: [{
         type: "text",
         text: `CME configured for course ${course_id}:\n` +
-          `  Credit type: ${creditLabels[credit_type]}\n` +
-          `  Hours: ${credit_hours}\n` +
-          `  Expiration: ${expiration_months > 0 ? expiration_months + " months" : "Never"}\n` +
+          `  Credits:\n${creditLines.map((l) => `    • ${l}`).join("\n")}\n` +
           `  Attestation required: ${attestation_required}\n` +
           `  Evaluation required: ${evaluation_required}`,
       }],
@@ -427,16 +456,17 @@ server.tool(
       })),
     })).describe("Course sections with nested lessons"),
     cme: z.object({
-      credit_type: z.enum(["ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom"]),
-      credit_hours: z.number(),
+      credits: z.array(CME_CREDIT_SCHEMA).optional().describe("Array of credit types for dual/multi-accredited courses (e.g., AMA PRA Cat 1 via UNC + ANCC via Duke)"),
+      credit_type: z.enum(["ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom"]).optional().describe("Single credit type (use 'credits' array for multi-accredited courses)"),
+      credit_hours: z.number().optional(),
       expiration_months: z.number().optional(),
       attestation_required: z.boolean().optional(),
       evaluation_required: z.boolean().optional(),
-      disclosure_text: z.string().optional().describe("Faculty disclosure statement (ACCME requirement)"),
+      disclosure_text: z.string().optional().describe("Faculty disclosure statement (ACCME/ANCC requirement)"),
       learning_objectives: z.array(z.string()).optional().describe("Course-level learning objectives shown at start of each lesson"),
       faculty_name: z.string().optional().describe("Faculty/presenter name for disclosure slide"),
-      accreditation_statement: z.string().optional().describe("Accreditation statement (e.g., 'This activity has been planned and implemented in accordance with...')"),
-    }).optional().describe("Optional CME credit configuration"),
+      accreditation_statement: z.string().optional().describe("Accreditation statement (legacy single-credit mode)"),
+    }).optional().describe("Optional CME credit configuration — supports single or multiple credit types for dual-accredited courses"),
     auto_images: z.boolean().optional().describe("Auto-generate images for each lesson using Unsplash/Gemini and attach as featured image + inline content (default: false)"),
     image_source: z.enum(["auto", "gemini", "unsplash"]).optional().describe("Image source when auto_images is true (default: auto)"),
     image_style_hint: z.string().optional().describe("Style hint for image generation (e.g., 'clinical photography', 'medical illustrations')"),
@@ -538,24 +568,52 @@ server.tool(
             try {
               const finalSlides = [];
 
-              // Prepend ACCME-required slides when CME is configured
+              // Prepend CME-required slides when CME is configured
               if (cme) {
+                // Normalize credits: support both single credit_type and credits array
+                const cmeCredits = cme.credits && cme.credits.length > 0
+                  ? cme.credits
+                  : (cme.credit_type ? [{ credit_type: cme.credit_type, credit_hours: cme.credit_hours, accrediting_institution: null, accreditation_statement: cme.accreditation_statement }] : []);
+
                 // Slide 1: Disclosure
                 const disclosureBullets = [];
                 if (cme.faculty_name) disclosureBullets.push(`Faculty: ${cme.faculty_name}`);
                 disclosureBullets.push(cme.disclosure_text || "The faculty for this activity have no relevant financial relationships with ineligible companies to disclose.");
-                if (cme.accreditation_statement) disclosureBullets.push(cme.accreditation_statement);
-                disclosureBullets.push(`Credit: ${cme.credit_hours} ${cme.credit_type.replace(/_/g, " ").toUpperCase()} hour(s)`);
+
+                // Add accreditation statements per credit type
+                for (const credit of cmeCredits) {
+                  if (credit.accreditation_statement) {
+                    disclosureBullets.push(credit.accreditation_statement);
+                  }
+                }
+                // Legacy single accreditation statement
+                if (cmeCredits.length === 0 && cme.accreditation_statement) {
+                  disclosureBullets.push(cme.accreditation_statement);
+                }
+
+                // Slide 2: Credits Available (shows all credit types)
+                const creditLines = buildCreditSummaryLines(cmeCredits);
+                if (creditLines.length > 0) {
+                  disclosureBullets.push(""); // spacer
+                  disclosureBullets.push("Credits available upon completion:");
+                  disclosureBullets.push(...creditLines);
+                } else if (cme.credit_type && cme.credit_hours) {
+                  disclosureBullets.push(`Credit: ${cme.credit_hours} ${cme.credit_type.replace(/_/g, " ").toUpperCase()} hour(s)`);
+                }
+
+                const disclosureScript = cmeCredits.length > 1
+                  ? "Before we begin, please review the following disclosure information. This activity is jointly accredited for multiple credit types as listed."
+                  : "Before we begin, please review the following disclosure information as required by accreditation standards.";
 
                 finalSlides.push({
-                  title: "Disclosures",
+                  title: "Disclosures & Accreditation",
                   layout: "title_bullets",
-                  bullets: disclosureBullets,
+                  bullets: disclosureBullets.filter((b) => b !== ""),
                   background_color: "#1a237e",
-                  script: "Before we begin, please review the following disclosure information as required by accreditation standards.",
+                  script: disclosureScript,
                 });
 
-                // Slide 2: Learning Objectives
+                // Slide 3: Learning Objectives
                 if (cme.learning_objectives && cme.learning_objectives.length > 0) {
                   finalSlides.push({
                     title: "Learning Objectives",
@@ -694,18 +752,28 @@ server.tool(
     // 3. Configure CME if specified
     if (cme) {
       try {
+        // Normalize to credits array
+        const cmeCredits = cme.credits && cme.credits.length > 0
+          ? cme.credits
+          : (cme.credit_type ? [{ credit_type: cme.credit_type, credit_hours: cme.credit_hours, expiration_months: cme.expiration_months }] : []);
+
         const metaUpdates = {
           _llms_cme_enabled: "yes",
-          _llms_cme_credit_type: cme.credit_type,
-          _llms_cme_credit_hours: String(cme.credit_hours),
-          _llms_cme_expiration_months: String(cme.expiration_months || 0),
+          _llms_cme_credits: JSON.stringify(cmeCredits),
+          // Primary credit (backward compat)
+          _llms_cme_credit_type: cmeCredits[0]?.credit_type || cme.credit_type,
+          _llms_cme_credit_hours: String(cmeCredits[0]?.credit_hours || cme.credit_hours),
+          _llms_cme_expiration_months: String(cmeCredits[0]?.expiration_months || cme.expiration_months || 0),
           _llms_cme_attestation_required: (cme.attestation_required !== false) ? "yes" : "no",
           _llms_cme_evaluation_required: (cme.evaluation_required !== false) ? "yes" : "no",
         };
         if (cme.disclosure_text) metaUpdates._llms_cme_disclosure_text = cme.disclosure_text;
 
         await apiCall("POST", `wp/v2/courses/${courseId}`, { meta: metaUpdates });
-        result.cme = "configured";
+        result.cme = {
+          status: "configured",
+          credits: buildCreditSummaryLines(cmeCredits),
+        };
       } catch (err) {
         result.errors.push(`CME config: ${err.message}`);
       }
@@ -1050,16 +1118,23 @@ server.tool(
     // 5. Configure CME if specified
     if (cme) {
       try {
+        const cmeCredits = cme.credits && cme.credits.length > 0
+          ? cme.credits
+          : (cme.credit_type ? [{ credit_type: cme.credit_type, credit_hours: cme.credit_hours }] : []);
         await apiCall("POST", `wp/v2/courses/${courseId}`, {
           meta: {
             _llms_cme_enabled: "yes",
-            _llms_cme_credit_type: cme.credit_type,
-            _llms_cme_credit_hours: String(cme.credit_hours),
+            _llms_cme_credits: JSON.stringify(cmeCredits),
+            _llms_cme_credit_type: cmeCredits[0]?.credit_type || cme.credit_type,
+            _llms_cme_credit_hours: String(cmeCredits[0]?.credit_hours || cme.credit_hours),
             _llms_cme_attestation_required: "yes",
             _llms_cme_evaluation_required: "yes",
           },
         });
-        result.cme = "configured";
+        result.cme = {
+          status: "configured",
+          credits: buildCreditSummaryLines(cmeCredits),
+        };
       } catch (err) {
         result.errors.push(`CME config: ${err.message}`);
       }
