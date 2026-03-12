@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import Tts from 'react-native-tts';
 
 interface Slide {
   title: string;
@@ -26,16 +27,160 @@ interface SlideViewerProps {
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
+function getReadableText(slide: Slide): string {
+  if (slide.script) return slide.script;
+  const parts: string[] = [slide.title];
+  if (slide.body) parts.push(slide.body);
+  if (slide.bullets) parts.push(...slide.bullets);
+  return parts.join('. ');
+}
+
 const SlideViewer: React.FC<SlideViewerProps> = ({slides, onComplete}) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showScript, setShowScript] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [lectureMode, setLectureMode] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [speechRate, setSpeechRate] = useState(0.5);
 
-  const slide = slides[currentIndex];
+  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lectureModeRef = useRef(lectureMode);
+  const autoAdvanceRef = useRef(autoAdvance);
+  const currentIndexRef = useRef(currentIndex);
+  const AUTO_ADVANCE_DELAY = 3; // seconds after TTS finishes
+
+  // Keep refs in sync
+  useEffect(() => {
+    lectureModeRef.current = lectureMode;
+  }, [lectureMode]);
+  useEffect(() => {
+    autoAdvanceRef.current = autoAdvance;
+  }, [autoAdvance]);
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  // Initialize TTS
+  useEffect(() => {
+    Tts.setDefaultLanguage('en-US');
+    Tts.setDefaultRate(speechRate);
+
+    const finishListener = Tts.addEventListener('tts-finish' as any, () => {
+      setIsSpeaking(false);
+      if (lectureModeRef.current || autoAdvanceRef.current) {
+        scheduleAutoAdvance();
+      }
+    });
+
+    const cancelListener = Tts.addEventListener('tts-cancel' as any, () => {
+      setIsSpeaking(false);
+    });
+
+    return () => {
+      (finishListener as any)?.remove?.();
+      (cancelListener as any)?.remove?.();
+      Tts.stop();
+      clearTimer();
+    };
+  }, []);
+
+  // Update TTS rate when changed
+  useEffect(() => {
+    Tts.setDefaultRate(speechRate);
+  }, [speechRate]);
+
+  const clearTimer = () => {
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
+  };
+
+  const scheduleAutoAdvance = useCallback(() => {
+    clearTimer();
+    if (currentIndexRef.current >= slides.length - 1) {
+      setLectureMode(false);
+      setAutoAdvance(false);
+      onComplete?.();
+      return;
+    }
+    autoAdvanceTimer.current = setTimeout(() => {
+      goToSlide(currentIndexRef.current + 1);
+    }, AUTO_ADVANCE_DELAY * 1000);
+  }, [slides.length, onComplete]);
+
+  const speak = useCallback(
+    (text?: string) => {
+      clearTimer();
+      Tts.stop();
+      const speakText = text || getReadableText(slides[currentIndexRef.current]);
+      if (!speakText) return;
+      Tts.speak(speakText);
+      setIsSpeaking(true);
+    },
+    [slides],
+  );
+
+  const stopSpeech = useCallback(() => {
+    clearTimer();
+    Tts.stop();
+    setIsSpeaking(false);
+  }, []);
+
+  const goToSlide = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= slides.length) return;
+      clearTimer();
+      Tts.stop();
+      setIsSpeaking(false);
+      setShowScript(false);
+      setCurrentIndex(index);
+      // In lecture mode, auto-speak the new slide after a brief delay
+      if (lectureModeRef.current) {
+        setTimeout(() => {
+          const text = getReadableText(slides[index]);
+          if (text) {
+            Tts.speak(text);
+            setIsSpeaking(true);
+          }
+        }, 500);
+      }
+    },
+    [slides],
+  );
+
+  const toggleLectureMode = useCallback(() => {
+    if (lectureMode) {
+      setLectureMode(false);
+      setAutoAdvance(false);
+      stopSpeech();
+    } else {
+      setLectureMode(true);
+      setAutoAdvance(true);
+      speak();
+    }
+  }, [lectureMode, speak, stopSpeech]);
+
+  const toggleAutoAdvance = useCallback(() => {
+    setAutoAdvance(prev => {
+      if (prev) clearTimer();
+      return !prev;
+    });
+  }, []);
+
+  const adjustSpeed = useCallback(
+    (delta: number) => {
+      setSpeechRate(prev => {
+        const newRate = Math.max(0.25, Math.min(1.0, prev + delta));
+        return newRate;
+      });
+    },
+    [],
+  );
 
   const goNext = () => {
     if (currentIndex < slides.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setShowScript(false);
+      goToSlide(currentIndex + 1);
     } else if (onComplete) {
       onComplete();
     }
@@ -43,8 +188,7 @@ const SlideViewer: React.FC<SlideViewerProps> = ({slides, onComplete}) => {
 
   const goPrev = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-      setShowScript(false);
+      goToSlide(currentIndex - 1);
     }
   };
 
@@ -54,9 +198,8 @@ const SlideViewer: React.FC<SlideViewerProps> = ({slides, onComplete}) => {
     }
   };
 
-  if (!slide) {
-    return null;
-  }
+  const slide = slides[currentIndex];
+  if (!slide) return null;
 
   const bgColor = slide.background_color || '#1a73e8';
   const isLight = isLightColor(bgColor);
@@ -65,6 +208,20 @@ const SlideViewer: React.FC<SlideViewerProps> = ({slides, onComplete}) => {
 
   return (
     <View style={[styles.container, {backgroundColor: bgColor}]}>
+      {/* Lecture mode indicator */}
+      {lectureMode && (
+        <View style={styles.lectureBadge}>
+          <Text style={styles.lectureBadgeText}>LECTURE MODE</Text>
+        </View>
+      )}
+
+      {/* Speaking indicator */}
+      {isSpeaking && (
+        <View style={styles.speakingIndicator}>
+          <Text style={styles.speakingText}>Speaking...</Text>
+        </View>
+      )}
+
       {/* Slide content */}
       <View style={styles.slideContent}>
         {renderSlide(slide, textColor, subColor)}
@@ -85,7 +242,62 @@ const SlideViewer: React.FC<SlideViewerProps> = ({slides, onComplete}) => {
         </Text>
       </View>
 
-      {/* Navigation buttons (focusable for D-pad) */}
+      {/* Control bar */}
+      <View style={styles.controlBar}>
+        {/* Lecture mode toggle */}
+        <TouchableOpacity
+          style={[
+            styles.controlBtn,
+            lectureMode && styles.controlBtnActive,
+          ]}
+          onPress={toggleLectureMode}>
+          <Text
+            style={[
+              styles.controlBtnText,
+              {color: lectureMode ? '#ef5350' : '#66bb6a'},
+            ]}>
+            {lectureMode ? '⏹ Stop' : '▶ Lecture'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* TTS speak/stop */}
+        {!lectureMode && (
+          <TouchableOpacity
+            style={styles.controlBtn}
+            onPress={() => (isSpeaking ? stopSpeech() : speak())}>
+            <Text style={[styles.controlBtnText, {color: '#42a5f5'}]}>
+              {isSpeaking ? '⏸ Pause' : '🔊 Speak'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Auto-advance toggle */}
+        <TouchableOpacity
+          style={[
+            styles.controlBtn,
+            autoAdvance && styles.controlBtnActive,
+          ]}
+          onPress={toggleAutoAdvance}>
+          <Text
+            style={[
+              styles.controlBtnText,
+              {color: autoAdvance ? '#ffa726' : '#9e9e9e'},
+            ]}>
+            ⏭ Auto {autoAdvance ? 'ON' : 'OFF'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Speed controls */}
+        <TouchableOpacity style={styles.controlBtn} onPress={() => adjustSpeed(-0.1)}>
+          <Text style={styles.controlBtnText}>🐢</Text>
+        </TouchableOpacity>
+        <Text style={styles.speedLabel}>{(speechRate * 2).toFixed(1)}x</Text>
+        <TouchableOpacity style={styles.controlBtn} onPress={() => adjustSpeed(0.1)}>
+          <Text style={styles.controlBtnText}>🐇</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Navigation buttons */}
       <View style={styles.navHints}>
         {currentIndex > 0 ? (
           <TouchableOpacity style={styles.navBtn} onPress={goPrev}>
@@ -213,6 +425,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  // Lecture mode badge
+  lectureBadge: {
+    position: 'absolute',
+    top: 20,
+    left: 80,
+    backgroundColor: 'rgba(76, 175, 80, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  lectureBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  // Speaking indicator
+  speakingIndicator: {
+    position: 'absolute',
+    top: 20,
+    right: 80,
+    backgroundColor: 'rgba(66, 165, 245, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  speakingText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   // Title + Bullets
   titleBulletsSlide: {
     paddingHorizontal: 80,
@@ -309,6 +554,38 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 16,
     marginLeft: 16,
+  },
+  // Control bar
+  controlBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 80,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  controlBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  controlBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  controlBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  speedLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 40,
+    textAlign: 'center',
   },
   // Nav buttons
   navHints: {

@@ -12,6 +12,8 @@ import PptxGenJS from "pptxgenjs";
 const SITE_URL = process.env.LIFTERLMS_SITE_URL || "";
 const CONSUMER_KEY = process.env.LIFTERLMS_CONSUMER_KEY || "";
 const CONSUMER_SECRET = process.env.LIFTERLMS_CONSUMER_SECRET || "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || "";
 
 function getAuthHeader() {
   return "Basic " + Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString("base64");
@@ -435,8 +437,15 @@ server.tool(
       faculty_name: z.string().optional().describe("Faculty/presenter name for disclosure slide"),
       accreditation_statement: z.string().optional().describe("Accreditation statement (e.g., 'This activity has been planned and implemented in accordance with...')"),
     }).optional().describe("Optional CME credit configuration"),
+    auto_images: z.boolean().optional().describe("Auto-generate images for each lesson using Unsplash/Gemini and attach as featured image + inline content (default: false)"),
+    image_source: z.enum(["auto", "gemini", "unsplash"]).optional().describe("Image source when auto_images is true (default: auto)"),
+    image_style_hint: z.string().optional().describe("Style hint for image generation (e.g., 'clinical photography', 'medical illustrations')"),
+    auto_videos: z.boolean().optional().describe("Auto-generate a short intro video for each lesson using Veo 3.1 AI and embed at top of content (default: false)"),
+    video_duration: z.number().optional().describe("Duration per auto-generated video in seconds: 4, 6, or 8 (default: 4)"),
+    video_style_hint: z.string().optional().describe("Style hint for video generation (e.g., 'clinical setting, diverse medical professionals')"),
+    video_fast: z.boolean().optional().describe("Use Veo fast model for quicker video generation (default: true)"),
   },
-  async ({ title, description, status = "draft", sections, cme }) => {
+  async ({ title, description, status = "draft", sections, cme, auto_images = false, image_source = "auto", image_style_hint = "", auto_videos = false, video_duration = 4, video_style_hint = "", video_fast = true }) => {
     const result = { course: null, sections: [], errors: [] };
 
     // 1. Create course
@@ -452,6 +461,42 @@ server.tool(
     }
 
     const courseId = result.course.id;
+
+    // 1b. Auto-generate course cover image
+    if (auto_images) {
+      try {
+        const coverPrompt = image_style_hint
+          ? `${title}: ${image_style_hint}`
+          : `${title}, professional medical education course cover image`;
+        const coverName = title.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+        let coverUploaded = null;
+
+        if (image_source === "unsplash" || image_source === "auto") {
+          const stock = await searchUnsplash(coverPrompt);
+          if (stock) {
+            coverUploaded = await fetchAndUploadUrl(stock.url, `${coverName}-cover.jpg`);
+            await triggerUnsplashDownload(stock.download_url);
+          }
+        }
+        if (!coverUploaded && (image_source === "gemini" || image_source === "auto") && GEMINI_API_KEY) {
+          const generated = await generateImageGemini(coverPrompt);
+          if (generated) {
+            const ext = generated.mimeType.includes("png") ? "png" : "jpg";
+            coverUploaded = await uploadToWordPressMedia(
+              Buffer.from(generated.base64, "base64"),
+              `${coverName}-cover.${ext}`,
+              generated.mimeType
+            );
+          }
+        }
+        if (coverUploaded) {
+          await setFeaturedImage("courses", courseId, coverUploaded.id);
+          result.course.cover_image = coverUploaded.url;
+        }
+      } catch (err) {
+        result.errors.push(`Course cover image: ${err.message}`);
+      }
+    }
 
     // 2. Create sections and lessons
     for (let si = 0; si < sections.length; si++) {
@@ -543,6 +588,50 @@ server.tool(
           result.errors.push(`Lesson "${les.title}": ${err.message}`);
           sectionResult.lessons.push(lessonResult);
           continue;
+        }
+
+        // Auto-generate and attach image if enabled
+        if (auto_images && lessonResult.id) {
+          try {
+            const imgPrompt = image_style_hint
+              ? `${les.title}: ${image_style_hint}`
+              : les.title;
+            const imgName = les.title.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+            const imgResult = await generateAndAttachImage(imgPrompt, imgName, image_source, lessonResult.id, "lessons");
+            if (imgResult) {
+              lessonResult.image = { url: imgResult.url, source: imgResult.source };
+            }
+          } catch (err) {
+            result.errors.push(`Image for "${les.title}": ${err.message}`);
+          }
+        }
+
+        // Auto-generate and attach video if enabled
+        if (auto_videos && lessonResult.id && GEMINI_API_KEY) {
+          try {
+            const vidPrompt = video_style_hint
+              ? `Short educational intro clip for a medical CME lesson titled "${les.title}". Style: ${video_style_hint}. Professional, no text overlays.`
+              : `Short educational intro clip for a medical CME lesson titled "${les.title}". Professional clinical setting, modern healthcare, no text overlays.`;
+            const vidName = les.title.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+            const uploaded = await generateAndUploadVideo(vidPrompt, `${vidName}-intro`, {
+              durationSeconds: video_duration,
+              aspectRatio: "16:9",
+              fast: video_fast,
+            });
+
+            // Prepend video to lesson content
+            const lesson = await apiCall("GET", `llms/v1/lessons/${lessonResult.id}`);
+            const currentContent = lesson.content?.rendered || lesson.content || "";
+            const videoHtml = buildVideoEmbed(uploaded.url);
+            await apiCall("POST", `llms/v1/lessons/${lessonResult.id}`, {
+              content: videoHtml + currentContent,
+              video_embed: uploaded.url,
+            });
+
+            lessonResult.video = { url: uploaded.url, model: uploaded.model };
+          } catch (err) {
+            result.errors.push(`Video for "${les.title}": ${err.message}`);
+          }
         }
 
         // Create quiz if specified
@@ -1279,6 +1368,946 @@ server.tool(
     };
   }
 );
+
+// ── Image Helpers ──────────────────────────────────────────────────────────────
+
+async function searchUnsplash(query, perPage = 1) {
+  if (!UNSPLASH_ACCESS_KEY) return null;
+  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=landscape`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data.results || data.results.length === 0) return null;
+  const photo = data.results[0];
+  return {
+    url: photo.urls.regular,
+    download_url: photo.links.download_location,
+    attribution: `Photo by ${photo.user.name} on Unsplash`,
+    unsplash_id: photo.id,
+  };
+}
+
+async function triggerUnsplashDownload(downloadLocationUrl) {
+  if (!UNSPLASH_ACCESS_KEY || !downloadLocationUrl) return;
+  try {
+    await fetch(`${downloadLocationUrl}?client_id=${UNSPLASH_ACCESS_KEY}`);
+  } catch (_) { /* best effort per Unsplash guidelines */ }
+}
+
+async function generateImageGemini(prompt) {
+  if (!GEMINI_API_KEY) return null;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${GEMINI_API_KEY}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Generate a professional, clean, medical-education-appropriate image for a CME course slide. The image should be: ${prompt}. Style: modern, clinical, professional photography or illustration style. No text overlays.`,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"],
+      },
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API ${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  // Extract image data from Gemini response
+  const candidates = data.candidates || [];
+  for (const candidate of candidates) {
+    const parts = candidate.content?.parts || [];
+    for (const part of parts) {
+      if (part.inlineData) {
+        return {
+          base64: part.inlineData.data,
+          mimeType: part.inlineData.mimeType || "image/png",
+        };
+      }
+    }
+  }
+  return null;
+}
+
+async function uploadToWordPressMedia(imageBuffer, filename, mimeType) {
+  const url = `${SITE_URL}/wp-json/wp/v2/media`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: getAuthHeader(),
+      "Content-Type": mimeType,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+    body: imageBuffer,
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`WP Media upload ${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  return {
+    id: data.id,
+    url: data.source_url,
+    title: data.title?.rendered || filename,
+  };
+}
+
+async function fetchAndUploadUrl(imageUrl, filename) {
+  const imgRes = await fetch(imageUrl);
+  if (!imgRes.ok) throw new Error(`Failed to fetch image: ${imgRes.status}`);
+  const buffer = Buffer.from(await imgRes.arrayBuffer());
+  const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+  return uploadToWordPressMedia(buffer, filename, contentType);
+}
+
+async function setFeaturedImage(postType, postId, mediaId) {
+  const url = `${SITE_URL}/wp-json/wp/v2/${postType}/${postId}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: getAuthHeader(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ featured_media: mediaId }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Set featured image failed ${res.status}: ${errText}`);
+  }
+  return await res.json();
+}
+
+async function prependImageToLessonContent(lessonId, imageUrl, altText) {
+  // Get current lesson content
+  const lesson = await apiCall("GET", `llms/v1/lessons/${lessonId}`);
+  const currentContent = lesson.content?.rendered || lesson.content || "";
+  const imgTag = `<figure class="wp-block-image size-large"><img src="${imageUrl}" alt="${altText}" style="width:100%;height:auto;border-radius:8px;margin-bottom:1.5em;" /></figure>\n`;
+  const updatedContent = imgTag + currentContent;
+  await apiCall("POST", `llms/v1/lessons/${lessonId}`, { content: updatedContent });
+}
+
+// ── Video Helpers ──────────────────────────────────────────────────────────────
+
+async function generateVideoVeo(prompt, options = {}) {
+  if (!GEMINI_API_KEY) return null;
+  const model = options.fast ? "veo-3.1-fast-generate-preview" : "veo-3.1-generate-preview";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning?key=${GEMINI_API_KEY}`;
+
+  const parameters = {
+    aspectRatio: options.aspectRatio || "16:9",
+    durationSeconds: options.durationSeconds || 8,
+    numberOfVideos: 1,
+  };
+  if (options.resolution) parameters.resolution = options.resolution;
+
+  const body = {
+    instances: [{ prompt }],
+    parameters,
+  };
+
+  // Submit the long-running request
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Veo API ${res.status}: ${errText}`);
+  }
+  const operation = await res.json();
+  const operationName = operation.name;
+  if (!operationName) throw new Error("Veo API did not return an operation name");
+
+  // Poll for completion
+  const pollUrl = `https://generativelanguage.googleapis.com/v1beta/${operationName}?key=${GEMINI_API_KEY}`;
+  const maxAttempts = 60; // 10 minutes max
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((r) => setTimeout(r, 10000)); // wait 10 seconds
+    const pollRes = await fetch(pollUrl);
+    if (!pollRes.ok) continue;
+    const pollData = await pollRes.json();
+    if (pollData.done) {
+      const samples = pollData.response?.generateVideoResponse?.generatedSamples;
+      if (!samples || samples.length === 0) throw new Error("Veo completed but returned no video");
+      const videoUri = samples[0].video?.uri;
+      if (!videoUri) throw new Error("Veo completed but no video URI found");
+      return { uri: videoUri, model };
+    }
+  }
+  throw new Error("Veo video generation timed out after 10 minutes");
+}
+
+async function downloadVeoVideo(videoUri) {
+  // Veo returns a URI that requires the API key and follows redirects
+  const separator = videoUri.includes("?") ? "&" : "?";
+  const downloadUrl = `${videoUri}${separator}key=${GEMINI_API_KEY}`;
+  const res = await fetch(downloadUrl, { redirect: "follow" });
+  if (!res.ok) throw new Error(`Failed to download Veo video: ${res.status}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  return { buffer, mimeType: res.headers.get("content-type") || "video/mp4" };
+}
+
+async function generateAndUploadVideo(prompt, sanitizedName, options = {}) {
+  const veoResult = await generateVideoVeo(prompt, options);
+  if (!veoResult) throw new Error("Video generation failed");
+
+  const { buffer, mimeType } = await downloadVeoVideo(veoResult.uri);
+  const ext = mimeType.includes("webm") ? "webm" : "mp4";
+  const uploaded = await uploadToWordPressMedia(buffer, `${sanitizedName}.${ext}`, mimeType);
+  return { wp_media_id: uploaded.id, url: uploaded.url, model: veoResult.model };
+}
+
+function buildVideoEmbed(videoUrl) {
+  return `<figure class="wp-block-video"><video controls preload="metadata" style="width:100%;border-radius:8px;margin:1em 0;"><source src="${videoUrl}" type="video/mp4" />Your browser does not support the video tag.</video></figure>\n`;
+}
+
+async function generateAndAttachImage(prompt, sanitizedName, source, lessonId, postType = "lessons") {
+  let uploaded = null;
+  let usedSource = "";
+  let attribution = null;
+
+  // Try Unsplash first if auto or unsplash
+  if (source === "unsplash" || source === "auto") {
+    const stock = await searchUnsplash(prompt);
+    if (stock) {
+      uploaded = await fetchAndUploadUrl(stock.url, `${sanitizedName}.jpg`);
+      await triggerUnsplashDownload(stock.download_url);
+      usedSource = "unsplash";
+      attribution = stock.attribution;
+    }
+  }
+
+  // Fall back to Gemini
+  if (!uploaded && (source === "gemini" || source === "auto") && GEMINI_API_KEY) {
+    const generated = await generateImageGemini(prompt);
+    if (generated) {
+      const ext = generated.mimeType.includes("png") ? "png" : "jpg";
+      const imageBuffer = Buffer.from(generated.base64, "base64");
+      uploaded = await uploadToWordPressMedia(imageBuffer, `${sanitizedName}.${ext}`, generated.mimeType);
+      usedSource = "gemini";
+    }
+  }
+
+  if (!uploaded) return null;
+
+  // Set as featured image
+  try {
+    await setFeaturedImage(postType, lessonId, uploaded.id);
+  } catch (_) { /* some post types may not support featured images */ }
+
+  // Prepend image into lesson HTML content
+  try {
+    await prependImageToLessonContent(lessonId, uploaded.url, prompt);
+  } catch (_) { /* non-critical */ }
+
+  return { wp_media_id: uploaded.id, url: uploaded.url, source: usedSource, attribution };
+}
+
+// ── Tool: generate_image ──────────────────────────────────────────────────────
+
+server.tool(
+  "generate_image",
+  "Generate or find an image using AI (Gemini) or stock photos (Unsplash), upload to WordPress Media Library, and return the URL",
+  {
+    prompt: z.string().describe("Description of the image to generate or search for"),
+    source: z
+      .enum(["auto", "gemini", "unsplash"])
+      .optional()
+      .describe("Image source: 'gemini' for AI-generated, 'unsplash' for stock photos, 'auto' tries Unsplash first then Gemini (default: auto)"),
+    upload_to_wp: z
+      .boolean()
+      .optional()
+      .describe("Upload the image to WordPress Media Library (default: true)"),
+  },
+  async ({ prompt, source = "auto", upload_to_wp = true }) => {
+    let result = null;
+    let usedSource = "";
+    const sanitizedName = prompt.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+
+    if (source === "unsplash" || source === "auto") {
+      const stock = await searchUnsplash(prompt);
+      if (stock) {
+        usedSource = "unsplash";
+        if (upload_to_wp) {
+          const uploaded = await fetchAndUploadUrl(stock.url, `${sanitizedName}.jpg`);
+          await triggerUnsplashDownload(stock.download_url);
+          result = {
+            source: "unsplash",
+            wp_media_id: uploaded.id,
+            url: uploaded.url,
+            attribution: stock.attribution,
+          };
+        } else {
+          result = {
+            source: "unsplash",
+            url: stock.url,
+            attribution: stock.attribution,
+          };
+        }
+      }
+    }
+
+    if (!result && (source === "gemini" || source === "auto")) {
+      if (!GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is not configured. Set it in .mcp.json env.");
+      }
+      const generated = await generateImageGemini(prompt);
+      if (!generated) {
+        throw new Error("Gemini did not return an image. Try a different prompt.");
+      }
+      usedSource = "gemini";
+      const ext = generated.mimeType.includes("png") ? "png" : "jpg";
+      const imageBuffer = Buffer.from(generated.base64, "base64");
+
+      if (upload_to_wp) {
+        const uploaded = await uploadToWordPressMedia(
+          imageBuffer,
+          `${sanitizedName}.${ext}`,
+          generated.mimeType
+        );
+        result = {
+          source: "gemini",
+          wp_media_id: uploaded.id,
+          url: uploaded.url,
+        };
+      } else {
+        // Write to temp file and return path (less ideal)
+        const tmpPath = path.join(process.cwd(), `${sanitizedName}.${ext}`);
+        await fs.writeFile(tmpPath, imageBuffer);
+        result = {
+          source: "gemini",
+          local_path: tmpPath,
+          note: "Image saved locally. Set upload_to_wp=true to upload to WordPress.",
+        };
+      }
+    }
+
+    if (!result) {
+      throw new Error(
+        `No image found. ${!UNSPLASH_ACCESS_KEY ? "UNSPLASH_ACCESS_KEY not set. " : ""}${!GEMINI_API_KEY ? "GEMINI_API_KEY not set." : ""}`
+      );
+    }
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+// ── Tool: add_image_to_lesson ─────────────────────────────────────────────────
+
+server.tool(
+  "add_image_to_lesson",
+  "Generate or find an image and insert it at a specific position within a lesson's HTML content. Can target a heading number, paragraph number, or insert at the top/bottom. Also optionally sets as featured image.",
+  {
+    lesson_id: z.number().describe("Lesson ID to add the image to"),
+    prompt: z.string().describe("Description of the image to generate (e.g., 'a child eating ice cream in a clinical waiting room')"),
+    position: z
+      .enum(["top", "bottom", "after_heading", "after_paragraph"])
+      .optional()
+      .describe("Where to insert the image (default: top)"),
+    position_index: z
+      .number()
+      .optional()
+      .describe("Which heading or paragraph to insert after (1-based). E.g., position='after_heading' + position_index=3 inserts after the 3rd heading."),
+    caption: z.string().optional().describe("Optional caption to display below the image"),
+    set_featured: z.boolean().optional().describe("Also set as the lesson's featured image (default: false)"),
+    source: z
+      .enum(["auto", "gemini", "unsplash"])
+      .optional()
+      .describe("Image source (default: auto)"),
+  },
+  async ({ lesson_id, prompt, position = "top", position_index = 1, caption, set_featured = false, source = "auto" }) => {
+    // 1. Generate/find and upload the image
+    const sanitizedName = prompt.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+    let uploaded = null;
+    let usedSource = "";
+
+    if (source === "unsplash" || source === "auto") {
+      const stock = await searchUnsplash(prompt);
+      if (stock) {
+        uploaded = await fetchAndUploadUrl(stock.url, `${sanitizedName}.jpg`);
+        await triggerUnsplashDownload(stock.download_url);
+        usedSource = "unsplash";
+      }
+    }
+    if (!uploaded && (source === "gemini" || source === "auto") && GEMINI_API_KEY) {
+      const generated = await generateImageGemini(prompt);
+      if (generated) {
+        const ext = generated.mimeType.includes("png") ? "png" : "jpg";
+        uploaded = await uploadToWordPressMedia(
+          Buffer.from(generated.base64, "base64"),
+          `${sanitizedName}.${ext}`,
+          generated.mimeType
+        );
+        usedSource = "gemini";
+      }
+    }
+    if (!uploaded) {
+      throw new Error("Failed to generate or find an image. Check API keys.");
+    }
+
+    // 2. Build the image HTML
+    const captionHtml = caption ? `<figcaption>${caption}</figcaption>` : "";
+    const imgHtml = `<figure class="wp-block-image size-large"><img src="${uploaded.url}" alt="${prompt}" style="width:100%;height:auto;border-radius:8px;margin:1em 0;" />${captionHtml}</figure>\n`;
+
+    // 3. Get current lesson content
+    const lesson = await apiCall("GET", `llms/v1/lessons/${lesson_id}`);
+    const currentContent = lesson.content?.rendered || lesson.content || "";
+
+    // 4. Insert at the specified position
+    let updatedContent;
+    if (position === "top") {
+      updatedContent = imgHtml + currentContent;
+    } else if (position === "bottom") {
+      updatedContent = currentContent + imgHtml;
+    } else if (position === "after_heading") {
+      // Find the Nth heading tag and insert after it
+      let count = 0;
+      const headingRegex = /<\/h[1-6]>/gi;
+      let match;
+      let insertPos = -1;
+      while ((match = headingRegex.exec(currentContent)) !== null) {
+        count++;
+        if (count === position_index) {
+          insertPos = match.index + match[0].length;
+          break;
+        }
+      }
+      if (insertPos === -1) {
+        updatedContent = currentContent + imgHtml; // fallback to bottom
+      } else {
+        updatedContent = currentContent.slice(0, insertPos) + "\n" + imgHtml + currentContent.slice(insertPos);
+      }
+    } else if (position === "after_paragraph") {
+      // Find the Nth </p> tag and insert after it
+      let count = 0;
+      const pRegex = /<\/p>/gi;
+      let match;
+      let insertPos = -1;
+      while ((match = pRegex.exec(currentContent)) !== null) {
+        count++;
+        if (count === position_index) {
+          insertPos = match.index + match[0].length;
+          break;
+        }
+      }
+      if (insertPos === -1) {
+        updatedContent = currentContent + imgHtml;
+      } else {
+        updatedContent = currentContent.slice(0, insertPos) + "\n" + imgHtml + currentContent.slice(insertPos);
+      }
+    } else {
+      updatedContent = imgHtml + currentContent;
+    }
+
+    // 5. Save updated content
+    await apiCall("POST", `llms/v1/lessons/${lesson_id}`, { content: updatedContent });
+
+    // 6. Optionally set as featured image
+    if (set_featured) {
+      try {
+        await setFeaturedImage("lessons", lesson_id, uploaded.id);
+      } catch (_) {}
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              lesson_id,
+              lesson_title: lesson.title?.rendered || lesson.title,
+              image_url: uploaded.url,
+              wp_media_id: uploaded.id,
+              source: usedSource,
+              position: position === "after_heading" || position === "after_paragraph"
+                ? `${position} #${position_index}`
+                : position,
+              caption: caption || null,
+              set_as_featured: set_featured,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+);
+
+// ── Tool: generate_video ──────────────────────────────────────────────────────
+
+server.tool(
+  "generate_video",
+  "Generate a video using Google Veo 3.1 AI, upload to WordPress Media Library, and return the URL. Video generation takes 30-120 seconds.",
+  {
+    prompt: z.string().describe("Description of the video to generate (e.g., 'a doctor explaining a diagnosis to a patient in a modern clinic')"),
+    duration: z
+      .number()
+      .optional()
+      .describe("Video duration in seconds: 4, 6, or 8 (default: 8)"),
+    aspect_ratio: z
+      .enum(["16:9", "9:16"])
+      .optional()
+      .describe("Aspect ratio: '16:9' landscape or '9:16' portrait (default: 16:9)"),
+    resolution: z
+      .enum(["720p", "1080p", "4k"])
+      .optional()
+      .describe("Video resolution (default: 720p). Note: 1080p and 4k require duration of 8 seconds"),
+    fast: z
+      .boolean()
+      .optional()
+      .describe("Use the fast model for quicker generation at potentially lower quality (default: false)"),
+    upload_to_wp: z
+      .boolean()
+      .optional()
+      .describe("Upload the video to WordPress Media Library (default: true)"),
+  },
+  async ({ prompt, duration = 8, aspect_ratio = "16:9", resolution, fast = false, upload_to_wp = true }) => {
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured.");
+
+    const sanitizedName = prompt.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+    const options = { durationSeconds: duration, aspectRatio: aspect_ratio, fast };
+    if (resolution) options.resolution = resolution;
+
+    if (upload_to_wp) {
+      const result = await generateAndUploadVideo(prompt, sanitizedName, options);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                source: "veo",
+                model: result.model,
+                wp_media_id: result.wp_media_id,
+                url: result.url,
+                duration,
+                aspect_ratio,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    } else {
+      const veoResult = await generateVideoVeo(prompt, options);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { source: "veo", model: veoResult.model, download_uri: veoResult.uri, note: "Video available for 2 days at this URI." },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  }
+);
+
+// ── Tool: add_video_to_lesson ────────────────────────────────────────────────
+
+server.tool(
+  "add_video_to_lesson",
+  "Generate a video using Veo 3.1 AI and insert it at a specific position within a lesson's HTML content. Also sets the lesson video_embed field. Video generation takes 30-120 seconds.",
+  {
+    lesson_id: z.number().describe("Lesson ID to add the video to"),
+    prompt: z.string().describe("Description of the video to generate (e.g., 'a child interacting with a therapist during an ABA session')"),
+    position: z
+      .enum(["top", "bottom", "after_heading", "after_paragraph"])
+      .optional()
+      .describe("Where to insert the video (default: top)"),
+    position_index: z
+      .number()
+      .optional()
+      .describe("Which heading or paragraph to insert after (1-based)"),
+    caption: z.string().optional().describe("Optional caption below the video"),
+    duration: z
+      .number()
+      .optional()
+      .describe("Video duration: 4, 6, or 8 seconds (default: 8)"),
+    aspect_ratio: z
+      .enum(["16:9", "9:16"])
+      .optional()
+      .describe("Aspect ratio (default: 16:9)"),
+    fast: z
+      .boolean()
+      .optional()
+      .describe("Use fast model for quicker generation (default: false)"),
+  },
+  async ({ lesson_id, prompt, position = "top", position_index = 1, caption, duration = 8, aspect_ratio = "16:9", fast = false }) => {
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured.");
+
+    const sanitizedName = prompt.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+    const options = { durationSeconds: duration, aspectRatio: aspect_ratio, fast };
+
+    // 1. Generate and upload video
+    const uploaded = await generateAndUploadVideo(prompt, sanitizedName, options);
+
+    // 2. Build video HTML
+    const captionHtml = caption ? `<figcaption>${caption}</figcaption>` : "";
+    const videoHtml = `<figure class="wp-block-video"><video controls preload="metadata" style="width:100%;border-radius:8px;margin:1em 0;"><source src="${uploaded.url}" type="video/mp4" />Your browser does not support the video tag.</video>${captionHtml}</figure>\n`;
+
+    // 3. Get current lesson content
+    const lesson = await apiCall("GET", `llms/v1/lessons/${lesson_id}`);
+    const currentContent = lesson.content?.rendered || lesson.content || "";
+
+    // 4. Insert at specified position
+    let updatedContent;
+    if (position === "top") {
+      updatedContent = videoHtml + currentContent;
+    } else if (position === "bottom") {
+      updatedContent = currentContent + videoHtml;
+    } else if (position === "after_heading") {
+      let count = 0;
+      const headingRegex = /<\/h[1-6]>/gi;
+      let match;
+      let insertPos = -1;
+      while ((match = headingRegex.exec(currentContent)) !== null) {
+        count++;
+        if (count === position_index) {
+          insertPos = match.index + match[0].length;
+          break;
+        }
+      }
+      updatedContent = insertPos === -1
+        ? currentContent + videoHtml
+        : currentContent.slice(0, insertPos) + "\n" + videoHtml + currentContent.slice(insertPos);
+    } else if (position === "after_paragraph") {
+      let count = 0;
+      const pRegex = /<\/p>/gi;
+      let match;
+      let insertPos = -1;
+      while ((match = pRegex.exec(currentContent)) !== null) {
+        count++;
+        if (count === position_index) {
+          insertPos = match.index + match[0].length;
+          break;
+        }
+      }
+      updatedContent = insertPos === -1
+        ? currentContent + videoHtml
+        : currentContent.slice(0, insertPos) + "\n" + videoHtml + currentContent.slice(insertPos);
+    } else {
+      updatedContent = videoHtml + currentContent;
+    }
+
+    // 5. Save updated content and set video_embed
+    await apiCall("POST", `llms/v1/lessons/${lesson_id}`, {
+      content: updatedContent,
+      video_embed: uploaded.url,
+    });
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              lesson_id,
+              lesson_title: lesson.title?.rendered || lesson.title,
+              video_url: uploaded.url,
+              wp_media_id: uploaded.wp_media_id,
+              model: uploaded.model,
+              duration,
+              position: position === "after_heading" || position === "after_paragraph"
+                ? `${position} #${position_index}`
+                : position,
+              caption: caption || null,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+);
+
+// ── Tool: generate_course_videos ─────────────────────────────────────────────
+
+server.tool(
+  "generate_course_videos",
+  "Auto-generate a short intro video for each lesson in a course using Veo 3.1. Uploads to WordPress and embeds in lesson content. WARNING: This is a long-running operation — each video takes 30-120 seconds to generate.",
+  {
+    course_id: z.number().describe("Course ID to generate videos for"),
+    style_hint: z
+      .string()
+      .optional()
+      .describe("Style guidance for video prompts (e.g., 'clinical setting, diverse medical professionals')"),
+    duration: z
+      .number()
+      .optional()
+      .describe("Duration per video in seconds: 4, 6, or 8 (default: 4 to keep generation fast)"),
+    fast: z
+      .boolean()
+      .optional()
+      .describe("Use fast model (default: true for batch operations)"),
+  },
+  async ({ course_id, style_hint = "", duration = 4, fast = true }) => {
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured.");
+
+    const course = await apiCall("GET", `llms/v1/courses/${course_id}`);
+    const courseTitle = course.title?.rendered || course.title;
+    const sections = await apiCall("GET", `llms/v1/sections?parent=${course_id}&per_page=50`);
+
+    const results = [];
+    const errors = [];
+
+    for (const section of sections) {
+      const lessons = await apiCall("GET", `llms/v1/lessons?parent=${section.id}&per_page=50`);
+
+      for (const lesson of lessons) {
+        const lessonTitle = lesson.title?.rendered || lesson.title;
+        const videoPrompt = style_hint
+          ? `Short educational intro clip for a medical CME lesson titled "${lessonTitle}". Style: ${style_hint}. Professional, clinical, no text overlays.`
+          : `Short educational intro clip for a medical CME lesson titled "${lessonTitle}". Professional clinical setting, modern healthcare environment, no text overlays.`;
+        const sanitizedName = lessonTitle.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+
+        try {
+          const uploaded = await generateAndUploadVideo(videoPrompt, sanitizedName, {
+            durationSeconds: duration,
+            aspectRatio: "16:9",
+            fast,
+          });
+
+          // Prepend video to lesson content
+          const videoHtml = buildVideoEmbed(uploaded.url);
+          const currentContent = lesson.content?.rendered || lesson.content || "";
+          await apiCall("POST", `llms/v1/lessons/${lesson.id}`, {
+            content: videoHtml + currentContent,
+            video_embed: uploaded.url,
+          });
+
+          results.push({
+            lesson_id: lesson.id,
+            lesson_title: lessonTitle,
+            video_url: uploaded.url,
+            wp_media_id: uploaded.wp_media_id,
+          });
+        } catch (err) {
+          errors.push({
+            lesson_id: lesson.id,
+            lesson_title: lessonTitle,
+            error: err.message,
+          });
+        }
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              course_id,
+              course_title: courseTitle,
+              videos_generated: results.length,
+              total_errors: errors.length,
+              summary: `Generated ${results.length} lesson intro videos. Each was uploaded to WordPress and embedded at the top of the lesson content.`,
+              results,
+              errors: errors.length > 0 ? errors : undefined,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+);
+
+// ── Tool: upload_media ────────────────────────────────────────────────────────
+
+server.tool(
+  "upload_media",
+  "Upload an image from a URL to the WordPress Media Library",
+  {
+    image_url: z.string().describe("URL of the image to upload"),
+    filename: z.string().optional().describe("Filename for the uploaded image (default: derived from URL)"),
+  },
+  async ({ image_url, filename }) => {
+    const fname = filename || image_url.split("/").pop().split("?")[0] || "image.jpg";
+    const uploaded = await fetchAndUploadUrl(image_url, fname);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              wp_media_id: uploaded.id,
+              url: uploaded.url,
+              title: uploaded.title,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+);
+
+// ── Tool: generate_course_images ──────────────────────────────────────────────
+
+server.tool(
+  "generate_course_images",
+  "Auto-generate images for an entire course. Generates a course featured image, then generates an image for each lesson — setting it as the lesson's featured image AND injecting it into the lesson HTML content. Uses Unsplash stock photos with Gemini AI fallback.",
+  {
+    course_id: z.number().describe("Course ID to generate images for"),
+    source: z
+      .enum(["auto", "gemini", "unsplash"])
+      .optional()
+      .describe("Image source preference (default: auto — tries Unsplash first, then Gemini)"),
+    style_hint: z
+      .string()
+      .optional()
+      .describe("Additional style guidance for image generation (e.g., 'medical illustrations', 'clinical photography', 'anatomical diagrams')"),
+  },
+  async ({ course_id, source = "auto", style_hint = "" }) => {
+    const course = await apiCall("GET", `llms/v1/courses/${course_id}`);
+    const courseTitle = course.title?.rendered || course.title;
+    const sections = await apiCall("GET", `llms/v1/sections?parent=${course_id}&per_page=50`);
+
+    const results = [];
+    const errors = [];
+
+    // 1. Generate course-level featured image
+    try {
+      const coursePrompt = style_hint
+        ? `${courseTitle}: ${style_hint}`
+        : `${courseTitle}, professional medical education course cover image`;
+      const courseSanitized = courseTitle.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+
+      let courseUploaded = null;
+      let courseSource = "";
+      let courseAttribution = null;
+
+      if (source === "unsplash" || source === "auto") {
+        const stock = await searchUnsplash(coursePrompt);
+        if (stock) {
+          courseUploaded = await fetchAndUploadUrl(stock.url, `${courseSanitized}-cover.jpg`);
+          await triggerUnsplashDownload(stock.download_url);
+          courseSource = "unsplash";
+          courseAttribution = stock.attribution;
+        }
+      }
+      if (!courseUploaded && (source === "gemini" || source === "auto") && GEMINI_API_KEY) {
+        const generated = await generateImageGemini(coursePrompt);
+        if (generated) {
+          const ext = generated.mimeType.includes("png") ? "png" : "jpg";
+          courseUploaded = await uploadToWordPressMedia(
+            Buffer.from(generated.base64, "base64"),
+            `${courseSanitized}-cover.${ext}`,
+            generated.mimeType
+          );
+          courseSource = "gemini";
+        }
+      }
+      if (courseUploaded) {
+        await setFeaturedImage("courses", course_id, courseUploaded.id);
+        results.push({
+          type: "course_cover",
+          course_id,
+          course_title: courseTitle,
+          source: courseSource,
+          wp_media_id: courseUploaded.id,
+          url: courseUploaded.url,
+          attribution: courseAttribution,
+        });
+      }
+    } catch (err) {
+      errors.push({ type: "course_cover", error: err.message });
+    }
+
+    // 2. Generate images for each lesson
+    for (const section of sections) {
+      const lessons = await apiCall("GET", `llms/v1/lessons?parent=${section.id}&per_page=50`);
+
+      for (const lesson of lessons) {
+        const lessonTitle = lesson.title?.rendered || lesson.title;
+        const imagePrompt = style_hint
+          ? `${lessonTitle}: ${style_hint}`
+          : lessonTitle;
+        const sanitizedName = lessonTitle.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 50).toLowerCase();
+
+        try {
+          const imageResult = await generateAndAttachImage(
+            imagePrompt, sanitizedName, source, lesson.id, "lessons"
+          );
+
+          if (imageResult) {
+            results.push({
+              type: "lesson_image",
+              lesson_id: lesson.id,
+              lesson_title: lessonTitle,
+              source: imageResult.source,
+              wp_media_id: imageResult.wp_media_id,
+              url: imageResult.url,
+              attribution: imageResult.attribution,
+              attached: { featured_image: true, inline_content: true },
+            });
+          } else {
+            errors.push({
+              type: "lesson_image",
+              lesson_id: lesson.id,
+              lesson_title: lessonTitle,
+              error: "No image source available",
+            });
+          }
+        } catch (err) {
+          errors.push({
+            type: "lesson_image",
+            lesson_id: lesson.id,
+            lesson_title: lessonTitle,
+            error: err.message,
+          });
+        }
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              course_id,
+              course_title: courseTitle,
+              total_images: results.length,
+              total_errors: errors.length,
+              summary: `Generated ${results.length} images (1 course cover + ${results.length - 1} lesson images). Each lesson image was set as featured image and injected into lesson HTML content.`,
+              results,
+              errors: errors.length > 0 ? errors : undefined,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+);
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
 
 function isLightHex(hex) {
   const r = parseInt(hex.substring(0, 2), 16);

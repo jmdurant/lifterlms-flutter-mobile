@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class SlideData {
   final String title;
@@ -33,11 +35,28 @@ class SlideData {
       script: json['script'],
     );
   }
+
+  /// Build readable text from slide content for TTS when no script is provided
+  String get readableText {
+    if (script != null && script!.isNotEmpty) return script!;
+    final parts = <String>[title];
+    if (body != null && body!.isNotEmpty) parts.add(body!);
+    if (bullets != null && bullets!.isNotEmpty) parts.addAll(bullets!);
+    return parts.join('. ');
+  }
 }
+
+enum TtsState { playing, paused, stopped }
 
 class SlideViewerWidget extends StatefulWidget {
   final List<SlideData> slides;
-  const SlideViewerWidget({Key? key, required this.slides}) : super(key: key);
+  final VoidCallback? onComplete;
+
+  const SlideViewerWidget({
+    super.key,
+    required this.slides,
+    this.onComplete,
+  });
 
   @override
   State<SlideViewerWidget> createState() => _SlideViewerWidgetState();
@@ -48,17 +67,151 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
   int _currentPage = 0;
   bool _showScript = false;
 
+  // TTS
+  late FlutterTts _tts;
+  TtsState _ttsState = TtsState.stopped;
+  double _speechRate = 0.5;
+  final double _pitch = 1.0;
+
+  // Lecture mode (auto-advance + TTS)
+  bool _lectureMode = false;
+  bool _autoAdvance = false;
+  Timer? _autoAdvanceTimer;
+  final int _autoAdvanceDelay = 5; // seconds after TTS finishes before advancing
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    _tts = FlutterTts();
+    await _tts.setLanguage('en-US');
+    await _tts.setSpeechRate(_speechRate);
+    await _tts.setPitch(_pitch);
+
+    _tts.setCompletionHandler(() {
+      setState(() => _ttsState = TtsState.stopped);
+      // Auto-advance after TTS completes
+      if (_lectureMode || _autoAdvance) {
+        _scheduleAutoAdvance();
+      }
+    });
+
+    _tts.setCancelHandler(() {
+      setState(() => _ttsState = TtsState.stopped);
+    });
+
+    _tts.setPauseHandler(() {
+      setState(() => _ttsState = TtsState.paused);
+    });
+
+    _tts.setContinueHandler(() {
+      setState(() => _ttsState = TtsState.playing);
+    });
   }
 
   @override
   void dispose() {
+    _tts.stop();
+    _autoAdvanceTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
+
+  // ── TTS Controls ──────────────────────────────────────────────────────────
+
+  Future<void> _speak([String? text]) async {
+    _autoAdvanceTimer?.cancel();
+    final speakText = text ?? widget.slides[_currentPage].readableText;
+    if (speakText.isEmpty) return;
+    await _tts.setSpeechRate(_speechRate);
+    await _tts.setPitch(_pitch);
+    await _tts.speak(speakText);
+    setState(() => _ttsState = TtsState.playing);
+  }
+
+  Future<void> _stop() async {
+    _autoAdvanceTimer?.cancel();
+    await _tts.stop();
+    setState(() => _ttsState = TtsState.stopped);
+  }
+
+  Future<void> _pause() async {
+    await _tts.pause();
+    setState(() => _ttsState = TtsState.paused);
+  }
+
+  // ── Auto-Advance ──────────────────────────────────────────────────────────
+
+  void _scheduleAutoAdvance() {
+    _autoAdvanceTimer?.cancel();
+    if (_currentPage >= widget.slides.length - 1) {
+      // Last slide — end lecture mode
+      setState(() {
+        _lectureMode = false;
+        _autoAdvance = false;
+      });
+      widget.onComplete?.call();
+      return;
+    }
+    _autoAdvanceTimer = Timer(Duration(seconds: _autoAdvanceDelay), () {
+      if (!mounted) return;
+      _goToPage(_currentPage + 1);
+    });
+  }
+
+  void _goToPage(int page) {
+    if (page < 0 || page >= widget.slides.length) return;
+    _autoAdvanceTimer?.cancel();
+    _tts.stop();
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onPageChanged(int index) {
+    _autoAdvanceTimer?.cancel();
+    _tts.stop();
+    setState(() {
+      _currentPage = index;
+      _showScript = false;
+      _ttsState = TtsState.stopped;
+    });
+    // In lecture mode, auto-speak the new slide
+    if (_lectureMode) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && _lectureMode) _speak();
+      });
+    }
+  }
+
+  // ── Lecture Mode Toggle ───────────────────────────────────────────────────
+
+  void _toggleLectureMode() {
+    setState(() {
+      _lectureMode = !_lectureMode;
+      _autoAdvance = _lectureMode;
+    });
+    if (_lectureMode) {
+      _speak(); // Start narrating current slide
+    } else {
+      _stop();
+    }
+  }
+
+  void _toggleAutoAdvance() {
+    setState(() => _autoAdvance = !_autoAdvance);
+    if (!_autoAdvance) {
+      _autoAdvanceTimer?.cancel();
+    }
+  }
+
+  // ── Color Helpers ─────────────────────────────────────────────────────────
 
   Color _parseColor(String? hex) {
     if (hex == null || hex.isEmpty) return const Color(0xFF1a73e8);
@@ -71,9 +224,13 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
     return color.computeLuminance() > 0.5;
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     if (widget.slides.isEmpty) return const SizedBox.shrink();
+    final currentSlide = widget.slides[_currentPage];
+    final hasScript = currentSlide.script != null && currentSlide.script!.isNotEmpty;
 
     return Column(
       children: [
@@ -97,17 +254,12 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
                 PageView.builder(
                   controller: _pageController,
                   itemCount: widget.slides.length,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                      _showScript = false;
-                    });
-                  },
+                  onPageChanged: _onPageChanged,
                   itemBuilder: (context, index) {
                     return _buildSlide(widget.slides[index]);
                   },
                 ),
-                // Page indicator
+                // Page indicator dots
                 Positioned(
                   bottom: 12,
                   left: 0,
@@ -129,24 +281,45 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
                     }),
                   ),
                 ),
-                // Slide counter
+                // Slide counter + lecture mode indicator
                 Positioned(
                   top: 12,
                   right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${_currentPage + 1} / ${widget.slides.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                  child: Row(
+                    children: [
+                      if (_lectureMode)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.play_circle_filled, color: Colors.white, size: 14),
+                              SizedBox(width: 4),
+                              Text('LECTURE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_currentPage + 1} / ${widget.slides.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
                 // Navigation arrows
@@ -156,12 +329,7 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
                     top: 0,
                     bottom: 0,
                     child: Center(
-                      child: _navArrow(Icons.chevron_left, () {
-                        _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }),
+                      child: _navArrow(Icons.chevron_left, () => _goToPage(_currentPage - 1)),
                     ),
                   ),
                 if (_currentPage < widget.slides.length - 1)
@@ -170,12 +338,21 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
                     top: 0,
                     bottom: 0,
                     child: Center(
-                      child: _navArrow(Icons.chevron_right, () {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }),
+                      child: _navArrow(Icons.chevron_right, () => _goToPage(_currentPage + 1)),
+                    ),
+                  ),
+                // TTS speaking indicator
+                if (_ttsState == TtsState.playing)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.volume_up, color: Colors.white, size: 18),
                     ),
                   ),
               ],
@@ -183,9 +360,83 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
           ),
         ),
 
-        // Per-slide narration script toggle
-        if (widget.slides[_currentPage].script != null &&
-            widget.slides[_currentPage].script!.isNotEmpty)
+        const SizedBox(height: 8),
+
+        // ── Control Bar ──────────────────────────────────────────────────
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            children: [
+              // Lecture mode button
+              _controlButton(
+                icon: _lectureMode ? Icons.stop_circle_outlined : Icons.play_circle_outline,
+                label: _lectureMode ? 'Stop' : 'Lecture',
+                color: _lectureMode ? Colors.red.shade600 : Colors.green.shade700,
+                onTap: _toggleLectureMode,
+              ),
+              const SizedBox(width: 4),
+              // TTS play/pause
+              if (!_lectureMode) ...[
+                _controlButton(
+                  icon: _ttsState == TtsState.playing ? Icons.pause : Icons.volume_up,
+                  label: _ttsState == TtsState.playing ? 'Pause' : 'Speak',
+                  color: Colors.blue.shade700,
+                  onTap: () {
+                    if (_ttsState == TtsState.playing) {
+                      _pause();
+                    } else {
+                      _speak();
+                    }
+                  },
+                ),
+                const SizedBox(width: 4),
+              ],
+              // Auto-advance toggle
+              _controlButton(
+                icon: Icons.skip_next,
+                label: 'Auto',
+                color: _autoAdvance ? Colors.orange.shade700 : Colors.grey.shade600,
+                onTap: _toggleAutoAdvance,
+                active: _autoAdvance,
+              ),
+              const Spacer(),
+              // Speed control
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.speed, size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 100,
+                    child: Slider(
+                      value: _speechRate,
+                      min: 0.25,
+                      max: 1.0,
+                      divisions: 6,
+                      label: '${(_speechRate * 2).toStringAsFixed(1)}x',
+                      onChanged: (val) {
+                        setState(() => _speechRate = val);
+                        _tts.setSpeechRate(val);
+                      },
+                    ),
+                  ),
+                  Text(
+                    '${(_speechRate * 2).toStringAsFixed(1)}x',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // ── Narration Script Panel ───────────────────────────────────────
+        if (hasScript)
           Container(
             margin: const EdgeInsets.only(top: 8),
             decoration: BoxDecoration(
@@ -227,7 +478,7 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: SelectableText(
-                      widget.slides[_currentPage].script!,
+                      currentSlide.script!,
                       style: const TextStyle(
                         fontSize: 14,
                         height: 1.5,
@@ -239,6 +490,34 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _controlButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool active = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: active ? color.withValues(alpha: 0.12) : Colors.transparent,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -255,6 +534,8 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
       ),
     );
   }
+
+  // ── Slide Layouts ─────────────────────────────────────────────────────────
 
   Widget _buildSlide(SlideData slide) {
     final bgColor = _parseColor(slide.backgroundColor);
@@ -425,7 +706,6 @@ class _SlideViewerWidgetState extends State<SlideViewerWidget> {
           )
         else
           Container(color: bg),
-        // Title overlay at bottom
         if (slide.title.isNotEmpty)
           Positioned(
             bottom: 0,
