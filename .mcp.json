@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "lifterlms": {
+      "command": "node",
+      "args": ["mcp-lifterlms/index.js"],
+      "env": {
+        "LIFTERLMS_SITE_URL": "https://vr2fit.com",
+        "LIFTERLMS_CONSUMER_KEY": "ck_9488a29dab0ee72d70e1dec012db499b57052b3d",
+        "LIFTERLMS_CONSUMER_SECRET": "cs_730fe825c949a4978d8640bc1ae0ca09069fd84f",
+        "GEMINI_API_KEY": "AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s",
+        "UNSPLASH_ACCESS_KEY": ""
+      }
+    }
+  }
+}

@@ -51,9 +51,9 @@ class LMSService extends GetxService {
   
   Future<void> _loadConfiguration() async {
     // Use test site credentials
-    _baseUrl = _prefs.getString('lms_base_url') ?? 'https://polite-tree.myliftersite.com';
-    _consumerKey = _prefs.getString('lms_consumer_key') ?? 'ck_0f0e0588e103e6ef372015eaa36a6c8ee1cddd59';
-    _consumerSecret = _prefs.getString('lms_consumer_secret') ?? 'cs_08f3bc87adcb6a090a2620479d91031d75ec213a';
+    _baseUrl = _prefs.getString('lms_base_url') ?? 'https://vr2fit.com';
+    _consumerKey = _prefs.getString('lms_consumer_key') ?? 'ck_9488a29dab0ee72d70e1dec012db499b57052b3d';
+    _consumerSecret = _prefs.getString('lms_consumer_secret') ?? 'cs_730fe825c949a4978d8640bc1ae0ca09069fd84f';
   }
   
   Future<void> _loadUserSession() async {
@@ -141,11 +141,11 @@ class LMSService extends GetxService {
     return _api.getMyEnrollments(userId: _currentUserId!, params: params);
   }
   
-  Future<Response> enrollInCourse(int courseId) async {
+  Future<Response> enrollInCourse(int courseId, {String? creditType}) async {
     if (_currentUserId == null) {
       return const Response(statusCode: 401, statusText: 'Not logged in');
     }
-    return _api.enrollInCourse(userId: _currentUserId!, courseId: courseId);
+    return _api.enrollInCourse(userId: _currentUserId!, courseId: courseId, creditType: creditType);
   }
   
   Future<Response> getCourseProgress(int courseId) async {

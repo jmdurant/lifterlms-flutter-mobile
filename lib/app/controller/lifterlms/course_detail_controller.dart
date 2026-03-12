@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
@@ -531,27 +532,39 @@ class CourseDetailController extends GetxController implements GetxService {
   }
   
   /// Enroll in course
-  Future<void> enrollInCourse() async {
+  Future<void> enrollInCourse({String? selectedCreditType}) async {
     if (!lmsService.isLoggedIn) {
       Get.toNamed(AppRouter.login);
       return;
     }
-    
+
+    // If course has multiple CME credit types and none selected, show picker
+    final courseModel = course.value;
+    if (selectedCreditType == null &&
+        courseModel != null &&
+        courseModel.hasMultipleCmeCredits) {
+      _showCreditTypeSelection(courseModel.cmeCredits);
+      return;
+    }
+
     try {
       isEnrolling.value = true;
       DialogHelper.showLoading();
-      
-      final response = await lmsService.enrollInCourse(courseId);
-      
+
+      final response = await lmsService.enrollInCourse(
+        courseId,
+        creditType: selectedCreditType,
+      );
+
       DialogHelper.hideLoading();
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         isEnrolled.value = true;
         hasAccess.value = true;
         enrolledStudents.value++;
-        
+
         showToast('Successfully enrolled in course');
-        
+
         // Navigate to learning page with overview
         // The LearningController will automatically use cached data from this controller
         Get.toNamed(
@@ -566,7 +579,7 @@ class CourseDetailController extends GetxController implements GetxService {
         isEnrolled.value = true;
         hasAccess.value = true;
         showToast('You are already enrolled in this course');
-        
+
         // Navigate to learning page with overview
         Get.toNamed(
           AppRouter.getLearning(),
@@ -586,6 +599,143 @@ class CourseDetailController extends GetxController implements GetxService {
       showToast('Error enrolling in course', isError: true);
     } finally {
       isEnrolling.value = false;
+    }
+  }
+
+  /// Show bottom sheet for selecting CME credit type
+  void _showCreditTypeSelection(List<CmeCreditType> credits) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Select Credit Type',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This course offers multiple accreditation options. '
+              'Choose the credit type for your enrollment:',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 20),
+            ...credits.map((credit) => _buildCreditOption(credit)),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Cancel'),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _buildCreditOption(CmeCreditType credit) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () {
+          Get.back(); // Close bottom sheet
+          enrollInCourse(selectedCreditType: credit.creditType);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _getCreditColor(credit.creditType).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _getCreditIcon(credit.creditType),
+                  color: _getCreditColor(credit.creditType),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      credit.displayLabel,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      credit.displaySummary,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getCreditColor(String creditType) {
+    switch (creditType) {
+      case 'ama_pra_1':
+      case 'ama_pra_2':
+        return Colors.blue;
+      case 'ancc':
+        return Colors.teal;
+      case 'acpe':
+        return Colors.purple;
+      case 'aafp':
+        return Colors.orange;
+      default:
+        return Colors.indigo;
+    }
+  }
+
+  IconData _getCreditIcon(String creditType) {
+    switch (creditType) {
+      case 'ama_pra_1':
+      case 'ama_pra_2':
+        return Icons.medical_services_outlined;
+      case 'ancc':
+        return Icons.health_and_safety_outlined;
+      case 'acpe':
+        return Icons.local_pharmacy_outlined;
+      default:
+        return Icons.school_outlined;
     }
   }
   

@@ -165,11 +165,11 @@ class LMSPlatformService extends GetxService {
     return api.getStudentEnrollments(studentId: _currentUserId!);
   }
   
-  Future<Response> enrollInCourse(int courseId) async {
+  Future<Response> enrollInCourse(int courseId, {String? creditType}) async {
     if (_currentUserId == null) {
       return Response(statusCode: 401, statusText: 'Not logged in');
     }
-    return api.enrollInCourse(userId: _currentUserId!, courseId: courseId);
+    return api.enrollInCourse(userId: _currentUserId!, courseId: courseId, creditType: creditType);
   }
   
   Future<Response> getCourseProgress(int courseId) async {

@@ -16,6 +16,9 @@ class LLMS_Mobile_REST_API {
     public function __construct() {
         add_action( 'rest_api_init', array( $this, 'register_routes' ) );
         add_filter( 'llms_rest_course_filters_get_item', array( $this, 'add_mobile_data_to_course' ), 10, 2 );
+
+        // Capture credit_type from enrollment requests and store as user meta
+        add_action( 'llms_user_enrolled_in_course', array( $this, 'save_enrollment_credit_type' ), 10, 2 );
     }
     
     /**
@@ -390,6 +393,39 @@ class LLMS_Mobile_REST_API {
             'lesson_id'   => $lesson_id,
             'slide_count' => count( $sanitized ),
         );
+    }
+
+    /**
+     * Save selected credit type when a user enrolls via the REST API.
+     * The credit_type is passed in the enrollment POST body.
+     */
+    public function save_enrollment_credit_type( $user_id, $course_id ) {
+        // Try to grab credit_type from the current REST request body
+        $request = $this->get_current_rest_request();
+        if ( ! $request ) {
+            return;
+        }
+
+        $credit_type = sanitize_text_field( $request->get_param( 'credit_type' ) ?? '' );
+        if ( ! empty( $credit_type ) ) {
+            update_user_meta( $user_id, "_llms_enrollment_credit_type_{$course_id}", $credit_type );
+        }
+    }
+
+    /**
+     * Try to get the current REST request object.
+     */
+    private function get_current_rest_request() {
+        global $wp_rest_server;
+        if ( isset( $wp_rest_server ) && method_exists( $wp_rest_server, 'get_raw_data' ) ) {
+            $body = json_decode( $wp_rest_server->get_raw_data(), true );
+            if ( is_array( $body ) && isset( $body['credit_type'] ) ) {
+                $request = new WP_REST_Request();
+                $request->set_body_params( $body );
+                return $request;
+            }
+        }
+        return null;
     }
 
     /**

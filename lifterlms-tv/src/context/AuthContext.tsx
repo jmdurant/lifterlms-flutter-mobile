@@ -2,9 +2,9 @@ import React, {createContext, useContext, useState, useEffect, useCallback} from
 import api from '../api/lifterlms';
 
 // Configure API — update these for your site
-const SITE_URL = 'https://your-site.com';
-const CONSUMER_KEY = 'ck_your_key';
-const CONSUMER_SECRET = 'cs_your_secret';
+const SITE_URL = 'https://vr2fit.com';
+const CONSUMER_KEY = 'ck_9488a29dab0ee72d70e1dec012db499b57052b3d';
+const CONSUMER_SECRET = 'cs_730fe825c949a4978d8640bc1ae0ca09069fd84f';
 
 interface User {
   token: string;

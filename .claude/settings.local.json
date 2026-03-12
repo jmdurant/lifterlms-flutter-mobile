@@ -1,0 +1,54 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/mcp-lifterlms && node -e \"const m = require\\('./index.js'\\); console.log\\('loaded ok'\\)\" 2>&1)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/mcp-lifterlms && node --version && npm ls 2>&1)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/mcp-lifterlms && node -e \"import\\('zod'\\).then\\(z => console.log\\('zod ok', Object.keys\\(z\\).length\\)\\).catch\\(e => console.error\\('zod missing:', e.message\\)\\)\" 2>&1)",
+      "mcp__lifterlms__scaffold_course",
+      "mcp__lifterlms__create_lesson",
+      "mcp__lifterlms__create_quiz",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/mcp-lifterlms && node -c index.js && echo \"Syntax OK\")",
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" -X POST -H \"Content-Type: application/json\" -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Generate a simple professional medical illustration of a brain scan, clean modern style, no text\"}]}],\"generationConfig\":{\"responseModalities\":[\"TEXT\",\"IMAGE\"]}}' 2>&1 | head -c 500)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview?key=AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" 2>/dev/null | python3 -c \"import sys,json; print\\(json.dumps\\(json.load\\(sys.stdin\\), indent=2\\)\\)\" 2>/dev/null || curl -s \"https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview?key=AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\")",
+      "Bash(curl -s -X POST \"https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview:predictLongRunning\" -H \"x-goog-api-key: AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" -H \"Content-Type: application/json\" -d '{\"instances\":[{\"prompt\":\"A slow motion shot of a single red rose petal falling through sunlight\"}],\"parameters\":{\"durationSeconds\":\"4\",\"aspectRatio\":\"16:9\"}}' 2>/dev/null)",
+      "Bash(curl -s -X POST \"https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview:predictLongRunning\" -H \"x-goog-api-key: AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" -H \"Content-Type: application/json\" -d '{\"instances\":[{\"prompt\":\"A slow motion shot of a single red rose petal falling through sunlight\"}],\"parameters\":{\"durationSeconds\":4,\"aspectRatio\":\"16:9\"}}' 2>/dev/null)",
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview/operations/1nhovvt1j1tv?key=AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" 2>/dev/null)",
+      "Bash(for model:*)",
+      "Bash(sleep 15 && curl -s \"https://generativelanguage.googleapis.com/v1beta/models/veo-3.1-generate-preview/operations/1nhovvt1j1tv?key=AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" 2>/dev/null)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}, Content-Type: %{content_type}, Size: %{size_download} bytes\" -H \"x-goog-api-key: AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" \"https://generativelanguage.googleapis.com/v1beta/files/kbgdtyccgxkp:download?alt=media\" 2>/dev/null)",
+      "Bash(curl -s -L -o /dev/null -w \"HTTP %{http_code}, Content-Type: %{content_type}, Size: %{size_download} bytes\" -H \"x-goog-api-key: AIzaSyADuGJYqjsQHJHpbA7czOoplqP6g33X21s\" \"https://generativelanguage.googleapis.com/v1beta/files/kbgdtyccgxkp:download?alt=media\" 2>/dev/null)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile && dart analyze lib/app/view/components/learning/slide_viewer_widget.dart 2>&1 | head -20)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile && dart analyze lib/app/view/components/learning/slide_viewer_widget.dart 2>&1 | head -10)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/lifterlms-tv && npx tsc --noEmit src/components/SlideViewer.tsx 2>&1 | head -20)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/lifterlms-tv && npx tsc --noEmit --skipLibCheck src/components/SlideViewer.tsx 2>&1)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile && dart analyze lib/app/view/components/learning/slide_viewer_widget.dart 2>&1)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/lifterlms-tv && npx tsc --noEmit --skipLibCheck 2>&1 | grep \"SlideViewer\" | head -10)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/lifterlms-tv && npm install react-native-tts 2>&1 | tail -5)",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/lifterlms-tv && npx tsc --noEmit --skipLibCheck 2>&1 | grep \"SlideViewer\")",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile/lifterlms-tv && npx tsc --noEmit --skipLibCheck src/screens/CourseScreen.tsx 2>&1 | head -20)",
+      "Bash(where.exe php:*)",
+      "Bash(ls /c/php*/php.exe)",
+      "Bash(ls /c/Program*/PHP*/php.exe)",
+      "Read(//c/Users/docto/AppData/**)",
+      "WebSearch"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "lifterlms"
+  ],
+  "mcpServers": {
+    "lifterlms": {
+      "command": "node",
+      "args": [
+        "mcp-lifterlms/index.js"
+      ],
+      "env": {
+        "LIFTERLMS_SITE_URL": "https://vr2fit.com",
+        "LIFTERLMS_CONSUMER_KEY": "ck_9488a29dab0ee72d70e1dec012db499b57052b3d",
+        "LIFTERLMS_CONSUMER_SECRET": "cs_730fe825c949a4978d8640bc1ae0ca09069fd84f"
+      }
+    }
+  }
+}

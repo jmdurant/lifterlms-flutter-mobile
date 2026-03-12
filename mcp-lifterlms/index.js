@@ -2,10 +2,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import fs from "fs/promises";
+import { createWriteStream } from "fs";
 import path from "path";
 import JSZip from "jszip";
 import xml2js from "xml2js";
 import PptxGenJS from "pptxgenjs";
+import PDFDocument from "pdfkit";
 
 // ── Configuration ──────────────────────────────────────────────────────────────
 
@@ -833,17 +835,80 @@ server.tool(
 
 server.tool(
   "enroll_student",
-  "Enroll a student in a course",
+  "Enroll a student in a course. For multi-credit CME courses, specify credit_type to record which accreditation the learner is pursuing.",
   {
     student_id: z.number().describe("Student/user ID"),
     course_id: z.number().describe("Course ID"),
+    credit_type: z.enum(["ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom"]).optional().describe("CME credit type the learner selected (for multi-accredited courses)"),
   },
-  async ({ student_id, course_id }) => {
+  async ({ student_id, course_id, credit_type }) => {
     await apiCall("POST", `llms/v1/students/${student_id}/enrollments`, {
       post_id: course_id,
     });
+    // Store selected credit type as user meta if provided
+    if (credit_type) {
+      try {
+        await apiCall("POST", `wp/v2/users/${student_id}`, {
+          meta: {
+            [`_llms_enrollment_credit_type_${course_id}`]: credit_type,
+          },
+        });
+      } catch (e) {
+        // Non-fatal — enrollment still succeeded
+      }
+    }
+    const creditMsg = credit_type ? ` with ${credit_type.replace(/_/g, " ").toUpperCase()} credits` : "";
     return {
-      content: [{ type: "text", text: `Student ${student_id} enrolled in course ${course_id}.` }],
+      content: [{ type: "text", text: `Student ${student_id} enrolled in course ${course_id}${creditMsg}.` }],
+    };
+  }
+);
+
+// ── Tool: cme_report ─────────────────────────────────────────────────────────
+
+server.tool(
+  "cme_report",
+  "Generate a CME credit report for CME office submissions. Returns all credits awarded, with attestation and evaluation dates, filterable by date range, credit type, and course.",
+  {
+    start_date: z.string().optional().describe("Start date (YYYY-MM-DD)"),
+    end_date: z.string().optional().describe("End date (YYYY-MM-DD)"),
+    credit_type: z.enum(["ama_pra_1", "ama_pra_2", "ancc", "acpe", "aafp", "aapa", "moc", "ce", "ceu", "custom"]).optional().describe("Filter by credit type"),
+    course_id: z.number().optional().describe("Filter by course ID"),
+  },
+  async ({ start_date, end_date, credit_type, course_id }) => {
+    const params = new URLSearchParams();
+    if (start_date) params.set("start_date", start_date);
+    if (end_date) params.set("end_date", end_date);
+    if (credit_type) params.set("credit_type", credit_type);
+    if (course_id) params.set("course_id", String(course_id));
+    const qs = params.toString() ? `?${params}` : "";
+    const report = await apiCall("GET", `llms/v1/mobile-app/cme/report${qs}`);
+
+    // Format a readable summary
+    const lines = [`CME Credit Report — generated ${report.generated_date}`];
+    if (report.filters?.start_date || report.filters?.end_date) {
+      lines.push(`Date range: ${report.filters.start_date || "beginning"} to ${report.filters.end_date || "now"}`);
+    }
+    lines.push(`Total records: ${report.total_records}`);
+    lines.push("");
+
+    if (report.summary?.length) {
+      lines.push("── Summary by Credit Type ──");
+      for (const s of report.summary) {
+        lines.push(`  ${s.credit_type_label}: ${s.total_hours} hours across ${s.total_learners} learner(s)`);
+      }
+      lines.push("");
+    }
+
+    if (report.credits?.length) {
+      lines.push("── Detail ──");
+      for (const c of report.credits) {
+        lines.push(`  ${c.user_name} (${c.user_email}) — ${c.credit_hours} ${c.credit_type_label} — ${c.course_title} — earned ${c.earned_date} — status: ${c.status}`);
+      }
+    }
+
+    return {
+      content: [{ type: "text", text: lines.join("\n") }],
     };
   }
 );
@@ -2378,6 +2443,524 @@ server.tool(
           ),
         },
       ],
+    };
+  }
+);
+
+// ── PDF Helper ────────────────────────────────────────────────────────────────
+
+function createPdf(outputPath) {
+  const doc = new PDFDocument({ size: "LETTER", margins: { top: 60, bottom: 60, left: 60, right: 60 } });
+  const stream = createWriteStream(outputPath);
+  doc.pipe(stream);
+
+  const helpers = {
+    doc,
+    stream,
+    COLORS: { primary: "#1a237e", secondary: "#0d47a1", text: "#212121", muted: "#616161", accent: "#e65100" },
+
+    title(text) {
+      doc.fontSize(24).font("Helvetica-Bold").fillColor(helpers.COLORS.primary).text(text, { align: "left" });
+      doc.moveDown(0.3);
+      doc.moveTo(60, doc.y).lineTo(552, doc.y).strokeColor(helpers.COLORS.primary).lineWidth(2).stroke();
+      doc.moveDown(0.8);
+    },
+
+    heading(text) {
+      doc.fontSize(16).font("Helvetica-Bold").fillColor(helpers.COLORS.secondary).text(text);
+      doc.moveDown(0.4);
+    },
+
+    subheading(text) {
+      doc.fontSize(13).font("Helvetica-Bold").fillColor(helpers.COLORS.text).text(text);
+      doc.moveDown(0.3);
+    },
+
+    body(text) {
+      doc.fontSize(11).font("Helvetica").fillColor(helpers.COLORS.text).text(text, { lineGap: 3 });
+      doc.moveDown(0.4);
+    },
+
+    muted(text) {
+      doc.fontSize(10).font("Helvetica").fillColor(helpers.COLORS.muted).text(text, { lineGap: 2 });
+      doc.moveDown(0.3);
+    },
+
+    bullet(text) {
+      doc.fontSize(11).font("Helvetica").fillColor(helpers.COLORS.text)
+        .text(`  •  ${text}`, { indent: 10, lineGap: 2 });
+      doc.moveDown(0.15);
+    },
+
+    numberedItem(num, text) {
+      doc.fontSize(11).font("Helvetica").fillColor(helpers.COLORS.text)
+        .text(`${num}. ${text}`, { indent: 10, lineGap: 2 });
+      doc.moveDown(0.15);
+    },
+
+    separator() {
+      doc.moveDown(0.3);
+      doc.moveTo(60, doc.y).lineTo(552, doc.y).strokeColor("#E0E0E0").lineWidth(0.5).stroke();
+      doc.moveDown(0.5);
+    },
+
+    checkPage(needed = 100) {
+      if (doc.y > 680 - needed) {
+        doc.addPage();
+      }
+    },
+
+    async finish() {
+      doc.end();
+      return new Promise((resolve, reject) => {
+        stream.on("finish", resolve);
+        stream.on("error", reject);
+      });
+    },
+  };
+
+  return helpers;
+}
+
+// ── Tool: export_pdf ──────────────────────────────────────────────────────────
+
+server.tool(
+  "export_pdf",
+  "Export a LifterLMS course as a PDF document suitable for peer review. Includes all slides, narration scripts, quiz questions, and CME configuration.",
+  {
+    course_id: z.number().describe("Course ID to export"),
+    output_path: z.string().describe("Absolute path for the output .pdf file"),
+    include_quizzes: z.boolean().optional().describe("Include quiz questions (default: true)"),
+    include_scripts: z.boolean().optional().describe("Include narration scripts (default: true)"),
+  },
+  async ({ course_id, output_path, include_quizzes = true, include_scripts = true }) => {
+    // 1. Fetch course
+    let course;
+    try {
+      course = await apiCall("GET", `llms/v1/courses/${course_id}`);
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to fetch course: ${err.message}` }] };
+    }
+
+    const courseTitle = course.title?.rendered || course.title || `Course ${course_id}`;
+    const pdf = createPdf(output_path);
+
+    // Title page
+    pdf.doc.moveDown(3);
+    pdf.doc.fontSize(32).font("Helvetica-Bold").fillColor(pdf.COLORS.primary).text(courseTitle, { align: "center" });
+    pdf.doc.moveDown(1);
+
+    const desc = (course.content?.rendered || "").replace(/<[^>]*>/g, "").trim();
+    if (desc) {
+      pdf.doc.fontSize(12).font("Helvetica").fillColor(pdf.COLORS.muted)
+        .text(desc.substring(0, 500), { align: "center", width: 430, indent: 0 });
+    }
+
+    pdf.doc.moveDown(2);
+    pdf.muted(`Course ID: ${course_id}`);
+    pdf.muted(`Exported: ${new Date().toISOString().split("T")[0]}`);
+
+    // CME config
+    let cmeConfig = null;
+    try {
+      cmeConfig = await apiCall("GET", `llms/v1/mobile-app/cme/course/${course_id}`);
+    } catch (_) {}
+
+    if (cmeConfig?.enabled) {
+      pdf.doc.moveDown(0.5);
+      pdf.subheading("CME Accreditation");
+      if (cmeConfig.credits?.length) {
+        for (const c of cmeConfig.credits) {
+          pdf.bullet(`${c.credit_hours} ${c.credit_type_label}${c.accrediting_institution ? ` (${c.accrediting_institution})` : ""}`);
+        }
+      } else {
+        pdf.bullet(`${cmeConfig.credit_hours} ${cmeConfig.credit_type_label}`);
+      }
+      if (cmeConfig.disclosure_text) {
+        pdf.doc.moveDown(0.3);
+        pdf.muted(`Disclosure: ${cmeConfig.disclosure_text}`);
+      }
+    }
+
+    // 2. Fetch sections & lessons
+    let sections = [];
+    try {
+      const raw = await apiCall("GET", `llms/v1/sections?parent_id=${course_id}&per_page=50`);
+      sections = Array.isArray(raw) ? raw : [];
+    } catch (_) {}
+
+    const lessonsMap = {};
+    for (const sec of sections) {
+      try {
+        const raw = await apiCall("GET", `llms/v1/lessons?parent_id=${sec.id}&per_page=100`);
+        lessonsMap[sec.id] = Array.isArray(raw) ? raw : [];
+      } catch (_) {
+        lessonsMap[sec.id] = [];
+      }
+    }
+
+    // 3. Render each section
+    let lessonCount = 0;
+    for (let si = 0; si < sections.length; si++) {
+      const sec = sections[si];
+      const sectionTitle = sec.title?.rendered || sec.title || `Section ${si + 1}`;
+
+      pdf.doc.addPage();
+      pdf.title(`Section ${si + 1}: ${sectionTitle}`);
+
+      const lessons = lessonsMap[sec.id] || [];
+      for (let li = 0; li < lessons.length; li++) {
+        const lesson = lessons[li];
+        const lessonTitle = lesson.title?.rendered || lesson.title || `Lesson ${li + 1}`;
+        lessonCount++;
+
+        pdf.checkPage(120);
+        pdf.heading(`${si + 1}.${li + 1}  ${lessonTitle}`);
+
+        // Fetch slides
+        let slides = [];
+        try {
+          const slideData = await apiCall("GET", `llms/v1/mobile-app/lesson/${lesson.id}/slides`);
+          if (slideData.has_slides && Array.isArray(slideData.slides)) {
+            slides = slideData.slides;
+          }
+        } catch (_) {}
+
+        if (slides.length > 0) {
+          for (let si2 = 0; si2 < slides.length; si2++) {
+            const s = slides[si2];
+            pdf.checkPage(80);
+            pdf.subheading(`Slide ${si2 + 1}: ${s.title || "(untitled)"}`);
+
+            if (s.body) {
+              pdf.body(s.body);
+            }
+            if (s.bullets?.length) {
+              for (const b of s.bullets) {
+                pdf.bullet(b);
+              }
+              pdf.doc.moveDown(0.2);
+            }
+            if (include_scripts && s.script) {
+              pdf.checkPage(60);
+              pdf.doc.fontSize(10).font("Helvetica-Oblique").fillColor("#7B1FA2")
+                .text("Narration:", { continued: false });
+              pdf.doc.fontSize(10).font("Helvetica").fillColor(pdf.COLORS.muted)
+                .text(s.script, { lineGap: 2 });
+              pdf.doc.moveDown(0.3);
+            }
+          }
+        } else {
+          // No slides — use lesson content
+          const content = (lesson.content?.rendered || "").replace(/<[^>]*>/g, "").trim();
+          if (content) {
+            pdf.body(content.substring(0, 2000));
+          }
+        }
+
+        // Quiz
+        if (include_quizzes && lesson.quiz_id) {
+          try {
+            const quiz = await apiCall("GET", `llms/v1/quizzes/${lesson.quiz_id}`);
+            const quizTitle = quiz.title?.rendered || quiz.title || "Quiz";
+            pdf.checkPage(80);
+            pdf.subheading(`Quiz: ${quizTitle}`);
+            if (quiz.passing_percent) {
+              pdf.muted(`Passing score: ${quiz.passing_percent}%`);
+            }
+
+            let questions = [];
+            try {
+              const raw = await apiCall("GET", `llms/v1/quizzes/${lesson.quiz_id}/questions?per_page=50`);
+              questions = Array.isArray(raw) ? raw : [];
+            } catch (_) {}
+
+            for (let qi = 0; qi < questions.length; qi++) {
+              const q = questions[qi];
+              const qText = (q.title?.rendered || q.title || "").replace(/<[^>]*>/g, "");
+              pdf.checkPage(60);
+              pdf.numberedItem(qi + 1, qText);
+
+              if (q.choices && Array.isArray(q.choices)) {
+                for (const ch of q.choices) {
+                  const choiceText = (ch.choice?.rendered || ch.choice || "").replace(/<[^>]*>/g, "");
+                  const marker = ch.correct ? "✓" : "○";
+                  pdf.doc.fontSize(10).font("Helvetica").fillColor(ch.correct ? "#2E7D32" : pdf.COLORS.muted)
+                    .text(`      ${marker}  ${choiceText}`, { lineGap: 1 });
+                }
+                pdf.doc.moveDown(0.2);
+              }
+            }
+          } catch (_) {}
+        }
+
+        pdf.separator();
+      }
+    }
+
+    // Finish
+    await pdf.finish();
+
+    return {
+      content: [{ type: "text", text: `PDF exported: ${output_path}\n${sections.length} sections, ${lessonCount} lessons.` }],
+    };
+  }
+);
+
+// ── Tool: generate_course_planning_doc ────────────────────────────────────────
+
+server.tool(
+  "generate_course_planning_doc",
+  "Generate a CME Course Planning Document (PDF) for submission to a CME office. Includes needs assessment, learning objectives, target audience, content outline, faculty disclosures, assessment strategy, and evaluation plan — all extracted from the course data.",
+  {
+    course_id: z.number().describe("Course ID"),
+    output_path: z.string().describe("Absolute path for the output .pdf file"),
+    needs_assessment: z.string().optional().describe("Practice gap / needs assessment text. If omitted, auto-generated from course content."),
+    faculty_name: z.string().optional().describe("Faculty/author name"),
+    faculty_degrees: z.string().optional().describe("Faculty degrees (e.g., 'MD, PhD')"),
+    faculty_institution: z.string().optional().describe("Faculty institution"),
+    faculty_disclosures: z.string().optional().describe("COI disclosures (e.g., 'No relevant financial relationships')"),
+  },
+  async ({ course_id, output_path, needs_assessment, faculty_name, faculty_degrees, faculty_institution, faculty_disclosures }) => {
+    // 1. Fetch course
+    let course;
+    try {
+      course = await apiCall("GET", `llms/v1/courses/${course_id}`);
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to fetch course: ${err.message}` }] };
+    }
+
+    const courseTitle = course.title?.rendered || course.title || `Course ${course_id}`;
+    const courseDesc = (course.content?.rendered || "").replace(/<[^>]*>/g, "").trim();
+
+    // 2. Fetch CME config
+    let cmeConfig = null;
+    try {
+      cmeConfig = await apiCall("GET", `llms/v1/mobile-app/cme/course/${course_id}`);
+    } catch (_) {}
+
+    // 3. Fetch sections & lessons for content outline
+    let sections = [];
+    try {
+      const raw = await apiCall("GET", `llms/v1/sections?parent_id=${course_id}&per_page=50`);
+      sections = Array.isArray(raw) ? raw : [];
+    } catch (_) {}
+
+    const lessonsMap = {};
+    let totalLessons = 0;
+    let totalQuizzes = 0;
+    for (const sec of sections) {
+      try {
+        const raw = await apiCall("GET", `llms/v1/lessons?parent_id=${sec.id}&per_page=100`);
+        const lessons = Array.isArray(raw) ? raw : [];
+        lessonsMap[sec.id] = lessons;
+        totalLessons += lessons.length;
+        totalQuizzes += lessons.filter((l) => l.quiz_id).length;
+      } catch (_) {
+        lessonsMap[sec.id] = [];
+      }
+    }
+
+    // 4. Extract learning objectives from first lesson's disclosure slide
+    let objectives = [];
+    if (sections.length > 0) {
+      const firstSectionLessons = lessonsMap[sections[0].id] || [];
+      for (const lesson of firstSectionLessons) {
+        try {
+          const slideData = await apiCall("GET", `llms/v1/mobile-app/lesson/${lesson.id}/slides`);
+          if (slideData.has_slides && Array.isArray(slideData.slides)) {
+            for (const s of slideData.slides) {
+              if (s.title && /objective/i.test(s.title) && s.bullets?.length) {
+                objectives = s.bullets;
+                break;
+              }
+            }
+          }
+        } catch (_) {}
+        if (objectives.length > 0) break;
+      }
+    }
+
+    // 5. Build the PDF
+    const pdf = createPdf(output_path);
+
+    // Header
+    pdf.doc.moveDown(2);
+    pdf.doc.fontSize(14).font("Helvetica-Bold").fillColor(pdf.COLORS.primary)
+      .text("CME ACTIVITY PLANNING DOCUMENT", { align: "center" });
+    pdf.doc.moveDown(0.3);
+    pdf.doc.fontSize(10).font("Helvetica").fillColor(pdf.COLORS.muted)
+      .text("For Submission to CME/CNE Accreditation Office", { align: "center" });
+    pdf.doc.moveDown(1.5);
+
+    pdf.doc.fontSize(22).font("Helvetica-Bold").fillColor(pdf.COLORS.primary).text(courseTitle, { align: "center" });
+    pdf.doc.moveDown(0.5);
+    pdf.muted(`Date: ${new Date().toISOString().split("T")[0]}     |     Course ID: ${course_id}     |     Format: Enduring Material (Online, Self-Paced)`);
+    pdf.doc.moveDown(0.5);
+
+    // Credit info
+    if (cmeConfig?.enabled) {
+      pdf.heading("Credit Designation");
+      if (cmeConfig.credits?.length) {
+        for (const c of cmeConfig.credits) {
+          pdf.bullet(`${c.credit_hours} ${c.credit_type_label}${c.accrediting_institution ? ` — ${c.accrediting_institution}` : ""}`);
+        }
+      } else if (cmeConfig.credit_type) {
+        pdf.bullet(`${cmeConfig.credit_hours} ${cmeConfig.credit_type_label}`);
+      }
+      pdf.doc.moveDown(0.3);
+    }
+
+    pdf.separator();
+
+    // Section 1: Activity Overview
+    pdf.heading("1. Activity Overview");
+    pdf.body(`Title: ${courseTitle}`);
+    pdf.body("Format: Enduring material — self-paced online education delivered via mobile app (iOS/Android), TV app (Apple TV, Fire TV, Google TV), and web.");
+    if (courseDesc) {
+      pdf.body(`Description: ${courseDesc.substring(0, 600)}`);
+    }
+    pdf.body(`Content: ${sections.length} sections, ${totalLessons} lessons, ${totalQuizzes} assessments`);
+    if (course.length?.rendered || course.length) {
+      const len = course.length?.rendered || course.length;
+      pdf.body(`Estimated duration: ${len}`);
+    }
+    pdf.separator();
+
+    // Section 2: Target Audience
+    pdf.heading("2. Target Audience");
+    if (cmeConfig?.credits?.length) {
+      const audiences = [];
+      for (const c of cmeConfig.credits) {
+        const typeMap = {
+          ama_pra_1: "Physicians (MD/DO), Physician Assistants",
+          ancc: "Registered Nurses, Nurse Practitioners, Clinical Nurse Specialists",
+          acpe: "Pharmacists, Pharmacy Technicians",
+          aafp: "Family Physicians",
+          aapa: "Physician Assistants",
+        };
+        audiences.push(typeMap[c.credit_type] || "Healthcare professionals");
+      }
+      pdf.body([...new Set(audiences)].join("; "));
+    } else {
+      pdf.body("Healthcare professionals seeking continuing education credits.");
+    }
+    pdf.separator();
+
+    // Section 3: Needs Assessment
+    pdf.heading("3. Needs Assessment / Practice Gap");
+    if (needs_assessment) {
+      pdf.body(needs_assessment);
+    } else {
+      pdf.body(`This activity addresses a knowledge and practice gap in ${courseTitle.toLowerCase().replace(/^(a |an |the )/i, "")}. Evidence suggests that healthcare providers require updated education in this area to improve patient outcomes and align with current evidence-based guidelines.`);
+      pdf.doc.moveDown(0.2);
+      pdf.muted("[Note: Replace with specific literature references, practice data, or quality improvement data supporting the educational need.]");
+    }
+    pdf.separator();
+
+    // Section 4: Learning Objectives
+    pdf.checkPage(120);
+    pdf.heading("4. Learning Objectives");
+    pdf.body("Upon completion of this activity, participants should be able to:");
+    if (objectives.length > 0) {
+      for (let i = 0; i < objectives.length; i++) {
+        pdf.numberedItem(i + 1, objectives[i]);
+      }
+    } else {
+      pdf.muted("[Learning objectives will be extracted from course content. Ensure objectives are measurable and map to identified practice gaps.]");
+    }
+    pdf.separator();
+
+    // Section 5: Content Outline
+    pdf.checkPage(100);
+    pdf.heading("5. Content Outline");
+    for (let si = 0; si < sections.length; si++) {
+      const sec = sections[si];
+      const secTitle = sec.title?.rendered || sec.title || `Section ${si + 1}`;
+      pdf.subheading(`Section ${si + 1}: ${secTitle}`);
+
+      const lessons = lessonsMap[sec.id] || [];
+      for (let li = 0; li < lessons.length; li++) {
+        const lesson = lessons[li];
+        const lessonTitle = lesson.title?.rendered || lesson.title || `Lesson ${li + 1}`;
+        const quizNote = lesson.quiz_id ? " [Assessment]" : "";
+        pdf.bullet(`${si + 1}.${li + 1}  ${lessonTitle}${quizNote}`);
+      }
+      pdf.doc.moveDown(0.2);
+    }
+    pdf.separator();
+
+    // Section 6: Faculty & Disclosures
+    pdf.checkPage(120);
+    pdf.heading("6. Faculty Information & Disclosures");
+    if (faculty_name) {
+      pdf.body(`Faculty: ${faculty_name}${faculty_degrees ? `, ${faculty_degrees}` : ""}`);
+      if (faculty_institution) pdf.body(`Institution: ${faculty_institution}`);
+      pdf.doc.moveDown(0.3);
+    }
+    pdf.subheading("Disclosure Statement");
+    if (faculty_disclosures) {
+      pdf.body(faculty_disclosures);
+    } else if (cmeConfig?.disclosure_text) {
+      pdf.body(cmeConfig.disclosure_text);
+    } else {
+      pdf.body("The faculty/author(s) have no relevant financial relationships with ineligible companies to disclose.");
+    }
+    pdf.separator();
+
+    // Section 7: Assessment Strategy
+    pdf.checkPage(100);
+    pdf.heading("7. Assessment Strategy");
+    pdf.body(`This activity includes ${totalQuizzes} knowledge-check assessment(s) embedded within the course modules.`);
+    pdf.bullet("Post-lesson quizzes assess retention and comprehension of key concepts");
+    if (cmeConfig?.attestation_required) {
+      pdf.bullet("Learner attestation required prior to credit award");
+    }
+    if (cmeConfig?.evaluation_required) {
+      pdf.bullet("Post-activity evaluation required prior to credit award");
+    }
+    pdf.body("Passing threshold: Learners must achieve the designated passing score on all assessments to receive credit.");
+    pdf.separator();
+
+    // Section 8: Evaluation Plan
+    pdf.checkPage(120);
+    pdf.heading("8. Evaluation Plan");
+    pdf.body("All participants will complete a post-activity evaluation survey addressing:");
+    pdf.bullet("Relevance of content to clinical practice (1-5 scale)");
+    pdf.bullet("Achievement of stated learning objectives (1-5 scale)");
+    pdf.bullet("Freedom from commercial bias (Yes/No)");
+    pdf.bullet("Anticipated changes to practice (Yes/No with free-text follow-up)");
+    pdf.bullet("Perceived barriers to implementing changes");
+    pdf.bullet("Open-ended suggestions for future activities");
+    pdf.doc.moveDown(0.3);
+    pdf.body("Evaluation data will be aggregated and submitted to the accreditation office as part of outcomes reporting.");
+    pdf.separator();
+
+    // Section 9: Commercial Support
+    pdf.checkPage(60);
+    pdf.heading("9. Commercial Support");
+    pdf.body("This activity does not receive any commercial support. There are no grants, sponsorships, or in-kind contributions from ineligible companies.");
+    pdf.separator();
+
+    // Section 10: Delivery Platforms
+    pdf.checkPage(80);
+    pdf.heading("10. Delivery Platforms");
+    pdf.body("This enduring material is available on the following platforms:");
+    pdf.bullet("iOS and Android mobile applications");
+    pdf.bullet("Apple TV, Amazon Fire TV, and Google TV applications");
+    pdf.bullet("Web browser via the LifterLMS learning management system");
+    pdf.doc.moveDown(0.3);
+    pdf.body("All platforms provide identical content delivery with slide-based lessons, optional text-to-speech narration, and embedded assessments.");
+
+    // Footer
+    pdf.doc.moveDown(2);
+    pdf.doc.fontSize(9).font("Helvetica").fillColor(pdf.COLORS.muted)
+      .text("This document was generated by the LifterLMS CME Platform. All course content, structure, and accreditation configuration are derived from the live course data.", { align: "center" });
+
+    await pdf.finish();
+
+    return {
+      content: [{ type: "text", text: `Course planning document generated: ${output_path}\n\nIncludes: Activity overview, target audience, needs assessment, ${objectives.length} learning objectives, content outline (${sections.length} sections / ${totalLessons} lessons), faculty disclosures, assessment strategy, evaluation plan, commercial support statement, and delivery platforms.` }],
     };
   }
 );

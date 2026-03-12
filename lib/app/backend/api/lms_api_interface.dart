@@ -35,7 +35,7 @@ abstract class LMSApiInterface {
   Future<Response> getSection({required int sectionId});
   
   // Enrollments
-  Future<Response> enrollInCourse({required int userId, required int courseId});
+  Future<Response> enrollInCourse({required int userId, required int courseId, String? creditType});
   Future<Response> unenrollFromCourse({required int userId, required int courseId});
   Future<Response> getMyEnrollments({required int userId, Map<String, dynamic>? params});
   Future<Response> getEnrollmentStatus({required int userId, required int courseId});

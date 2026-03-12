@@ -635,9 +635,16 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
   
   // Enrollment Management
   @override
-  Future<Response> enrollInCourse({required int userId, required int courseId}) async {
+  Future<Response> enrollInCourse({required int userId, required int courseId, String? creditType}) async {
     final url = Uri.parse('$appBaseUrl/wp-json/llms/v1/students/$userId/enrollments/$courseId');
-    
+
+    final body = <String, dynamic>{
+      'trigger': 'admin_enrollment',
+    };
+    if (creditType != null) {
+      body['credit_type'] = creditType;
+    }
+
     try {
       final response = await http.post(
         url,
@@ -645,11 +652,9 @@ class LifterLMSApiService extends GetxService with LifterLMSApiStubs implements 
           'Content-Type': 'application/json',
           'Authorization': 'Basic ${base64Encode(utf8.encode('$consumerKey:$consumerSecret'))}',
         },
-        body: jsonEncode({
-          'trigger': 'admin_enrollment',  // Use a meaningful trigger
-        }),
+        body: jsonEncode(body),
       ).timeout(Duration(seconds: timeoutInSeconds));
-      
+
       return parseResponse(response, url.toString());
     } catch (e) {
       return const Response(statusCode: 1, statusText: connectionIssue);

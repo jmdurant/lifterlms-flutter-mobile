@@ -324,7 +324,7 @@ mixin LifterLMSApiStubs {
     return _notImplemented('Section details');
   }
   
-  Future<Response> enrollInCourse({required int userId, required int courseId}) async {
+  Future<Response> enrollInCourse({required int userId, required int courseId, String? creditType}) async {
     return _notImplemented('Course enrollment');
   }
   

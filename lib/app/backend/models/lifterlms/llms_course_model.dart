@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_app/app/backend/models/lifterlms/llms_instructor_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
 
@@ -53,6 +55,10 @@ class LLMSCourseModel {
   final String? audioSrc;
   final double passingPercentage;
   final bool hasCertificate;
+
+  // CME accreditation fields
+  final bool cmeEnabled;
+  final List<CmeCreditType> cmeCredits;
   
   LLMSCourseModel({
     required this.id,
@@ -104,6 +110,8 @@ class LLMSCourseModel {
     this.audioSrc,
     this.passingPercentage = 70.0,
     this.hasCertificate = false,
+    this.cmeEnabled = false,
+    this.cmeCredits = const [],
   });
   
   factory LLMSCourseModel.fromJson(Map<String, dynamic> json) {
@@ -173,6 +181,8 @@ class LLMSCourseModel {
       audioSrc: json['audio_src'],
       passingPercentage: (json['passing_percentage'] ?? 70).toDouble(),
       hasCertificate: json['has_certificate'] ?? false,
+      cmeEnabled: _parseCmeEnabled(json),
+      cmeCredits: _parseCmeCredits(json),
     );
     } catch (e) {
       rethrow;
@@ -382,4 +392,88 @@ class LLMSCourseModel {
     return true;
   }
   bool get hasCapacity => !capacityEnabled || enrollmentCount < capacity;
+  bool get hasMultipleCmeCredits => cmeEnabled && cmeCredits.length > 1;
+
+  static bool _parseCmeEnabled(Map<String, dynamic> json) {
+    final meta = json['meta'] ?? json['post_meta'] ?? {};
+    if (meta is Map) {
+      final enabled = meta['_llms_cme_enabled'];
+      if (enabled == 'yes' || enabled == true) return true;
+    }
+    return false;
+  }
+
+  static List<CmeCreditType> _parseCmeCredits(Map<String, dynamic> json) {
+    final meta = json['meta'] ?? json['post_meta'] ?? {};
+    if (meta is! Map) return [];
+    final creditsRaw = meta['_llms_cme_credits'];
+    if (creditsRaw == null) return [];
+    try {
+      List<dynamic> creditsList;
+      if (creditsRaw is String) {
+        creditsList = jsonDecode(creditsRaw) as List<dynamic>;
+      } else if (creditsRaw is List) {
+        creditsList = creditsRaw;
+      } else {
+        return [];
+      }
+      return creditsList
+          .map((c) => CmeCreditType.fromJson(c as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+}
+
+class CmeCreditType {
+  final String creditType;
+  final double creditHours;
+  final int expirationMonths;
+  final String? accreditingInstitution;
+  final String? accreditationStatement;
+
+  CmeCreditType({
+    required this.creditType,
+    required this.creditHours,
+    this.expirationMonths = 0,
+    this.accreditingInstitution,
+    this.accreditationStatement,
+  });
+
+  factory CmeCreditType.fromJson(Map<String, dynamic> json) {
+    return CmeCreditType(
+      creditType: json['credit_type'] ?? '',
+      creditHours: (json['credit_hours'] ?? 0).toDouble(),
+      expirationMonths: json['expiration_months'] ?? 0,
+      accreditingInstitution: json['accrediting_institution'],
+      accreditationStatement: json['accreditation_statement'],
+    );
+  }
+
+  String get displayLabel {
+    const labels = {
+      'ama_pra_1': 'AMA PRA Category 1',
+      'ama_pra_2': 'AMA PRA Category 2',
+      'ancc': 'ANCC Contact Hours',
+      'acpe': 'ACPE Credits',
+      'aafp': 'AAFP Prescribed Credits',
+      'aapa': 'AAPA Category 1 CME',
+      'moc': 'MOC Points',
+      'ce': 'CE Credits',
+      'ceu': 'CEU Credits',
+    };
+    return labels[creditType] ?? creditType.replaceAll('_', ' ').toUpperCase();
+  }
+
+  String get displaySummary {
+    final label = displayLabel;
+    final hours = creditHours % 1 == 0
+        ? creditHours.toInt().toString()
+        : creditHours.toString();
+    final institution = accreditingInstitution != null
+        ? ' ($accreditingInstitution)'
+        : '';
+    return '$hours $label$institution';
+  }
 }

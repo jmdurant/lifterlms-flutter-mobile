@@ -192,6 +192,31 @@ class LLMS_Mobile_CME_Handler {
 				),
 			),
 		) );
+
+		// Admin: CME report across all users (for CME office submissions)
+		register_rest_route( $namespace, '/mobile-app/cme/report', array(
+			'methods'             => 'GET',
+			'callback'            => array( $this, 'get_admin_report' ),
+			'permission_callback' => array( $this, 'check_admin_permissions' ),
+			'args'                => array(
+				'start_date' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+				'end_date' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+				'credit_type' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+				'course_id' => array(
+					'required' => false,
+					'type'     => 'integer',
+				),
+			),
+		) );
 	}
 
 	/**
@@ -226,7 +251,8 @@ class LLMS_Mobile_CME_Handler {
 	}
 
 	/**
-	 * Award CME credits to a user for a course
+	 * Award CME credits to a user for a course.
+	 * Uses the credit type the learner selected at enrollment (for multi-credit courses).
 	 */
 	public function award_credits( $user_id, $course_id ) {
 		global $wpdb;
@@ -235,7 +261,16 @@ class LLMS_Mobile_CME_Handler {
 		$course_id = absint( $course_id );
 		$config    = $this->get_course_cme_settings( $course_id );
 
-		if ( empty( $config['enabled'] ) || empty( $config['credit_type'] ) || empty( $config['credit_hours'] ) ) {
+		if ( empty( $config['enabled'] ) ) {
+			return false;
+		}
+
+		// Resolve which credit type to award based on learner's selection
+		$selected = $this->get_user_selected_credit( $user_id, $course_id, $config );
+		$credit_type  = $selected['credit_type'] ?? '';
+		$credit_hours = floatval( $selected['credit_hours'] ?? 0 );
+
+		if ( empty( $credit_type ) || $credit_hours <= 0 ) {
 			return false;
 		}
 
@@ -252,7 +287,7 @@ class LLMS_Mobile_CME_Handler {
 			return false;
 		}
 
-		$expiration_months = absint( $config['expiration_months'] ?? 0 );
+		$expiration_months = absint( $selected['expiration_months'] ?? 0 );
 		$expiration_date   = null;
 
 		if ( $expiration_months > 0 ) {
@@ -264,8 +299,8 @@ class LLMS_Mobile_CME_Handler {
 			array(
 				'user_id'         => $user_id,
 				'course_id'       => $course_id,
-				'credit_type'     => sanitize_text_field( $config['credit_type'] ),
-				'credit_hours'    => floatval( $config['credit_hours'] ),
+				'credit_type'     => sanitize_text_field( $credit_type ),
+				'credit_hours'    => $credit_hours,
 				'earned_date'     => current_time( 'mysql' ),
 				'expiration_date' => $expiration_date,
 				'status'          => 'active',
@@ -274,14 +309,14 @@ class LLMS_Mobile_CME_Handler {
 		);
 
 		if ( $result ) {
-			// Send push notification
+			$label = self::CREDIT_TYPES[ $credit_type ] ?? $credit_type;
 			llms_mobile_send_push_notification(
 				$user_id,
 				'CME Credits Earned',
 				sprintf(
 					'You earned %s %s credits for completing %s.',
-					$config['credit_hours'],
-					self::CREDIT_TYPES[ $config['credit_type'] ] ?? $config['credit_type'],
+					$credit_hours,
+					$label,
 					get_the_title( $course_id )
 				),
 				array( 'type' => 'cme_credit', 'course_id' => $course_id )
@@ -471,6 +506,11 @@ class LLMS_Mobile_CME_Handler {
 			return new WP_Error( 'already_attested', 'You have already claimed credits for this course.', array( 'status' => 400 ) );
 		}
 
+		// Resolve which credit type the learner selected
+		$selected     = $this->get_user_selected_credit( $user_id, $course_id, $config );
+		$credit_type  = $selected['credit_type'] ?? '';
+		$credit_hours = floatval( $selected['credit_hours'] ?? 0 );
+
 		// Record attestation
 		$attestation_text = sanitize_text_field( $config['attestation_text'] ?? '' );
 		if ( empty( $attestation_text ) ) {
@@ -483,8 +523,8 @@ class LLMS_Mobile_CME_Handler {
 				'user_id'          => $user_id,
 				'course_id'        => $course_id,
 				'attestation_text' => $attestation_text,
-				'credit_type'      => sanitize_text_field( $config['credit_type'] ),
-				'credit_hours'     => floatval( $config['credit_hours'] ),
+				'credit_type'      => sanitize_text_field( $credit_type ),
+				'credit_hours'     => $credit_hours,
 				'signed_date'      => current_time( 'mysql' ),
 			),
 			array( '%d', '%d', '%s', '%s', '%f', '%s' )
@@ -500,8 +540,9 @@ class LLMS_Mobile_CME_Handler {
 		return array(
 			'status'       => 'success',
 			'message'      => 'Credits claimed successfully.',
-			'credit_type'  => $config['credit_type'],
-			'credit_hours' => floatval( $config['credit_hours'] ),
+			'credit_type'  => $credit_type,
+			'credit_type_label' => self::CREDIT_TYPES[ $credit_type ] ?? $credit_type,
+			'credit_hours' => $credit_hours,
 		);
 	}
 
@@ -548,20 +589,43 @@ class LLMS_Mobile_CME_Handler {
 			) );
 		}
 
+		// Build enriched credits array with labels
+		$enriched_credits = array();
+		foreach ( $config['credits'] as $credit ) {
+			$ct = $credit['credit_type'] ?? '';
+			$enriched_credits[] = array(
+				'credit_type'             => $ct,
+				'credit_type_label'       => self::CREDIT_TYPES[ $ct ] ?? $ct,
+				'credit_hours'            => floatval( $credit['credit_hours'] ?? 0 ),
+				'expiration_months'        => absint( $credit['expiration_months'] ?? 0 ),
+				'accrediting_institution'  => $credit['accrediting_institution'] ?? null,
+				'accreditation_statement'  => $credit['accreditation_statement'] ?? null,
+			);
+		}
+
+		// Determine which credit type the current user selected (if any)
+		$user_selected_type = null;
+		if ( $user_id ) {
+			$user_selected_type = get_user_meta( $user_id, "_llms_enrollment_credit_type_{$course_id}", true ) ?: null;
+		}
+
 		return array(
 			'enabled'               => ! empty( $config['enabled'] ),
 			'credit_type'           => $config['credit_type'] ?? '',
 			'credit_type_label'     => self::CREDIT_TYPES[ $config['credit_type'] ?? '' ] ?? '',
 			'credit_hours'          => floatval( $config['credit_hours'] ?? 0 ),
 			'expiration_months'     => absint( $config['expiration_months'] ?? 0 ),
+			'credits'               => $enriched_credits,
+			'multi_credit'          => count( $enriched_credits ) > 1,
 			'attestation_required'  => ! empty( $config['attestation_required'] ),
 			'attestation_text'      => $config['attestation_text'] ?? '',
 			'evaluation_required'   => ! empty( $config['evaluation_required'] ),
 			'disclosure_text'       => $config['disclosure_text'] ?? '',
 			'user_status'           => array(
-				'has_attested'    => $has_attested,
-				'has_evaluated'   => $has_evaluated,
-				'credits_awarded' => $credits_awarded,
+				'has_attested'         => $has_attested,
+				'has_evaluated'        => $has_evaluated,
+				'credits_awarded'      => $credits_awarded,
+				'selected_credit_type' => $user_selected_type,
 			),
 		);
 	}
@@ -857,7 +921,7 @@ class LLMS_Mobile_CME_Handler {
 	 * Get CME settings for a course (stored as post meta)
 	 */
 	private function get_course_cme_settings( $course_id ) {
-		return array(
+		$settings = array(
 			'enabled'              => get_post_meta( $course_id, '_llms_cme_enabled', true ) === 'yes',
 			'credit_type'          => get_post_meta( $course_id, '_llms_cme_credit_type', true ),
 			'credit_hours'         => get_post_meta( $course_id, '_llms_cme_credit_hours', true ),
@@ -866,6 +930,58 @@ class LLMS_Mobile_CME_Handler {
 			'attestation_text'     => get_post_meta( $course_id, '_llms_cme_attestation_text', true ),
 			'evaluation_required'  => get_post_meta( $course_id, '_llms_cme_evaluation_required', true ) === 'yes',
 			'disclosure_text'      => get_post_meta( $course_id, '_llms_cme_disclosure_text', true ),
+			'credits'              => array(),
+		);
+
+		// Parse multi-credit array if present
+		$credits_json = get_post_meta( $course_id, '_llms_cme_credits', true );
+		if ( ! empty( $credits_json ) ) {
+			$credits = json_decode( $credits_json, true );
+			if ( is_array( $credits ) && ! empty( $credits ) ) {
+				$settings['credits'] = $credits;
+			}
+		}
+
+		// If no credits array but we have a single credit_type, build a one-element array for consistency
+		if ( empty( $settings['credits'] ) && ! empty( $settings['credit_type'] ) ) {
+			$settings['credits'] = array(
+				array(
+					'credit_type'             => $settings['credit_type'],
+					'credit_hours'            => $settings['credit_hours'],
+					'expiration_months'        => $settings['expiration_months'],
+					'accrediting_institution'  => null,
+					'accreditation_statement'  => null,
+				),
+			);
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Get the credit config a user selected at enrollment.
+	 * Falls back to the primary credit type if no selection was stored.
+	 */
+	private function get_user_selected_credit( $user_id, $course_id, $config ) {
+		$selected_type = get_user_meta( $user_id, "_llms_enrollment_credit_type_{$course_id}", true );
+
+		if ( ! empty( $selected_type ) && ! empty( $config['credits'] ) ) {
+			foreach ( $config['credits'] as $credit ) {
+				if ( $credit['credit_type'] === $selected_type ) {
+					return $credit;
+				}
+			}
+		}
+
+		// Fallback: first credit in the array, or the legacy single values
+		if ( ! empty( $config['credits'] ) ) {
+			return $config['credits'][0];
+		}
+
+		return array(
+			'credit_type'      => $config['credit_type'] ?? '',
+			'credit_hours'     => $config['credit_hours'] ?? 0,
+			'expiration_months' => $config['expiration_months'] ?? 0,
 		);
 	}
 
@@ -934,10 +1050,133 @@ class LLMS_Mobile_CME_Handler {
 	}
 
 	/**
+	 * Admin report: all credits awarded across all users.
+	 * Filterable by date range, credit type, and course.
+	 * This is the data you submit to Duke/UNC CME offices.
+	 */
+	public function get_admin_report( $request ) {
+		global $wpdb;
+
+		$table      = $wpdb->prefix . 'llms_mobile_cme_credits';
+		$start_date = sanitize_text_field( $request->get_param( 'start_date' ) ?? '' );
+		$end_date   = sanitize_text_field( $request->get_param( 'end_date' ) ?? '' );
+		$credit_type = sanitize_text_field( $request->get_param( 'credit_type' ) ?? '' );
+		$course_id  = absint( $request->get_param( 'course_id' ) ?? 0 );
+
+		$where  = array( '1=1' );
+		$values = array();
+
+		if ( ! empty( $start_date ) ) {
+			$where[]  = 'c.earned_date >= %s';
+			$values[] = $start_date;
+		}
+		if ( ! empty( $end_date ) ) {
+			$where[]  = 'c.earned_date <= %s';
+			$values[] = $end_date;
+		}
+		if ( ! empty( $credit_type ) ) {
+			$where[]  = 'c.credit_type = %s';
+			$values[] = $credit_type;
+		}
+		if ( $course_id > 0 ) {
+			$where[]  = 'c.course_id = %d';
+			$values[] = $course_id;
+		}
+
+		$where_clause = implode( ' AND ', $where );
+
+		$query = "SELECT c.*, a.signed_date as attestation_date, e.submitted_at as evaluation_date
+			FROM $table c
+			LEFT JOIN {$wpdb->prefix}llms_mobile_cme_attestations a
+			  ON c.user_id = a.user_id AND c.course_id = a.course_id
+			LEFT JOIN {$wpdb->prefix}llms_mobile_cme_evaluations e
+			  ON c.user_id = e.user_id AND c.course_id = e.course_id
+			WHERE $where_clause
+			ORDER BY c.earned_date DESC";
+
+		if ( ! empty( $values ) ) {
+			$credits = $wpdb->get_results( $wpdb->prepare( $query, ...$values ) );
+		} else {
+			$credits = $wpdb->get_results( $query );
+		}
+
+		if ( ! is_array( $credits ) ) {
+			$credits = array();
+		}
+
+		// Build report rows
+		$rows = array();
+		$totals_by_type = array();
+
+		foreach ( $credits as $credit ) {
+			$user = get_userdata( $credit->user_id );
+			$ct   = $credit->credit_type;
+
+			$rows[] = array(
+				'user_id'            => absint( $credit->user_id ),
+				'user_name'          => $user ? $user->display_name : 'Unknown',
+				'user_email'         => $user ? $user->user_email : '',
+				'course_id'          => absint( $credit->course_id ),
+				'course_title'       => $credit->course_id > 0 ? get_the_title( $credit->course_id ) : ( $credit->activity_title ?? '' ),
+				'credit_type'        => $ct,
+				'credit_type_label'  => self::CREDIT_TYPES[ $ct ] ?? $ct,
+				'credit_hours'       => floatval( $credit->credit_hours ),
+				'earned_date'        => $credit->earned_date,
+				'expiration_date'    => $credit->expiration_date,
+				'attestation_date'   => $credit->attestation_date,
+				'evaluation_date'    => $credit->evaluation_date,
+				'status'             => $this->calculate_credit_status( $credit ),
+			);
+
+			if ( ! isset( $totals_by_type[ $ct ] ) ) {
+				$totals_by_type[ $ct ] = array(
+					'credit_type'       => $ct,
+					'credit_type_label' => self::CREDIT_TYPES[ $ct ] ?? $ct,
+					'total_hours'       => 0,
+					'total_learners'    => 0,
+					'learner_ids'       => array(),
+				);
+			}
+			$totals_by_type[ $ct ]['total_hours'] += floatval( $credit->credit_hours );
+			if ( ! in_array( $credit->user_id, $totals_by_type[ $ct ]['learner_ids'], true ) ) {
+				$totals_by_type[ $ct ]['learner_ids'][] = $credit->user_id;
+				$totals_by_type[ $ct ]['total_learners']++;
+			}
+		}
+
+		// Remove learner_ids from output (internal tracking only)
+		$summary = array();
+		foreach ( $totals_by_type as $type_data ) {
+			unset( $type_data['learner_ids'] );
+			$summary[] = $type_data;
+		}
+
+		return array(
+			'generated_date' => current_time( 'mysql' ),
+			'filters'        => array(
+				'start_date'  => $start_date ?: null,
+				'end_date'    => $end_date ?: null,
+				'credit_type' => $credit_type ?: null,
+				'course_id'   => $course_id ?: null,
+			),
+			'total_records'  => count( $rows ),
+			'summary'        => $summary,
+			'credits'        => $rows,
+		);
+	}
+
+	/**
 	 * Permission callback
 	 */
 	public function check_permissions() {
 		return is_user_logged_in();
+	}
+
+	/**
+	 * Admin permission callback
+	 */
+	public function check_admin_permissions() {
+		return current_user_can( 'manage_options' );
 	}
 }
 

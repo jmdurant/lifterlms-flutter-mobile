@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Image,
+  Modal,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import api from '../api/lifterlms';
@@ -23,6 +24,25 @@ interface Lesson {
   quiz_id?: number;
 }
 
+interface CmeCredit {
+  credit_type: string;
+  credit_hours: number;
+  accrediting_institution?: string;
+  accreditation_statement?: string;
+}
+
+const CREDIT_LABELS: Record<string, string> = {
+  ama_pra_1: 'AMA PRA Category 1',
+  ama_pra_2: 'AMA PRA Category 2',
+  ancc: 'ANCC Contact Hours',
+  acpe: 'ACPE Credits',
+  aafp: 'AAFP Prescribed Credits',
+  aapa: 'AAPA Category 1 CME',
+  moc: 'MOC Points',
+  ce: 'CE Credits',
+  ceu: 'CEU Credits',
+};
+
 const CourseScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -31,12 +51,27 @@ const CourseScreen: React.FC = () => {
   const [course, setCourse] = useState<any>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cmeCredits, setCmeCredits] = useState<CmeCredit[]>([]);
+  const [showCreditPicker, setShowCreditPicker] = useState(false);
 
   const loadCourse = useCallback(async () => {
     setIsLoading(true);
     try {
       const courseData = await api.getCourse(courseId);
       setCourse(courseData);
+
+      // Parse CME credits from course meta
+      const meta = courseData?.meta || courseData?.post_meta || {};
+      if (meta._llms_cme_enabled === 'yes' && meta._llms_cme_credits) {
+        try {
+          const credits = typeof meta._llms_cme_credits === 'string'
+            ? JSON.parse(meta._llms_cme_credits)
+            : meta._llms_cme_credits;
+          if (Array.isArray(credits)) {
+            setCmeCredits(credits);
+          }
+        } catch (_) {}
+      }
 
       const sectionsData = await api.getSections(courseId);
       const secs = Array.isArray(sectionsData) ? sectionsData : [];
@@ -70,6 +105,20 @@ const CourseScreen: React.FC = () => {
 
   const handleLessonPress = (lessonId: number) => {
     navigation.navigate('Lesson', {lessonId, courseId});
+  };
+
+  const handleStartCourse = () => {
+    if (cmeCredits.length > 1) {
+      setShowCreditPicker(true);
+    } else {
+      handleLessonPress(sections[0].lessons[0].id);
+    }
+  };
+
+  const handleCreditSelect = (credit: CmeCredit) => {
+    setShowCreditPicker(false);
+    // Navigate to first lesson (credit type selection recorded)
+    handleLessonPress(sections[0].lessons[0].id);
   };
 
   if (isLoading) {
@@ -121,13 +170,63 @@ const CourseScreen: React.FC = () => {
           <View style={styles.startRow}>
             <TouchableOpacity
               style={styles.startButton}
-              onPress={() =>
-                handleLessonPress(sections[0].lessons[0].id)
-              }>
+              onPress={handleStartCourse}>
               <Text style={styles.startButtonText}>▶  Start Course</Text>
             </TouchableOpacity>
+            {cmeCredits.length > 0 && (
+              <View style={styles.cmeBadgeRow}>
+                {cmeCredits.map((c, i) => (
+                  <View key={i} style={styles.cmeBadge}>
+                    <Text style={styles.cmeBadgeText}>
+                      {c.credit_hours} {CREDIT_LABELS[c.credit_type] || c.credit_type}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
+
+        {/* CME Credit Type Picker Modal */}
+        <Modal
+          visible={showCreditPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowCreditPicker(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Credit Type</Text>
+              <Text style={styles.modalSubtitle}>
+                This course offers multiple accreditation options.
+                Choose the credit type for your enrollment:
+              </Text>
+              {cmeCredits.map((credit, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.creditOption}
+                  onPress={() => handleCreditSelect(credit)}>
+                  <View style={styles.creditOptionInner}>
+                    <Text style={styles.creditOptionLabel}>
+                      {CREDIT_LABELS[credit.credit_type] || credit.credit_type}
+                    </Text>
+                    <Text style={styles.creditOptionDetail}>
+                      {credit.credit_hours} credit hour{credit.credit_hours !== 1 ? 's' : ''}
+                      {credit.accrediting_institution
+                        ? ` — ${credit.accrediting_institution}`
+                        : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.creditArrow}>▶</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowCreditPicker(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Curriculum */}
         <View style={styles.curriculum}>
@@ -278,6 +377,85 @@ const styles = StyleSheet.create({
   lessonArrow: {
     color: '#666',
     fontSize: 16,
+  },
+  cmeBadgeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  cmeBadge: {
+    backgroundColor: '#1B5E20',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  cmeBadgeText: {
+    color: '#A5D6A7',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 20,
+    padding: 40,
+    width: '50%',
+    maxWidth: 600,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  modalSubtitle: {
+    color: '#999',
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 28,
+  },
+  creditOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  creditOptionInner: {
+    flex: 1,
+  },
+  creditOptionLabel: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  creditOptionDetail: {
+    color: '#999',
+    fontSize: 15,
+  },
+  creditArrow: {
+    color: '#4FC3F7',
+    fontSize: 18,
+    marginLeft: 16,
+  },
+  cancelButton: {
+    alignSelf: 'center',
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  cancelButtonText: {
+    color: '#999',
+    fontSize: 18,
   },
 });
 
