@@ -24,10 +24,10 @@ class TopCourse extends StatelessWidget {
     final CoursesController courseController = Get.find<CoursesController>();
     final WishlistController wishlistStore = Get.find<WishlistController>();
     
-    // Determine if we should use grid or horizontal scroll based on screen width
+    // Use horizontal scroll on phones, responsive grid on wider screens
     final screenWidth = MediaQuery.of(context).size.width;
-    final bool useGrid = screenWidth < 600; // Use grid for phones/narrow screens
-    
+    final bool useHorizontalScroll = screenWidth < 600;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -45,17 +45,19 @@ class TopCourse extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 17),
-        useGrid
-            ? _buildGridView(context, courseController, wishlistStore)
-            : _buildHorizontalScrollView(courseController, wishlistStore),
+        useHorizontalScroll
+            ? _buildHorizontalScrollView(courseController, wishlistStore)
+            : _buildGridView(context, courseController, wishlistStore),
       ],
     );
   }
   
   Widget _buildGridView(BuildContext context, CoursesController courseController, WishlistController wishlistStore) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final itemWidth = (screenWidth - 48) / 2; // 2 columns with padding
-    
+    // Responsive columns: 2 for tablets, 3 for desktop, 4 for wide screens
+    final int crossAxisCount = screenWidth < 900 ? 2 : screenWidth < 1200 ? 3 : 4;
+    final itemWidth = (screenWidth - 32 - (crossAxisCount - 1) * 16) / crossAxisCount;
+
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 0),
       child: GridView.builder(
@@ -63,10 +65,10 @@ class TopCourse extends StatelessWidget {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+          crossAxisCount: crossAxisCount,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 0.85, // Better aspect ratio for course cards
+          childAspectRatio: 0.85,
         ),
         itemCount: topCoursesList.length,
         itemBuilder: (context, index) {

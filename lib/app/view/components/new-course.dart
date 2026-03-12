@@ -24,10 +24,10 @@ class NewCourse extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<HomeController>(builder: (value) {
-      // Determine if we should use grid or horizontal scroll based on screen width
+      // Use horizontal scroll on phones, responsive grid on wider screens
       final screenWidth = MediaQuery.of(context).size.width;
-      final bool useGrid = screenWidth < 600; // Use grid for phones/narrow screens
-      
+      final bool useHorizontalScroll = screenWidth < 600;
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -45,9 +45,9 @@ class NewCourse extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 25),
-          useGrid
-              ? _buildGridView(context, value)
-              : _buildHorizontalScrollView(value),
+          useHorizontalScroll
+              ? _buildHorizontalScrollView(value)
+              : _buildGridView(context, value),
         ],
       );
     });
@@ -55,18 +55,19 @@ class NewCourse extends StatelessWidget {
   
   Widget _buildGridView(BuildContext context, HomeController controller) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final itemWidth = (screenWidth - 48) / 2; // 2 columns with padding
-    
+    final int crossAxisCount = screenWidth < 900 ? 2 : screenWidth < 1200 ? 3 : 4;
+    final itemWidth = (screenWidth - 32 - (crossAxisCount - 1) * 16) / crossAxisCount;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+          crossAxisCount: crossAxisCount,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: itemWidth / (itemWidth * 1.3), // Adjust height ratio
+          childAspectRatio: 0.85,
         ),
         itemCount: newCoursesList.length,
         itemBuilder: (context, index) {

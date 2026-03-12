@@ -57,6 +57,11 @@ class DialogHelper {
 
   //hide loading
   static void hideLoading() {
-    if (Get.isDialogOpen!) Get.back();
+    if (Get.isDialogOpen == true) {
+      final context = Get.overlayContext;
+      if (context != null) {
+        Navigator.of(context).pop();
+      }
+    }
   }
 }
