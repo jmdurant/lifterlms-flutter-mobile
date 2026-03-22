@@ -2,19 +2,19 @@
   "mcpServers": {
     "lifterlms": {
       "command": "bash",
-      "args": ["-c", "set -a && source C:/Users/docto/lifterlms-flutter-mobile/.env && exec node mcp-lifterlms/index.js"]
+      "args": ["-c", "set -a && source $HOME/.env && source ./.env 2>/dev/null && exec node mcp-lifterlms/index.js"]
     },
     "gplay": {
       "command": "bash",
-      "args": ["-c", "set -a && source C:/Users/docto/lifterlms-flutter-mobile/.env && exec node C:/Users/docto/gplay-mcp-server/dist/index.js"]
+      "args": ["-c", "set -a && source $HOME/.env && source ./.env 2>/dev/null && exec node $HOME/gplay-mcp-server/dist/index.js"]
     },
     "app-store-connect": {
       "command": "bash",
-      "args": ["-c", "set -a && source C:/Users/docto/lifterlms-flutter-mobile/.env && exec node C:/Users/docto/asc-mcp-server/dist/index.js"]
+      "args": ["-c", "set -a && source $HOME/.env && source ./.env 2>/dev/null && exec node $HOME/asc-mcp-server/dist/index.js"]
     },
     "amazon-appstore": {
       "command": "bash",
-      "args": ["-c", "set -a && source C:/Users/docto/lifterlms-flutter-mobile/.env && exec node C:/Users/docto/amazon-mcp-server/dist/index.js"]
+      "args": ["-c", "set -a && source $HOME/.env && source ./.env 2>/dev/null && exec node $HOME/amazon-mcp-server/dist/index.js"]
     }
   }
 }
