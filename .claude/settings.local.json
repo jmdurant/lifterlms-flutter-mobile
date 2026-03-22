@@ -31,7 +31,8 @@
       "Bash(ls /c/php*/php.exe)",
       "Bash(ls /c/Program*/PHP*/php.exe)",
       "Read(//c/Users/docto/AppData/**)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cd C:/Users/docto/lifterlms-flutter-mobile && flutter create --platforms web .)"
     ]
   },
   "enableAllProjectMcpServers": true,
