@@ -82,3 +82,6 @@ learnpress-mobile-flutter-orig/
 .env
 .env.local
 purchase-code.txt
+
+# MCP server config (contains credentials)
+.mcp.json

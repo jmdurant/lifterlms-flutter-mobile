@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "lifterlms": {
+      "command": "node",
+      "args": ["/path/to/lifterlms-flutter-mobile/mcp-lifterlms/index.js"],
+      "env": {
+        "LIFTERLMS_SITE_URL": "https://your-site.com",
+        "LIFTERLMS_CONSUMER_KEY": "YOUR_CONSUMER_KEY",
+        "LIFTERLMS_CONSUMER_SECRET": "YOUR_CONSUMER_SECRET",
+        "GEMINI_API_KEY": "YOUR_GEMINI_API_KEY",
+        "UNSPLASH_ACCESS_KEY": "YOUR_UNSPLASH_ACCESS_KEY"
+      }
+    },
+    "gplay": {
+      "command": "node",
+      "args": ["/path/to/gplay-mcp-server/dist/index.js"],
+      "env": {
+        "GPLAY_SERVICE_ACCOUNT_KEY": "/path/to/service-account.json"
+      }
+    },
+    "app-store-connect": {
+      "command": "node",
+      "args": ["/path/to/asc-mcp-server/dist/index.js"],
+      "env": {
+        "ASC_KEY_ID": "YOUR_KEY_ID",
+        "ASC_ISSUER_ID": "YOUR_ISSUER_ID",
+        "ASC_KEY_PATH": "/path/to/AuthKey_XXXXXXXX.p8",
+        "ASC_CONTACT_PHONE": "+18005551234"
+      }
+    },
+    "amazon-appstore": {
+      "command": "node",
+      "args": ["/path/to/amazon-mcp-server/dist/index.js"],
+      "env": {
+        "AMAZON_CLIENT_ID": "YOUR_CLIENT_ID",
+        "AMAZON_CLIENT_SECRET": "YOUR_CLIENT_SECRET"
+      }
+    }
+  }
+}
