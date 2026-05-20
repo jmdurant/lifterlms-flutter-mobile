@@ -1,6 +1,7 @@
 import 'package:flutter_app/app/backend/api/lms_api_interface.dart';
 import 'package:flutter_app/app/backend/api/lifterlms_api.dart';
 import 'package:flutter_app/app/backend/api/api.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_course_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_section_model.dart';
 import 'package:flutter_app/app/backend/models/lifterlms/llms_lesson_model.dart';
@@ -50,10 +51,15 @@ class LMSService extends GetxService {
   }
   
   Future<void> _loadConfiguration() async {
-    // Use test site credentials
-    _baseUrl = _prefs.getString('lms_base_url') ?? 'https://vr2fit.com';
-    _consumerKey = _prefs.getString('lms_consumer_key') ?? 'ck_9488a29dab0ee72d70e1dec012db499b57052b3d';
-    _consumerSecret = _prefs.getString('lms_consumer_secret') ?? 'cs_730fe825c949a4978d8640bc1ae0ca09069fd84f';
+    _baseUrl = _prefs.getString('lms_base_url')
+        ?? dotenv.maybeGet('LIFTERLMS_SITE_URL')
+        ?? '';
+    _consumerKey = _prefs.getString('lms_consumer_key')
+        ?? dotenv.maybeGet('LIFTERLMS_CONSUMER_KEY')
+        ?? '';
+    _consumerSecret = _prefs.getString('lms_consumer_secret')
+        ?? dotenv.maybeGet('LIFTERLMS_CONSUMER_SECRET')
+        ?? '';
   }
   
   Future<void> _loadUserSession() async {
