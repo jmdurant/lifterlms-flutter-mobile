@@ -134,44 +134,11 @@ mixin LifterLMSApiStubs {
     return _notImplemented('Assignment submissions');
   }
   
-  // Social login methods (IMPLEMENTED via our WordPress plugin!)
-  Future<Response> loginWithGoogle({required String token}) async {
-    // This is actually implemented in our LifterLMS Mobile App plugin
-    // Endpoint: /wp-json/llms/v1/mobile-app/social-login
-    return Response(
-      statusCode: 200,
-      body: {
-        'message': 'Social login endpoint available at /wp-json/llms/v1/mobile-app/social-login',
-        'implemented': true,
-      },
-    );
-  }
-  
-  Future<Response> loginWithFacebook({required String token}) async {
-    // This is actually implemented in our LifterLMS Mobile App plugin
-    // Endpoint: /wp-json/llms/v1/mobile-app/social-login
-    return Response(
-      statusCode: 200,
-      body: {
-        'message': 'Social login endpoint available at /wp-json/llms/v1/mobile-app/social-login',
-        'implemented': true,
-      },
-    );
-  }
-  
-  Future<Response> loginWithApple({required String token}) async {
-    // This is actually implemented in our LifterLMS Mobile App plugin
-    // Endpoint: /wp-json/llms/v1/mobile-app/social-login
-    return Response(
-      statusCode: 200,
-      body: {
-        'message': 'Social login endpoint available at /wp-json/llms/v1/mobile-app/social-login',
-        'implemented': true,
-      },
-    );
-  }
-  
-  // Notification methods (IMPLEMENTED via our WordPress plugin!)
+  // loginWithGoogle / loginWithFacebook / loginWithApple are implemented in
+  // lifterlms_api.dart against /mobile-app/verify-google, /verify-facebook,
+  // /verify-apple respectively (handled by class-social-login.php).
+
+// Notification methods (IMPLEMENTED via our WordPress plugin!)
   Future<Response> getNotifications({required int userId}) async {
     // This is actually implemented in our LifterLMS Mobile App plugin
     // Endpoint: /wp-json/llms/v1/mobile-app/notifications

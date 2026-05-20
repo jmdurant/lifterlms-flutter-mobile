@@ -58,12 +58,21 @@ class LLMS_Mobile_IAP_Handler {
                     if ( $purchase['product_id'] == $course_id ) {
                         // Log successful verification
                         $this->log_verification( 'apple', $course_id, true );
-                        return true;
+                        // Prefer original_transaction_id: it is stable across
+                        // subscription renewals and equals transaction_id for
+                        // non-renewing purchases, so it works for both.
+                        if ( ! empty( $purchase['original_transaction_id'] ) ) {
+                            return (string) $purchase['original_transaction_id'];
+                        }
+                        if ( ! empty( $purchase['transaction_id'] ) ) {
+                            return (string) $purchase['transaction_id'];
+                        }
+                        return false;
                     }
                 }
             }
         }
-        
+
         // Log failed verification
         $this->log_verification( 'apple', $course_id, false, $response );
         return false;
@@ -150,7 +159,13 @@ class LLMS_Mobile_IAP_Handler {
                 if ( $product_id == $course_id ) {
                     // Log successful verification
                     $this->log_verification( 'google', $course_id, true );
-                    return true;
+                    // Strip the subscription renewal suffix (..0, ..1, ..N) so
+                    // every renewal of the same subscription maps to one stable
+                    // dedupe key. One-shot purchases have no suffix.
+                    if ( ! empty( $result['orderId'] ) ) {
+                        return preg_replace( '/\.\.\d+$/', '', (string) $result['orderId'] );
+                    }
+                    return (string) $purchase_token;
                 }
             }
             

@@ -276,9 +276,10 @@ class LLMS_Mobile_REST_API {
      */
     public function get_lesson_script( $request ) {
         $lesson_id = absint( $request->get_param( 'lesson_id' ) );
+        $access    = $this->check_lesson_access( $lesson_id );
 
-        if ( ! $lesson_id || get_post_type( $lesson_id ) !== 'lesson' ) {
-            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        if ( is_wp_error( $access ) ) {
+            return $access;
         }
 
         $script = get_post_meta( $lesson_id, '_llms_lesson_script', true );
@@ -288,6 +289,38 @@ class LLMS_Mobile_REST_API {
             'script'    => $script ?: '',
             'has_script' => ! empty( $script ),
         );
+    }
+
+    /**
+     * Verify the current user can read a lesson's content.
+     *
+     * Returns true if the user is enrolled in the parent course or can edit the
+     * lesson; otherwise returns a WP_Error with the appropriate status.
+     */
+    private function check_lesson_access( $lesson_id ) {
+        if ( ! $lesson_id || get_post_type( $lesson_id ) !== 'lesson' ) {
+            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        }
+
+        if ( current_user_can( 'edit_post', $lesson_id ) ) {
+            return true;
+        }
+
+        $lesson = llms_get_post( $lesson_id );
+        if ( ! $lesson || ! is_a( $lesson, 'LLMS_Lesson' ) ) {
+            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        }
+
+        $course = $lesson->get_course();
+        if ( ! $course ) {
+            return new WP_Error( 'lesson_no_course', 'Lesson has no parent course.', array( 'status' => 400 ) );
+        }
+
+        if ( ! llms_is_user_enrolled( get_current_user_id(), $course->get( 'id' ) ) ) {
+            return new WP_Error( 'not_enrolled', 'You must be enrolled in the course to access this lesson.', array( 'status' => 403 ) );
+        }
+
+        return true;
     }
 
     /**
@@ -318,9 +351,10 @@ class LLMS_Mobile_REST_API {
      */
     public function get_lesson_slides( $request ) {
         $lesson_id = absint( $request->get_param( 'lesson_id' ) );
+        $access    = $this->check_lesson_access( $lesson_id );
 
-        if ( ! $lesson_id || get_post_type( $lesson_id ) !== 'lesson' ) {
-            return new WP_Error( 'invalid_lesson', 'Invalid lesson ID.', array( 'status' => 400 ) );
+        if ( is_wp_error( $access ) ) {
+            return $access;
         }
 
         $slides_json = get_post_meta( $lesson_id, '_llms_lesson_slides', true );

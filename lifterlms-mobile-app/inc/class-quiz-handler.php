@@ -385,36 +385,36 @@ class LLMS_Mobile_Quiz_Handler {
             $attempt = $existing_attempt;
         } else {
             // Initialize new quiz attempt using LifterLMS
-            error_log('Calling LLMS_Quiz_Attempt::init with quiz_id=' . $quiz_id . ', lesson_id=' . $lesson_id . ', user_id=' . $user_id);
+            $this->debug_log('Calling LLMS_Quiz_Attempt::init with quiz_id=' . $quiz_id . ', lesson_id=' . $lesson_id . ', user_id=' . $user_id);
             $attempt = LLMS_Quiz_Attempt::init( $quiz_id, $lesson_id, $user_id );
-            error_log('LLMS_Quiz_Attempt::init returned: ' . var_export($attempt, true));
+            $this->debug_log('LLMS_Quiz_Attempt::init returned: ' . var_export($attempt, true));
             
             // Simple debug without crashing
             if ( $attempt ) {
-                error_log('Quiz attempt created for quiz ' . $quiz_id);
-                error_log('Attempt class: ' . get_class($attempt));
+                $this->debug_log('Quiz attempt created for quiz ' . $quiz_id);
+                $this->debug_log('Attempt class: ' . get_class($attempt));
                 
                 // Try different ways to get the ID
                 $try_attempt_id = $attempt->get('attempt_id');
                 $try_id = $attempt->get('id');
                 
-                error_log('attempt->get(attempt_id): ' . var_export($try_attempt_id, true));
-                error_log('attempt->get(id): ' . var_export($try_id, true));
+                $this->debug_log('attempt->get(attempt_id): ' . var_export($try_attempt_id, true));
+                $this->debug_log('attempt->get(id): ' . var_export($try_id, true));
                 
                 // Check if it has a get_id method
                 if (method_exists($attempt, 'get_id')) {
-                    error_log('attempt->get_id(): ' . $attempt->get_id());
+                    $this->debug_log('attempt->get_id(): ' . $attempt->get_id());
                 }
                 
                 // Check direct property access
                 if (property_exists($attempt, 'id')) {
-                    error_log('attempt->id: ' . $attempt->id);
+                    $this->debug_log('attempt->id: ' . $attempt->id);
                 }
                 if (property_exists($attempt, 'attempt_id')) {
-                    error_log('attempt->attempt_id: ' . $attempt->attempt_id);
+                    $this->debug_log('attempt->attempt_id: ' . $attempt->attempt_id);
                 }
             } else {
-                error_log('Failed to create quiz attempt for quiz ' . $quiz_id);
+                $this->debug_log('Failed to create quiz attempt for quiz ' . $quiz_id);
             }
             
             if ( ! $attempt ) {
@@ -434,9 +434,9 @@ class LLMS_Mobile_Quiz_Handler {
             }
             
             // Start the attempt
-            error_log('START_QUIZ: About to call attempt->start()');
+            $this->debug_log('START_QUIZ: About to call attempt->start()');
             $attempt->start();
-            error_log('START_QUIZ: After attempt->start(), status=' . $attempt->get('status'));
+            $this->debug_log('START_QUIZ: After attempt->start(), status=' . $attempt->get('status'));
             
             // Get the actual ID from database
             $attempt_id = null;
@@ -450,7 +450,7 @@ class LLMS_Mobile_Quiz_Handler {
             
             if ($latest) {
                 $attempt_id = $latest->id;
-                error_log('START_QUIZ: Got attempt_id from DB = ' . $attempt_id . ', status in DB = ' . $latest->status);
+                $this->debug_log('START_QUIZ: Got attempt_id from DB = ' . $attempt_id . ', status in DB = ' . $latest->status);
             }
         }
         
@@ -460,8 +460,8 @@ class LLMS_Mobile_Quiz_Handler {
         $quiz = llms_get_post( $quiz_id );
         $question_ids = $quiz->get_questions( 'ids' );
         
-        error_log('START_QUIZ: Quiz has ' . count($question_ids) . ' total questions');
-        error_log('START_QUIZ: Question IDs: ' . implode(', ', $question_ids));
+        $this->debug_log('START_QUIZ: Quiz has ' . count($question_ids) . ' total questions');
+        $this->debug_log('START_QUIZ: Question IDs: ' . implode(', ', $question_ids));
         
         // Check what questions are in the attempt
         $attempt_questions = $attempt->get_questions();
@@ -473,18 +473,18 @@ class LLMS_Mobile_Quiz_Handler {
                 }
             }
         }
-        error_log('START_QUIZ: Attempt has ' . count($attempt_question_ids) . ' questions: ' . implode(', ', $attempt_question_ids));
+        $this->debug_log('START_QUIZ: Attempt has ' . count($attempt_question_ids) . ' questions: ' . implode(', ', $attempt_question_ids));
         
         // Find missing questions
         $missing_questions = array_diff( $question_ids, $attempt_question_ids );
         if ( ! empty( $missing_questions ) ) {
-            error_log('START_QUIZ: Missing questions in attempt: ' . implode(', ', $missing_questions));
+            $this->debug_log('START_QUIZ: Missing questions in attempt: ' . implode(', ', $missing_questions));
             
             // Add missing questions to the attempt
             foreach ( $missing_questions as $missing_qid ) {
                 $missing_question = llms_get_post( $missing_qid );
                 if ( $missing_question ) {
-                    error_log('START_QUIZ: Adding missing question ' . $missing_qid . ' to attempt');
+                    $this->debug_log('START_QUIZ: Adding missing question ' . $missing_qid . ' to attempt');
                     $attempt->add_question( array(
                         'id' => $missing_qid,
                         'points' => $missing_question->get( 'points' ) ?: 1,
@@ -504,19 +504,19 @@ class LLMS_Mobile_Quiz_Handler {
             $question = llms_get_post( $qid );
             
             if ( ! $question ) {
-                error_log('START_QUIZ: Question ' . $qid . ' not found');
+                $this->debug_log('START_QUIZ: Question ' . $qid . ' not found');
                 continue;
             }
             
             $question_data = $this->format_question_for_attempt( $question, $attempt );
-            error_log('START_QUIZ: Adding question ' . $qid . ' type: ' . $question->get('question_type') . 
+            $this->debug_log('START_QUIZ: Adding question ' . $qid . ' type: ' . $question->get('question_type') . 
                      ', points: ' . $question->get('points') . 
                      ', auto_gradable: ' . ($question_data['auto_gradable'] ? 'yes' : 'no') .
                      ', grading: ' . $question_data['grading_notes']);
             $questions[] = $question_data;
         }
         
-        error_log('START_QUIZ: Returning ' . count($questions) . ' questions to app');
+        $this->debug_log('START_QUIZ: Returning ' . count($questions) . ' questions to app');
         
         // Try to get the attempt ID if we don't have it yet
         if (!isset($attempt_id)) {
@@ -557,29 +557,29 @@ class LLMS_Mobile_Quiz_Handler {
         $question_id = $request->get_param( 'question_id' );
         $answer = $request->get_param( 'answer' );
         
-        error_log('SUBMIT_ANSWER: attempt_id=' . $attempt_id . ', question_id=' . $question_id);
+        $this->debug_log('SUBMIT_ANSWER: attempt_id=' . $attempt_id . ', question_id=' . $question_id);
         
         // Get attempt
         $attempt = new LLMS_Quiz_Attempt( $attempt_id );
         
         if ( ! $attempt->exists() ) {
-            error_log('SUBMIT_ANSWER: Attempt does not exist');
+            $this->debug_log('SUBMIT_ANSWER: Attempt does not exist');
             return new WP_Error( 'attempt_not_found', 'Quiz attempt not found', array( 'status' => 404 ) );
         }
         
         // Log attempt status
         $status = $attempt->get( 'status' );
-        error_log('SUBMIT_ANSWER: Attempt status = ' . $status);
+        $this->debug_log('SUBMIT_ANSWER: Attempt status = ' . $status);
         
         // Verify attempt belongs to current user
         if ( $attempt->get( 'student_id' ) != get_current_user_id() ) {
-            error_log('SUBMIT_ANSWER: User mismatch');
+            $this->debug_log('SUBMIT_ANSWER: User mismatch');
             return new WP_Error( 'unauthorized', 'Unauthorized access', array( 'status' => 403 ) );
         }
         
         // Check if attempt is still in progress (status can be 'incomplete' or 'in-progress')
         if ( $attempt->get( 'status' ) !== 'in-progress' && $attempt->get( 'status' ) !== 'incomplete' ) {
-            error_log('SUBMIT_ANSWER: Attempt not in progress, status=' . $status);
+            $this->debug_log('SUBMIT_ANSWER: Attempt not in progress, status=' . $status);
             return new WP_Error( 'attempt_ended', 'This quiz attempt has ended (status: ' . $status . ')', array( 'status' => 400 ) );
         }
         
@@ -587,10 +587,10 @@ class LLMS_Mobile_Quiz_Handler {
         $question = llms_get_post( $question_id );
         if ( $question ) {
             $question_type = $question->get('question_type');
-            error_log('SUBMIT_ANSWER: Question type: ' . $question_type);
-            error_log('SUBMIT_ANSWER: Multi choices: ' . $question->get('multi_choices'));
-            error_log('SUBMIT_ANSWER: Received answer type: ' . gettype($answer));
-            error_log('SUBMIT_ANSWER: Received answer value: ' . print_r($answer, true));
+            $this->debug_log('SUBMIT_ANSWER: Question type: ' . $question_type);
+            $this->debug_log('SUBMIT_ANSWER: Multi choices: ' . $question->get('multi_choices'));
+            $this->debug_log('SUBMIT_ANSWER: Received answer type: ' . gettype($answer));
+            $this->debug_log('SUBMIT_ANSWER: Received answer value: ' . print_r($answer, true));
             
             // Handle answer format based on question type
             // Regular choice questions - keep as array of IDs
@@ -599,7 +599,7 @@ class LLMS_Mobile_Quiz_Handler {
                 if ( ! is_array( $answer ) ) {
                     $answer = array( $answer );
                 }
-                error_log('SUBMIT_ANSWER: Choice answer (keeping IDs): ' . print_r($answer, true));
+                $this->debug_log('SUBMIT_ANSWER: Choice answer (keeping IDs): ' . print_r($answer, true));
             }
             // Picture choice - keep as array of IDs (don't convert to markers)
             elseif ( $question_type === 'picture_choice' ) {
@@ -607,7 +607,7 @@ class LLMS_Mobile_Quiz_Handler {
                 if ( ! is_array( $answer ) ) {
                     $answer = array( $answer );
                 }
-                error_log('SUBMIT_ANSWER: Picture choice answer (keeping IDs): ' . print_r($answer, true));
+                $this->debug_log('SUBMIT_ANSWER: Picture choice answer (keeping IDs): ' . print_r($answer, true));
             }
             // True/false - convert "true"/"false" strings to actual choice IDs
             elseif ( $question_type === 'true_false' ) {
@@ -634,10 +634,10 @@ class LLMS_Mobile_Quiz_Handler {
                     $ans_str = strval( $ans );
                     if ( strtolower( $ans_str ) === 'true' && $true_id ) {
                         $converted_answers[] = $true_id;
-                        error_log('SUBMIT_ANSWER: Converted "true" to choice ID: ' . $true_id);
+                        $this->debug_log('SUBMIT_ANSWER: Converted "true" to choice ID: ' . $true_id);
                     } elseif ( strtolower( $ans_str ) === 'false' && $false_id ) {
                         $converted_answers[] = $false_id;
-                        error_log('SUBMIT_ANSWER: Converted "false" to choice ID: ' . $false_id);
+                        $this->debug_log('SUBMIT_ANSWER: Converted "false" to choice ID: ' . $false_id);
                     } else {
                         // Already an ID or unrecognized - keep as is
                         $converted_answers[] = $ans;
@@ -645,29 +645,29 @@ class LLMS_Mobile_Quiz_Handler {
                 }
                 
                 $answer = $converted_answers;
-                error_log('SUBMIT_ANSWER: True/false final answer: ' . print_r($answer, true));
+                $this->debug_log('SUBMIT_ANSWER: True/false final answer: ' . print_r($answer, true));
             }
             // Reorder questions - LifterLMS expects ARRAY of choice IDs
             elseif ( $question_type === 'reorder' ) {
                 // Convert to array if string
                 if ( ! is_array( $answer ) ) {
                     $answer = explode( ',', $answer );
-                    error_log('SUBMIT_ANSWER: Converted comma-separated string to array for reorder');
+                    $this->debug_log('SUBMIT_ANSWER: Converted comma-separated string to array for reorder');
                 }
                 // Ensure all elements are strings
                 $answer = array_map( 'strval', $answer );
-                error_log('SUBMIT_ANSWER: Reorder answer array: ' . implode(',', $answer));
+                $this->debug_log('SUBMIT_ANSWER: Reorder answer array: ' . implode(',', $answer));
             }
             // Scale questions - LifterLMS expects array with single value
             elseif ( $question_type === 'scale' ) {
                 // Accept either format
                 if ( ! is_array( $answer ) ) {
                     $answer = array( strval( $answer ) );
-                    error_log('SUBMIT_ANSWER: Converted to array for scale');
+                    $this->debug_log('SUBMIT_ANSWER: Converted to array for scale');
                 } else {
                     // Ensure all elements are strings
                     $answer = array_map( 'strval', $answer );
-                    error_log('SUBMIT_ANSWER: Keeping array format for scale');
+                    $this->debug_log('SUBMIT_ANSWER: Keeping array format for scale');
                 }
             }
             // Blank/fill-in-the-blank questions - LifterLMS expects ARRAY of strings
@@ -675,45 +675,45 @@ class LLMS_Mobile_Quiz_Handler {
                 // Always use array format
                 if ( ! is_array( $answer ) ) {
                     $answer = array( strval($answer) );
-                    error_log('SUBMIT_ANSWER: Converted string to array for blank');
+                    $this->debug_log('SUBMIT_ANSWER: Converted string to array for blank');
                 } else {
                     // Ensure all elements are strings
                     $answer = array_map( 'strval', $answer );
-                    error_log('SUBMIT_ANSWER: Keeping array format for blank');
+                    $this->debug_log('SUBMIT_ANSWER: Keeping array format for blank');
                 }
-                error_log('SUBMIT_ANSWER: Blank answer final: ' . print_r($answer, true));
+                $this->debug_log('SUBMIT_ANSWER: Blank answer final: ' . print_r($answer, true));
             }
             // Other types (short_answer, long_answer, etc.) - keep as string
             else {
                 if ( is_array( $answer ) ) {
                     // If we get an array for a text answer, join it
                     $answer = implode( ' ', $answer );
-                    error_log('SUBMIT_ANSWER: Converted array to string for ' . $question_type);
+                    $this->debug_log('SUBMIT_ANSWER: Converted array to string for ' . $question_type);
                 }
             }
         }
         // Log what the correct answer should be for debugging
         if ( $question ) {
             $question_type = $question->get('question_type');
-            error_log('SUBMIT_ANSWER: Question type: ' . $question_type);
+            $this->debug_log('SUBMIT_ANSWER: Question type: ' . $question_type);
             
             // Log correct answer format
             if ( in_array( $question_type, array( 'choice', 'picture_choice' ) ) ) {
                 $choices = $question->get_choices();
                 foreach ( $choices as $choice ) {
                     if ( $choice->is_correct() ) {
-                        error_log('SUBMIT_ANSWER: Correct choice ID: ' . $choice->get( 'id' ));
-                        error_log('SUBMIT_ANSWER: Correct choice marker: ' . $choice->get( 'marker' ));
+                        $this->debug_log('SUBMIT_ANSWER: Correct choice ID: ' . $choice->get( 'id' ));
+                        $this->debug_log('SUBMIT_ANSWER: Correct choice marker: ' . $choice->get( 'marker' ));
                         $choice_text = $choice->get( 'choice' );
                         if ( is_array( $choice_text ) ) {
-                            error_log('SUBMIT_ANSWER: Correct choice text: [image array]');
+                            $this->debug_log('SUBMIT_ANSWER: Correct choice text: [image array]');
                         } else {
-                            error_log('SUBMIT_ANSWER: Correct choice text: ' . $choice_text);
+                            $this->debug_log('SUBMIT_ANSWER: Correct choice text: ' . $choice_text);
                         }
                     }
                 }
             } elseif ( $question_type === 'true_false' ) {
-                error_log('SUBMIT_ANSWER: Correct true/false answer: ' . $question->get( 'correct_answer' ));
+                $this->debug_log('SUBMIT_ANSWER: Correct true/false answer: ' . $question->get( 'correct_answer' ));
             } elseif ( $question_type === 'blank' ) {
                 // Debug what's in the database for blank questions
                 $this->debug_question_data( $question_id );
@@ -730,22 +730,22 @@ class LLMS_Mobile_Quiz_Handler {
                 }
                 
                 if ( empty( $correct ) ) {
-                    error_log('SUBMIT_ANSWER: Blank question - no correct answer defined (manual grading required)');
+                    $this->debug_log('SUBMIT_ANSWER: Blank question - no correct answer defined (manual grading required)');
                 } else {
-                    error_log('SUBMIT_ANSWER: Correct blank answer: ' . $correct);
-                    error_log('SUBMIT_ANSWER:   Correct type: ' . gettype($correct));
-                    error_log('SUBMIT_ANSWER:   Our answer: ' . print_r($answer, true));
-                    error_log('SUBMIT_ANSWER:   Our type: ' . gettype($answer));
+                    $this->debug_log('SUBMIT_ANSWER: Correct blank answer: ' . $correct);
+                    $this->debug_log('SUBMIT_ANSWER:   Correct type: ' . gettype($correct));
+                    $this->debug_log('SUBMIT_ANSWER:   Our answer: ' . print_r($answer, true));
+                    $this->debug_log('SUBMIT_ANSWER:   Our type: ' . gettype($answer));
                     
                     // Check if they match
                     if ( is_array($answer) && count($answer) === 1 ) {
                         $our_answer = $answer[0];
                         if ( $our_answer == $correct ) {
-                            error_log('SUBMIT_ANSWER:   Answers MATCH (loose comparison)');
+                            $this->debug_log('SUBMIT_ANSWER:   Answers MATCH (loose comparison)');
                         } else {
-                            error_log('SUBMIT_ANSWER:   Answers DO NOT match');
-                            error_log('SUBMIT_ANSWER:     Our: "' . $our_answer . '" (' . gettype($our_answer) . ')');
-                            error_log('SUBMIT_ANSWER:     Expected: "' . $correct . '" (' . gettype($correct) . ')');
+                            $this->debug_log('SUBMIT_ANSWER:   Answers DO NOT match');
+                            $this->debug_log('SUBMIT_ANSWER:     Our: "' . $our_answer . '" (' . gettype($our_answer) . ')');
+                            $this->debug_log('SUBMIT_ANSWER:     Expected: "' . $correct . '" (' . gettype($correct) . ')');
                         }
                     }
                 }
@@ -755,38 +755,38 @@ class LLMS_Mobile_Quiz_Handler {
                 
                 // For reorder questions, the correct answer is the original order of choices
                 $choices = $question->get_choices();
-                error_log('SUBMIT_ANSWER: Reorder has ' . count($choices) . ' choices');
+                $this->debug_log('SUBMIT_ANSWER: Reorder has ' . count($choices) . ' choices');
                 
                 // Build the correct sequence from the original order
                 $correct_sequence_array = array();
                 foreach ( $choices as $idx => $choice ) {
                     $choice_id = $choice->get('id');
                     $correct_sequence_array[] = $choice_id;
-                    error_log('SUBMIT_ANSWER:   Choice ' . $idx . ' - ID: ' . $choice_id . 
+                    $this->debug_log('SUBMIT_ANSWER:   Choice ' . $idx . ' - ID: ' . $choice_id . 
                              ', marker: ' . $choice->get('marker'));
                 }
                 
                 // The correct answer for reorder is the original order
                 $correct_sequence = implode(',', $correct_sequence_array);
-                error_log('SUBMIT_ANSWER: Correct reorder sequence: ' . $correct_sequence);
+                $this->debug_log('SUBMIT_ANSWER: Correct reorder sequence: ' . $correct_sequence);
                 
                 // Check if the submitted answer matches
                 $submitted_sequence = is_array($answer) ? implode(',', $answer) : $answer;
                 if ( $submitted_sequence === $correct_sequence ) {
-                    error_log('SUBMIT_ANSWER: Reorder answer MATCHES expected sequence');
+                    $this->debug_log('SUBMIT_ANSWER: Reorder answer MATCHES expected sequence');
                 } else {
-                    error_log('SUBMIT_ANSWER: Reorder answer does NOT match');
-                    error_log('SUBMIT_ANSWER:   Submitted: ' . $submitted_sequence);
-                    error_log('SUBMIT_ANSWER:   Expected: ' . $correct_sequence);
+                    $this->debug_log('SUBMIT_ANSWER: Reorder answer does NOT match');
+                    $this->debug_log('SUBMIT_ANSWER:   Submitted: ' . $submitted_sequence);
+                    $this->debug_log('SUBMIT_ANSWER:   Expected: ' . $correct_sequence);
                 }
             } elseif ( $question_type === 'scale' ) {
-                error_log('SUBMIT_ANSWER: Scale question - any answer within range is correct');
+                $this->debug_log('SUBMIT_ANSWER: Scale question - any answer within range is correct');
             }
         }
         
-        error_log('SUBMIT_ANSWER: About to submit answer for question ' . $question_id);
-        error_log('SUBMIT_ANSWER: Final answer type: ' . gettype($answer));
-        error_log('SUBMIT_ANSWER: Final answer value: ' . print_r($answer, true));
+        $this->debug_log('SUBMIT_ANSWER: About to submit answer for question ' . $question_id);
+        $this->debug_log('SUBMIT_ANSWER: Final answer type: ' . gettype($answer));
+        $this->debug_log('SUBMIT_ANSWER: Final answer value: ' . print_r($answer, true));
         
         // Submit answer using LifterLMS
         $attempt->answer_question( $question_id, $answer );
@@ -800,10 +800,10 @@ class LLMS_Mobile_Quiz_Handler {
             if ( is_array( $q ) && isset( $q['id'] ) && $q['id'] == $question_id ) {
                 $stored_answer = $q['answer'] ?? null;
                 $is_correct = $q['correct'] ?? null;
-                error_log('SUBMIT_ANSWER: Found question in attempt');
-                error_log('SUBMIT_ANSWER: Stored answer: ' . print_r($stored_answer, true));
-                error_log('SUBMIT_ANSWER: Marked correct: ' . ($is_correct ? 'YES' : 'NO'));
-                error_log('SUBMIT_ANSWER: Points earned: ' . ($q['earned'] ?? 0));
+                $this->debug_log('SUBMIT_ANSWER: Found question in attempt');
+                $this->debug_log('SUBMIT_ANSWER: Stored answer: ' . print_r($stored_answer, true));
+                $this->debug_log('SUBMIT_ANSWER: Marked correct: ' . ($is_correct ? 'YES' : 'NO'));
+                $this->debug_log('SUBMIT_ANSWER: Points earned: ' . ($q['earned'] ?? 0));
                 
                 // Log what LifterLMS thinks is the correct answer
                 $this->log_correct_answer( $question, $question_type );
@@ -813,18 +813,18 @@ class LLMS_Mobile_Quiz_Handler {
                     // Try different methods to get the correct answer
                     if ( method_exists( $attempt, 'get_question_correct_answer' ) ) {
                         $llms_correct = $attempt->get_question_correct_answer( $question_id );
-                        error_log('SUBMIT_ANSWER: LifterLMS correct answer (method): ' . print_r($llms_correct, true));
+                        $this->debug_log('SUBMIT_ANSWER: LifterLMS correct answer (method): ' . print_r($llms_correct, true));
                     }
                     
                     // For reorder, log more details about what went wrong
                     if ( $question_type === 'reorder' ) {
-                        error_log('SUBMIT_ANSWER: Reorder marked incorrect!');
-                        error_log('SUBMIT_ANSWER:   We submitted: ' . print_r($stored_answer, true));
-                        error_log('SUBMIT_ANSWER:   Type: ' . gettype($stored_answer));
+                        $this->debug_log('SUBMIT_ANSWER: Reorder marked incorrect!');
+                        $this->debug_log('SUBMIT_ANSWER:   We submitted: ' . print_r($stored_answer, true));
+                        $this->debug_log('SUBMIT_ANSWER:   Type: ' . gettype($stored_answer));
                         
                         // Check if the question object has the expected answer
                         // Note: get_array() requires a parameter
-                        error_log('SUBMIT_ANSWER:   Checking what LifterLMS expects...');
+                        $this->debug_log('SUBMIT_ANSWER:   Checking what LifterLMS expects...');
                     }
                 }
                 break;
@@ -832,7 +832,7 @@ class LLMS_Mobile_Quiz_Handler {
         }
         
         if ( $stored_answer === null ) {
-            error_log('SUBMIT_ANSWER: WARNING - Could not find question ' . $question_id . ' in attempt questions');
+            $this->debug_log('SUBMIT_ANSWER: WARNING - Could not find question ' . $question_id . ' in attempt questions');
             
             // Try to add it if missing
             $question_obj = llms_get_post( $question_id );
@@ -843,7 +843,7 @@ class LLMS_Mobile_Quiz_Handler {
                     'points' => $points,
                 ) );
                 $attempt->answer_question( $question_id, $answer );
-                error_log('SUBMIT_ANSWER: Added missing question and submitted answer');
+                $this->debug_log('SUBMIT_ANSWER: Added missing question and submitted answer');
             }
         }
         
@@ -990,8 +990,8 @@ class LLMS_Mobile_Quiz_Handler {
         $actual_question_count = count( $quiz->get_questions( 'ids' ) );
         $attempt_question_count = $attempt->get_count( 'questions' );
         
-        error_log('COMPLETE_QUIZ: Quiz has ' . $actual_question_count . ' questions');
-        error_log('COMPLETE_QUIZ: Attempt recorded ' . $attempt_question_count . ' questions');
+        $this->debug_log('COMPLETE_QUIZ: Quiz has ' . $actual_question_count . ' questions');
+        $this->debug_log('COMPLETE_QUIZ: Attempt recorded ' . $attempt_question_count . ' questions');
         
         // Debug log the questions and their answers
         $all_questions = $attempt->get_questions();
@@ -1024,17 +1024,17 @@ class LLMS_Mobile_Quiz_Handler {
                     }
                 }
                 
-                error_log('Question ' . $q['id'] . ' (' . $question_type . ') - answer: ' . print_r($q['answer'] ?? 'null', true) . 
+                $this->debug_log('Question ' . $q['id'] . ' (' . $question_type . ') - answer: ' . print_r($q['answer'] ?? 'null', true) . 
                          ', correct: ' . ($is_correct ? 'YES' : 'NO') . 
                          ', earned: ' . $points_earned . '/' . $points_possible . ' points' .
                          ', auto-gradable: ' . ($is_auto_gradable ? 'YES' : 'NO'));
             } else {
-                error_log('Question ' . $idx . ' - attempt data: ' . print_r($q, true));
+                $this->debug_log('Question ' . $idx . ' - attempt data: ' . print_r($q, true));
             }
         }
         
-        error_log('COMPLETE_QUIZ: Total points earned (auto-gradable only): ' . $total_points_earned . '/' . $total_points_possible);
-        error_log('COMPLETE_QUIZ: Questions correct: ' . $questions_correct . '/' . $auto_gradable_count . ' (auto-gradable)');
+        $this->debug_log('COMPLETE_QUIZ: Total points earned (auto-gradable only): ' . $total_points_earned . '/' . $total_points_possible);
+        $this->debug_log('COMPLETE_QUIZ: Questions correct: ' . $questions_correct . '/' . $auto_gradable_count . ' (auto-gradable)');
         
         // Calculate percentage grade based on points
         $percentage_grade = $total_points_possible > 0 ? 
@@ -1094,18 +1094,18 @@ class LLMS_Mobile_Quiz_Handler {
      * Log the correct answer for a question
      */
     private function log_correct_answer( $question, $question_type ) {
-        error_log('CORRECT_ANSWER: Checking correct answer for ' . $question_type);
+        $this->debug_log('CORRECT_ANSWER: Checking correct answer for ' . $question_type);
         
         // Try the standard correct_answer field first
         $correct_answer = $question->get( 'correct_answer' );
         if ( ! empty( $correct_answer ) ) {
-            error_log('CORRECT_ANSWER: From correct_answer field: ' . print_r($correct_answer, true));
+            $this->debug_log('CORRECT_ANSWER: From correct_answer field: ' . print_r($correct_answer, true));
         }
         
         // Check choices for questions with choices
         if ( in_array( $question_type, array( 'choice', 'picture_choice', 'true_false', 'reorder' ) ) ) {
             $choices = $question->get_choices();
-            error_log('CORRECT_ANSWER: Checking ' . count($choices) . ' choices');
+            $this->debug_log('CORRECT_ANSWER: Checking ' . count($choices) . ' choices');
             
             $correct_choices = array();
             $all_choices = array();
@@ -1132,7 +1132,7 @@ class LLMS_Mobile_Quiz_Handler {
                 }
             }
             
-            error_log('CORRECT_ANSWER: All choices: ' . print_r($all_choices, true));
+            $this->debug_log('CORRECT_ANSWER: All choices: ' . print_r($all_choices, true));
             
             if ( $question_type === 'reorder' ) {
                 // For reorder, all choices are "correct" but the order matters
@@ -1141,11 +1141,11 @@ class LLMS_Mobile_Quiz_Handler {
                 foreach ( $choices as $idx => $choice ) {
                     $correct_order[] = $choice->get('id');
                 }
-                error_log('CORRECT_ANSWER: Reorder correct sequence: ' . implode(',', $correct_order));
+                $this->debug_log('CORRECT_ANSWER: Reorder correct sequence: ' . implode(',', $correct_order));
             } else {
                 // For other choice questions, log which ones are marked correct
                 if ( ! empty( $correct_choices ) ) {
-                    error_log('CORRECT_ANSWER: Correct choice IDs: ' . implode(',', $correct_choices));
+                    $this->debug_log('CORRECT_ANSWER: Correct choice IDs: ' . implode(',', $correct_choices));
                 }
             }
         }
@@ -1168,7 +1168,7 @@ class LLMS_Mobile_Quiz_Handler {
             }
             
             if ( ! empty( $grading_options ) ) {
-                error_log('CORRECT_ANSWER: Grading options: ' . print_r($grading_options, true));
+                $this->debug_log('CORRECT_ANSWER: Grading options: ' . print_r($grading_options, true));
             }
         }
     }
@@ -1182,8 +1182,8 @@ class LLMS_Mobile_Quiz_Handler {
         // Get ALL post meta for the question to see what's available
         $all_meta = get_post_meta( $question_id );
         
-        error_log('DEBUG_QUESTION ' . $question_id . ': All meta keys available:');
-        error_log('  Keys: ' . implode(', ', array_keys($all_meta)));
+        $this->debug_log('DEBUG_QUESTION ' . $question_id . ': All meta keys available:');
+        $this->debug_log('  Keys: ' . implode(', ', array_keys($all_meta)));
         
         // Look for specific fields that might affect grading
         $important_fields = array(
@@ -1208,9 +1208,9 @@ class LLMS_Mobile_Quiz_Handler {
                 // Unserialize if needed
                 $unserialized = @unserialize($value);
                 if ($unserialized !== false) {
-                    error_log('  ' . $field . ' = ' . print_r($unserialized, true));
+                    $this->debug_log('  ' . $field . ' = ' . print_r($unserialized, true));
                 } else {
-                    error_log('  ' . $field . ' = ' . $value);
+                    $this->debug_log('  ' . $field . ' = ' . $value);
                 }
             }
         }
@@ -1222,11 +1222,11 @@ class LLMS_Mobile_Quiz_Handler {
         ), ARRAY_A );
         
         if ( ! empty($choices_meta) ) {
-            error_log('  Choice data:');
+            $this->debug_log('  Choice data:');
             foreach ( $choices_meta as $meta ) {
                 $value = @unserialize($meta['meta_value']);
                 if ($value !== false && is_array($value)) {
-                    error_log('    ' . $meta['meta_key'] . ' = ID:' . ($value['id'] ?? '?') . 
+                    $this->debug_log('    ' . $meta['meta_key'] . ' = ID:' . ($value['id'] ?? '?') . 
                              ', correct:' . ($value['correct'] ?? 'false') . 
                              ', marker:' . ($value['marker'] ?? '?'));
                 }
@@ -1452,14 +1452,14 @@ class LLMS_Mobile_Quiz_Handler {
                         $correct_order[] = $choice_data['id'];
                     }
                     
-                    error_log('START_QUIZ: Reorder question CORRECT order: ' . implode(',', $correct_order));
+                    $this->debug_log('START_QUIZ: Reorder question CORRECT order: ' . implode(',', $correct_order));
                     
                     // DON'T shuffle - LifterLMS doesn't know about our shuffle
                     // The app should display them in the wrong order already from LifterLMS
                     // shuffle( $choices );
                     
                     $display_order = array_column($choices, 'id');
-                    error_log('START_QUIZ: Reorder question order sent to app: ' . implode(',', $display_order));
+                    $this->debug_log('START_QUIZ: Reorder question order sent to app: ' . implode(',', $display_order));
                 }
                 break;
                 
@@ -1578,15 +1578,15 @@ class LLMS_Mobile_Quiz_Handler {
             $question = llms_get_post( $qid );
             $attempt_question = $attempt->get_question( $qid );
             
-            error_log('Question ' . $qid . ' - attempt data: ' . print_r($attempt_question, true));
+            $this->debug_log('Question ' . $qid . ' - attempt data: ' . print_r($attempt_question, true));
             
             if ( ! $question ) {
-                error_log('Question ' . $qid . ' not found');
+                $this->debug_log('Question ' . $qid . ' not found');
                 continue;
             }
             
             if ( ! $attempt_question ) {
-                error_log('No attempt data for question ' . $qid);
+                $this->debug_log('No attempt data for question ' . $qid);
                 // Still include the question with default values
                 $attempt_question = array(
                     'points' => 0,
@@ -1679,6 +1679,15 @@ class LLMS_Mobile_Quiz_Handler {
      */
     public function check_permissions() {
         return is_user_logged_in();
+    }
+
+    /**
+     * Write a debug message to error_log only when WP_DEBUG is enabled.
+     */
+    private function debug_log( $message ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( $message );
+        }
     }
     
     /**

@@ -147,14 +147,7 @@ class LifterLMS_Mobile_App {
                 ),
             ),
         ) );
-        
-        // Social login endpoints
-        register_rest_route( 'llms/v1', '/mobile-app/social-login', array(
-            'methods'             => 'POST',
-            'callback'            => array( $this, 'social_login' ),
-            'permission_callback' => '__return_true',
-        ) );
-        
+
         // Push notification registration
         register_rest_route( 'llms/v1', '/mobile-app/register-device', array(
             'methods'             => 'POST',
@@ -196,53 +189,63 @@ class LifterLMS_Mobile_App {
         }
         
         // Verify the receipt
-        if ( class_exists( 'LLMS_Mobile_IAP_Handler' ) ) {
-            $iap_handler = new LLMS_Mobile_IAP_Handler();
-            
-            if ( $is_ios ) {
-                $verified = $iap_handler->verify_apple_receipt( $receipt_data, $course_id );
-            } else {
-                $verified = $iap_handler->verify_google_receipt( $receipt_data, $course_id );
-            }
-            
-            if ( $verified ) {
-                // Enroll user in LifterLMS course
-                $enrollment = llms_enroll_student( $user_id, $course_id, 'mobile_app_iap' );
-                
-                if ( $enrollment ) {
-                    // Log the purchase
-                    $this->log_iap_purchase( $user_id, $course_id, $receipt_data, $is_ios );
-                    
-                    return array(
-                        'status' => 'success',
-                        'message' => 'Enrollment successful',
-                        'enrolled' => true,
-                    );
-                } else {
-                    return new WP_Error( 'enrollment_failed', 'Failed to enroll user', array( 'status' => 500 ) );
-                }
-            } else {
-                return new WP_Error( 'invalid_receipt', 'Receipt verification failed', array( 'status' => 400 ) );
-            }
+        if ( ! class_exists( 'LLMS_Mobile_IAP_Handler' ) ) {
+            return new WP_Error( 'handler_missing', 'IAP handler not available', array( 'status' => 500 ) );
         }
-        
-        return new WP_Error( 'handler_missing', 'IAP handler not available', array( 'status' => 500 ) );
-    }
-    
-    /**
-     * Social login handler
-     */
-    public function social_login( $request ) {
-        $provider = $request->get_param( 'provider' );
-        $token = $request->get_param( 'token' );
-        
-        // This would verify the social token and create/login user
-        // Implementation depends on social provider
-        
+
+        $iap_handler = new LLMS_Mobile_IAP_Handler();
+
+        // Verifiers return the unique transaction id on success (Apple
+        // transaction_id or Google orderId/purchaseToken), or false on failure.
+        $txn_id = $is_ios
+            ? $iap_handler->verify_apple_receipt( $receipt_data, $course_id )
+            : $iap_handler->verify_google_receipt( $receipt_data, $course_id );
+
+        if ( empty( $txn_id ) ) {
+            return new WP_Error( 'invalid_receipt', 'Receipt verification failed', array( 'status' => 400 ) );
+        }
+
+        // De-duplicate: a transaction id can only ever enroll one user.
+        // Same user retrying (reinstall, restore purchases) is allowed.
+        $existing_owner = $this->find_iap_transaction_owner( $txn_id );
+        if ( $existing_owner && $existing_owner !== $user_id ) {
+            return new WP_Error( 'receipt_already_used', 'This purchase has already been redeemed.', array( 'status' => 409 ) );
+        }
+
+        $enrollment = llms_enroll_student( $user_id, $course_id, 'mobile_app_iap' );
+        if ( ! $enrollment ) {
+            return new WP_Error( 'enrollment_failed', 'Failed to enroll user', array( 'status' => 500 ) );
+        }
+
+        // Only record the transaction id on a fresh redemption.
+        if ( ! $existing_owner ) {
+            add_user_meta( $user_id, '_llms_mobile_iap_txn_id', $txn_id );
+        }
+
+        $this->log_iap_purchase( $user_id, $course_id, $receipt_data, $is_ios );
+
         return array(
-            'status' => 'success',
-            'message' => 'Social login endpoint ready',
+            'status'   => 'success',
+            'message'  => 'Enrollment successful',
+            'enrolled' => true,
         );
+    }
+
+    /**
+     * Return the user_id that previously redeemed an IAP transaction id, or 0.
+     *
+     * Uses wp_usermeta's indexed (meta_key, meta_value) columns, so no schema
+     * change is required. transaction ids are bounded short strings.
+     */
+    private function find_iap_transaction_owner( $txn_id ) {
+        $owners = get_users( array(
+            'meta_key'   => '_llms_mobile_iap_txn_id',
+            'meta_value' => $txn_id,
+            'fields'     => 'ID',
+            'number'     => 1,
+        ) );
+
+        return ! empty( $owners ) ? (int) $owners[0] : 0;
     }
     
     /**
